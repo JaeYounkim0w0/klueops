@@ -30,6 +30,12 @@
 
 2026-09-14 기준 `npm audit --omit=dev`는 production dependency High 0/Critical 0이다. 전체 개발 dependency에는 Moderate 3, High 7, Critical 2가 보고되며 Orval, Vite/Vitest와 관련 transitive build tooling이 포함된다. 현재 자동 수정은 major upgrade를 요구하므로 runtime 위험과 분리해 공개하고, generated-client·typecheck·unit/E2E 계약을 유지하는 독립 upgrade 작업으로 처리한다. 개발 의존성 결과는 CI artifact와 정기 점검에서 계속 추적한다.
 
+### 현재 container blocker
+
+최초 공개 CI scan에서 기존 NGINX 1.27 Alpine과 Temurin 17 Jammy runtime의 수정 가능한 OS 취약점이 확인되어 Frontend는 NGINX unprivileged 1.31.5/Alpine 3.24, Backend와 Command Runner는 Temurin 17 Noble로 갱신했다.
+
+최신 안정 Keycloak 26.7.3 image에는 2026-09-14 기준 `io.netty:netty-handler` 4.1.136.Final의 Critical `CVE-2026-75595`가 남아 있고 Trivy가 4.1.137.Final을 수정 버전으로 제시한다. 해당 library는 upstream Keycloak image에 포함되므로 임의 교체나 예외 처리하지 않는다. 수정된 Keycloak 안정 patch가 제공되면 image를 갱신하고 전체 identity 회귀 테스트와 container scan을 다시 수행한다. 이 항목이 해소되기 전 `supply-chain` workflow는 의도적으로 실패하며 OSS-06 완료로 판정하지 않는다.
+
 ## 로컬 실행
 
 ```bash

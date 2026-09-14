@@ -124,7 +124,7 @@ export AIOPS_POSTGRES_BOOTSTRAP_PASSWORD='<postgres-bootstrap-password>'
 
 ### Frontend
 
-`frontend/Dockerfile`은 Node 22 Alpine에서 lockfile 기반 `npm ci`와 Vue production build를 실행한다. runtime에는 Node와 source를 넣지 않고 unprivileged nginx 1.27, `dist`, nginx 설정만 포함한다. UID 101과 port 8080을 사용한다.
+`frontend/Dockerfile`은 Node 22 Alpine에서 lockfile 기반 `npm ci`와 Vue production build를 실행한다. runtime에는 Node와 source를 넣지 않고 unprivileged nginx 1.31.5 Alpine 3.24, `dist`, nginx 설정만 포함한다. UID 101과 port 8080을 사용한다.
 
 ### Keycloak
 

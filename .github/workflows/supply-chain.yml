@@ -77,12 +77,14 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
       - name: Generate runtime image SBOM
+        if: always()
         uses: anchore/sbom-action@v0
         with:
           image: klueops-scan/${{ matrix.component }}:${{ github.sha }}
           format: spdx-json
           output-file: ${{ matrix.component }}.spdx.json
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ${{ matrix.component }}-runtime-sbom
           path: ${{ matrix.component }}.spdx.json

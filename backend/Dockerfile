@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn -q -DskipTests package
 
 # Run only the packaged jar on a smaller JRE image as a numeric non-root user.
-FROM eclipse-temurin:17-jre-jammy
+FROM eclipse-temurin:17-jre-noble
 ARG KUBECTL_VERSION=v1.34.1
 ARG TARGETARCH
 RUN apt-get update \

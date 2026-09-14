@@ -37,6 +37,8 @@ jobs:
         run: npx --prefix frontend playwright install --with-deps chromium
       - name: Install Helm
         uses: azure/setup-helm@v4
+      - name: Install repository validation tools
+        run: sudo apt-get update && sudo apt-get install --yes ripgrep
       - name: Validate KlueOps quality gate
         run: ./scripts/validate-release-candidate.sh
       - name: Upload redacted evidence
