@@ -179,6 +179,8 @@ TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-m
 7. 요청이 수락되면 Application을 `DEPLOYING` 상태로 만들어 Deployed Applications에 즉시 표시하고 Job Center/Job Dock에서 진행을 추적한다.
 8. 성공 후 Release/Pod/Endpoint health를 검증하고, 실패 시 Application에 실패 단계와 안전한 retry/cleanup 동작을 표시한다.
 
+배포 시작은 Applications에서 무조건 Discover로 보내지 않는다. `Application 배포` 진입 시 Tenant Library의 검증된 Chart 선택을 기본·권장 경로로 제공하고, Chart가 없을 때만 Artifact Hub 검색 또는 URL/.tgz 직접 가져오기를 선택하게 한다. Chart 검색·가져오기는 Cluster를 변경하지 않으며 Cluster/Namespace는 Target 단계에서 선택한다.
+
 ### 6.7 Application 운영
 
 - Overview, Workload/Pod health, restart와 Event 조회

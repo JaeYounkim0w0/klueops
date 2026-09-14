@@ -1,4 +1,4 @@
-const allowedScreens = ["discover", "library", "sources", "values", "exposure", "preview", "applications", "application-detail", "ai-settings", "models"];
+const allowedScreens = ["discover", "library", "sources", "values", "exposure", "preview", "applications", "application-detail", "states", "ai-settings", "models"];
 const overlay = document.querySelector("[data-overlay]");
 const dialog = overlay.querySelector(".modal");
 const modalKicker = overlay.querySelector(".modal-kicker");
@@ -16,13 +16,19 @@ function requestedScreen() {
 
 function showScreen(screen, push = true) {
   document.querySelectorAll("[data-screen-panel]").forEach((panel) => panel.classList.toggle("active", panel.dataset.screenPanel === screen));
-  document.querySelectorAll(".nav-item[data-screen]").forEach((item) => item.classList.toggle("active", item.dataset.screen === screen));
+  document.querySelectorAll(".nav-item[data-screen]").forEach((item) => {
+    const active = item.dataset.screen === screen || (screen === "application-detail" && item.dataset.screen === "applications");
+    item.classList.toggle("active", active);
+    active ? item.setAttribute("aria-current", "page") : item.removeAttribute("aria-current");
+  });
   if (push) {
     const url = new URL(window.location.href);
     url.searchParams.set("screen", screen);
     window.history.pushState({ screen }, "", url);
   }
   window.scrollTo({ top: 0, behavior: "instant" });
+  document.body.classList.remove("nav-open");
+  document.querySelector(".mobile-menu")?.setAttribute("aria-expanded", "false");
 }
 
 function toast(message) {
@@ -38,6 +44,7 @@ function closeModal() {
   document.body.classList.remove("modal-open");
   modalBody.innerHTML = "";
   modalActions.innerHTML = "";
+  document.querySelectorAll(".sidebar, .screen.active, .topbar, .concept-banner").forEach((element) => element.removeAttribute("inert"));
   lastFocused?.focus();
 }
 
@@ -69,6 +76,7 @@ function openModal({ kicker = "APPLICATION DELIVERY", title, body, confirm = "�
   modalActions.querySelector("[data-modal-cancel]").addEventListener("click", closeModal);
   overlay.hidden = false;
   document.body.classList.add("modal-open");
+  document.querySelectorAll(".sidebar, .screen.active, .topbar, .concept-banner").forEach((element) => element.setAttribute("inert", ""));
   (modalBody.querySelector("input, select, textarea") || confirmButton).focus();
 }
 
@@ -89,7 +97,11 @@ function jobCenterModal() {
 }
 
 function sourceModal() {
-  openModal({ title: "Helm 소스 추가", body: `<div class="segmented"><button class="active" type="button">Helm Repository</button><button type="button">OCI Registry</button></div>${formField("표시 이름", "team-charts")}${formField("Repository URL", "https://charts.example.com", "HTTPS만 허용하며 Browser가 아닌 Backend에서 연결합니다.")}<label class="modal-field"><span>Credential</span><select><option>인증 없음</option><option>Existing Secret 선택</option></select></label><div class="info-box">연결 검사는 Chart 데이터나 Tenant 정보를 외부로 보내지 않습니다.</div>`, confirm: "연결 검사", onConfirm: () => toast("연결 검사가 완료되었습니다. 저장할 수 있습니다.") });
+  openModal({ title: "Helm 소스 추가", body: `<div class="step-mini"><b>1 연결 정보</b><span>2 검사 결과</span><span>3 저장</span></div><div class="segmented"><button class="active" type="button">Helm Repository</button><button type="button">OCI Registry</button></div>${formField("표시 이름", "team-charts")}${formField("Repository URL", "https://charts.example.com", "HTTPS만 허용하며 Browser가 아닌 Backend에서 연결합니다.")}<label class="modal-field"><span>Credential</span><select><option>인증 없음</option><option>Existing Secret 선택</option></select></label><div class="info-box">연결 검사는 Chart 데이터나 Tenant 정보를 외부로 보내지 않습니다.</div>`, confirm: "연결 검사", onConfirm: sourceResultModal });
+}
+
+function sourceResultModal() {
+  openModal({ title: "연결 검사 완료", body: `<div class="step-mini"><span>1 연결 정보</span><b>2 검사 결과</b><span>3 저장</span></div><div class="review-list"><p><span>Endpoint</span><strong>✓ TLS 연결 성공</strong></p><p><span>Index</span><strong>42 charts · 186 versions</strong></p><p><span>Latency</span><strong>184 ms</strong></p><p><span>Credential</span><strong>인증 없음</strong></p></div><div class="info-box">Source를 저장하면 15분마다 index를 동기화합니다. Chart archive는 가져오기를 선택할 때만 저장합니다.</div>`, confirm: "Tenant Source 저장", onConfirm: () => toast("team-charts Source를 저장했습니다.") });
 }
 
 function directImportModal() {
@@ -100,12 +112,41 @@ function localModelModal() {
   openModal({ kicker: "DEFAULT OLLAMA · MODEL MANAGEMENT", title: "Local Model 추가", body: `${formField("Ollama library model tag", "granite3.3:8b", "임의 URL과 Modelfile은 허용하지 않습니다.")}<div class="review-list"><p><span>Parameter limit</span><strong>9B 이하</strong></p><p><span>예상 download</span><strong>4.9 GB</strong></p><p><span>Volume 여유</span><strong>58.8 GB</strong></p><p><span>초기 상태</span><strong>Candidate</strong></p></div><div class="info-box">다운로드 후 size, parameter, license와 capability를 검사하고 regression gate를 통과해야 Tenant routing에 사용할 수 있습니다.</div>`, confirm: "Download Job 시작", onConfirm: () => jobResult("Ollama model download") });
 }
 
-function providerModal(provider = "New Provider") {
-  openModal({ kicker: "PLATFORM ADMIN · AI", title: `${provider} 설정`, body: `<div class="step-mini"><b>1 Provider</b><span>2 Credential</span><span>3 Model</span><span>4 Tenant</span></div><label class="modal-field"><span>Provider type</span><select><option>Ollama</option><option>OpenAI</option><option>Google GenAI</option><option>OpenAI Compatible</option></select></label>${formField("Profile 이름", provider === "New Provider" ? "" : provider)}${formField("Base URL", provider.includes("OpenAI") ? "https://api.openai.com" : "http://ollama.aiops.svc:11434")}<label class="modal-field"><span>Credential</span><select><option>Existing Secret 선택</option><option>새 API key 등록</option></select><small>저장 후 credential 값은 다시 표시하지 않습니다.</small></label><div class="external-consent"><input type="checkbox" /><div><strong>외부 데이터 전송 Provider</strong><p>외부 Provider인 경우 Tenant에서 purpose별 동의를 추가로 받아야 합니다.</p></div></div>`, confirm: "연결 검사 후 다음", onConfirm: () => toast("Synthetic prompt 연결 검사를 시작했습니다.") });
+function providerModal(provider = "New Provider", step = 1) {
+  const steps = `<div class="step-mini"><${step === 1 ? "b" : "span"}>1 Provider</${step === 1 ? "b" : "span"}><${step === 2 ? "b" : "span"}>2 Credential</${step === 2 ? "b" : "span"}><${step === 3 ? "b" : "span"}>3 Model</${step === 3 ? "b" : "span"}><${step === 4 ? "b" : "span"}>4 Tenant</${step === 4 ? "b" : "span"}></div>`;
+  const bodies = {
+    1: `${steps}<label class="modal-field"><span>Provider type</span><select><option>Ollama</option><option>OpenAI</option><option>Google GenAI</option><option>OpenAI Compatible</option></select></label>${formField("Profile 이름", provider === "New Provider" ? "Team Provider" : provider)}${formField("Base URL", provider.includes("OpenAI") ? "https://api.openai.com" : "http://ollama.aiops.svc:11434")}`,
+    2: `${steps}<label class="modal-field"><span>Credential</span><select><option>Existing Secret 선택</option><option>새 API key 등록</option></select><small>저장 후 credential 값은 다시 표시하지 않습니다.</small></label><div class="review-list"><p><span>Connectivity</span><strong>✓ Endpoint reachable</strong></p><p><span>Synthetic prompt</span><strong>✓ Response validated</strong></p></div>`,
+    3: `${steps}<label class="modal-field"><span>Default model</span><select><option>qwen2.5-coder:7b · Approved</option><option>gemma3:4b · Approved</option></select><small>Local Candidate와 9B 초과 모델은 선택 목록에 나타나지 않습니다.</small></label><div class="info-box">Capability, context limit와 최근 regression 결과를 확인했습니다.</div>`,
+    4: `${steps}<div class="review-list"><p><span>Profile</span><strong>${provider === "New Provider" ? "Team Provider" : provider}</strong></p><p><span>Allowed Tenant</span><strong>Platform Engineering</strong></p><p><span>Purpose</span><strong>AI Analysis · Chat · Helm Values</strong></p><p><span>External transfer</span><strong>OFF</strong></p></div><div class="external-consent"><input type="checkbox" data-require-check /><div><strong>설정과 Audit 정책 확인</strong><p>External Provider는 Tenant별 별도 동의 전까지 routing할 수 없습니다.</p></div></div>`,
+  };
+  openModal({ kicker: "PLATFORM ADMIN · AI", title: `${provider} 설정`, body: bodies[step], confirm: step < 4 ? "다음" : "Profile 저장", onConfirm: step < 4 ? () => providerModal(provider, step + 1) : () => toast("Provider Profile을 저장했습니다.") });
+}
+
+function deploymentStartModal() {
+  openModal({ kicker: "APPLICATION DELIVERY", title: "어떤 Chart를 배포할까요?", body: `<p class="modal-note">Chart를 이미 보유했는지에 따라 가장 짧은 시작 경로를 선택합니다.</p><div class="launch-options"><button type="button" data-start="library"><strong>Chart Library에서 선택 <em>권장</em></strong><span>Tenant가 검증·승인한 Chart로 바로 시작</span></button><button type="button" data-start="discover"><strong>새 Chart 검색</strong><span>Artifact Hub에서 찾아 Library로 가져오기</span></button><button type="button" data-start="import"><strong>URL 또는 .tgz 가져오기</strong><span>알고 있는 원본이나 보유 파일 검사</span></button></div><div class="info-box">Cluster는 Values 설정 후 Target 단계에서 선택합니다. 이 단계에서는 Cluster를 변경하지 않습니다.</div>`, confirm: "닫기" });
+}
+
+function uninstallConfirmation() {
+  openModal({ kicker: "위험 작업 확인", title: "payments-web을 제거할까요?", body: exactBody("Helm resource 6개와 HTTPRoute 1개를 삭제합니다.", "payments-web/payments", "PVC는 없으며 shared Namespace와 Chart Library는 유지합니다. 실패하면 cleanup 상태를 Application History에 남깁니다."), confirm: "Uninstall 실행", danger: true, exact: "payments-web/payments", onConfirm: () => jobResult("Helm uninstall") });
 }
 
 function simpleInfo(title, message) {
   openModal({ title, body: `<div class="info-box"><strong>${title}</strong><p>${message}</p></div>`, confirm: "닫기" });
+}
+
+function activateApplicationTab(tab, push = true) {
+  const activeButton = document.querySelector(`[data-app-tab="${tab}"]`) || document.querySelector('[data-app-tab="overview"]');
+  document.querySelectorAll("[data-app-tab]").forEach((item) => {
+    item.classList.toggle("active", item === activeButton);
+    item.setAttribute("aria-selected", String(item === activeButton));
+  });
+  document.querySelectorAll("[data-app-tab-panel]").forEach((item) => item.classList.toggle("active", item.dataset.appTabPanel === activeButton.dataset.appTab));
+  if (push) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", activeButton.dataset.appTab);
+    window.history.pushState({ screen: "application-detail", tab: activeButton.dataset.appTab }, "", url);
+  }
 }
 
 function actionFor(button) {
@@ -115,13 +156,19 @@ function actionFor(button) {
   if (button.dataset.screen) return () => showScreen(button.dataset.screen);
   if (button.classList.contains("chip")) return () => { button.parentElement.querySelectorAll(".chip").forEach((item) => item.classList.remove("active")); button.classList.add("active"); toast(`${label} 필터를 적용했습니다.`); };
   if (button.closest(".choice-grid")) return () => { button.parentElement.querySelectorAll("button").forEach((item) => item.classList.remove("selected")); button.classList.add("selected"); toast(`${label} 방식을 선택했습니다. Preview를 다시 계산합니다.`); };
-  if (button.closest(".app-tabs")) return () => { button.parentElement.querySelectorAll("button").forEach((item) => item.classList.remove("active")); button.classList.add("active"); toast(`${label} 탭을 표시합니다.`); };
+  if (button.closest(".app-tabs")) return () => {
+    activateApplicationTab(button.dataset.appTab);
+  };
   if (button.closest(".values-nav")) return () => { button.parentElement.querySelectorAll("button").forEach((item) => item.classList.remove("active")); button.classList.add("active"); toast(`${label.replace(/\d+$/, "")} Values 항목을 표시합니다.`); };
   if (button.closest(".mode-tabs")) return () => { button.parentElement.querySelectorAll("button").forEach((item) => item.classList.remove("active")); button.classList.add("active"); toast(`${label} 편집 모드로 전환했습니다.`); };
   if (button.closest(".segmented")) return () => { button.parentElement.querySelectorAll("button").forEach((item) => item.classList.remove("active")); button.classList.add("active"); };
   if (button.getAttribute("aria-label") === "검색") return () => openModal({ kicker: "GLOBAL SEARCH", title: "KlueOps 전체 검색", body: `${formField("검색어")}<p class="modal-note">Cluster, Release, Chart와 Cook Book을 Tenant 권한 범위에서 검색합니다.</p>`, confirm: "검색" });
   if (button.getAttribute("aria-label") === "작업 센터") return jobCenterModal;
   if (button.getAttribute("aria-label") === "대화상자 닫기") return closeModal;
+  if (button.getAttribute("aria-label") === "메뉴 열기") return () => {
+    const open = document.body.classList.toggle("nav-open");
+    button.setAttribute("aria-expanded", String(open));
+  };
 
   const actions = {
     "Overview": () => simpleInfo("1차 기능 화면", "실제 제품의 Overview route로 이동합니다. Phase 2 시안에서는 현재 화면을 유지합니다."),
@@ -140,7 +187,7 @@ function actionFor(button) {
     "전체 렌더링 YAML 보기 ↗": () => openModal({ title: "Rendered manifests", body: `<div class="code-toolbar"><span>6 resources · Secret value masked</span><button type="button">복사</button></div><pre class="modal-code">apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: payments-web\nspec:\n  replicas: 3\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: payments-web</pre>`, confirm: "닫기" }),
     "이전": () => showScreen("values"),
     "확정 단계로 →": () => openModal({ kicker: "위험 작업 확인", title: "payments-web을 배포할까요?", body: exactBody("prod-seoul / payments에 Helm resource 6개와 HTTPRoute 1개를 적용합니다.", "payments-web", "접근 URL은 https://nginx.cluster.co.kr/입니다. Exposure가 REQUIRED 상태에서 실패하면 Helm atomic rollback 정책을 적용합니다."), confirm: "배포 실행", danger: true, exact: "payments-web", onConfirm: () => jobResult("Helm deployment") }),
-    "＋ 새 배포": () => showScreen("discover"),
+    "Application 배포": deploymentStartModal,
     "···": () => panel === "applications" ? openModal({ title: "Application 작업", body: `<div class="action-list"><button type="button">Application 상세 보기</button><button type="button">Audit 기록 보기</button><button type="button">Uninstall 계획 생성</button></div>`, confirm: "닫기" }) : panel === "sources" ? openModal({ title: "Source 작업", body: `<div class="action-list"><button type="button">지금 동기화</button><button type="button">연결 검사</button><button type="button">Credential 교체</button><button type="button">Source 비활성화</button></div>`, confirm: "닫기" }) : panel === "models" ? openModal({ title: "Local Model 작업", body: `<div class="action-list"><button type="button">Capability 보기</button><button type="button">Regression 실행</button><button type="button">Tenant 허용 설정</button><button type="button">삭제 가능 여부 검사</button></div>`, confirm: "닫기" }) : simpleInfo("Provider 작업", "연결 검사, Profile 편집, 비활성화와 삭제 작업을 선택할 수 있습니다."),
     "Values Diff": () => openModal({ title: "Revision 6 → 7 Values Diff", body: `<pre class="modal-code"><span class="minus">- replicaCount: 2</span>\n<span class="plus">+ replicaCount: 3</span>\n<span class="plus">+ resources.requests.cpu: 250m</span>\n<span class="plus">+ resources.requests.memory: 256Mi</span></pre>`, confirm: "닫기" }),
     "Rollback": () => openModal({ kicker: "위험 작업 확인", title: "Revision 6으로 Rollback", body: exactBody("payments-web을 이전 Values와 Chart 상태로 되돌립니다.", "payments-web", "새 Helm revision 8이 생성되며 현재 revision 7은 이력에 유지됩니다."), confirm: "Rollback 실행", danger: true, exact: "payments-web", onConfirm: () => jobResult("Helm rollback") }),
@@ -152,8 +199,8 @@ function actionFor(button) {
     "Kubernetes Console": () => toast("payments-web Deployment를 Kubernetes Console에서 엽니다."),
     "접근 설정 변경": () => showScreen("exposure"),
     "AI Analysis": () => toast("Application evidence를 수집하는 분석 Job을 시작합니다."),
-    "Uninstall 계획": () => openModal({ kicker: "위험 작업 계획", title: "payments-web Uninstall 계획", body: `<div class="review-list"><p><span>Helm resources</span><strong>6개 삭제</strong></p><p><span>Companion</span><strong>HTTPRoute 1개 삭제</strong></p><p><span>PVC</span><strong>없음</strong></p><p><span>Namespace</span><strong>payments 유지</strong></p><p><span>Chart Library</span><strong>nginx 18.2.4 유지</strong></p></div><div class="danger-summary"><strong>계획 생성은 아직 Resource를 삭제하지 않습니다.</strong><p>Preflight 이후 별도 exact confirmation에서 payments-web/payments를 입력해야 합니다.</p></div>`, confirm: "Uninstall Preview 생성", danger: true, onConfirm: () => toast("Uninstall Preview를 생성했습니다.") }),
-    "변경 저장": () => openModal({ kicker: "TENANT AI ROUTING", title: "AI Routing 변경 저장", body: `<div class="review-list"><p><span>AI Analysis</span><strong>Default Ollama / granite3.3:8b 후보</strong></p><p><span>AI Chat</span><strong>Default Ollama / qwen2.5-coder:7b</strong></p><p><span>Helm Values</span><strong>Default Ollama / granite3.3:8b 후보</strong></p><p><span>External</span><strong>OFF</strong></p></div><div class="info-box">실행 중인 Job에는 영향을 주지 않고 새 요청부터 적용됩니다.</div>`, confirm: "Routing 저장", onConfirm: () => toast("Tenant AI Routing 정책을 저장했습니다.") }),
+    "Uninstall 계획": () => openModal({ kicker: "위험 작업 계획", title: "payments-web Uninstall 계획", body: `<div class="review-list"><p><span>Helm resources</span><strong>6개 삭제</strong></p><p><span>Companion</span><strong>HTTPRoute 1개 삭제</strong></p><p><span>PVC</span><strong>없음</strong></p><p><span>Namespace</span><strong>payments 유지</strong></p><p><span>Chart Library</span><strong>nginx 18.2.4 유지</strong></p></div><div class="danger-summary"><strong>계획 생성은 아직 Resource를 삭제하지 않습니다.</strong><p>Preflight가 통과했습니다. 다음 단계에서 payments-web/payments를 정확히 입력해야 합니다.</p></div>`, confirm: "Exact confirmation으로", danger: true, onConfirm: uninstallConfirmation }),
+    "변경 저장": () => openModal({ kicker: "TENANT AI ROUTING", title: "AI Routing 변경 저장", body: `<div class="review-list"><p><span>AI Analysis</span><strong>Default Ollama / qwen2.5-coder:7b · Approved</strong></p><p><span>AI Chat</span><strong>Default Ollama / qwen2.5-coder:7b · Approved</strong></p><p><span>Helm Values</span><strong>Default Ollama / gemma3:4b · Approved</strong></p><p><span>External</span><strong>OFF</strong></p></div><div class="info-box">Candidate는 평가 전용이라 선택되지 않았습니다. 변경은 새 요청부터 적용됩니다.</div>`, confirm: "Routing 저장", onConfirm: () => toast("Tenant AI Routing 정책을 저장했습니다.") }),
   };
   return actions[label] || (button.dataset.toast ? () => toast(button.dataset.toast) : () => simpleInfo(label || "동작 안내", "이 컨트롤의 상세 화면 또는 선택 상태가 표시되는 시안입니다."));
 }
@@ -170,7 +217,7 @@ document.querySelectorAll(".result-card, .release-table tbody tr").forEach((row)
 }));
 
 document.querySelectorAll(".select-like, .switch").forEach((control) => {
-  control.setAttribute("role", "button");
+  if (!control.classList.contains("switch")) control.setAttribute("role", "button");
   control.tabIndex = 0;
   control.addEventListener("click", () => control.classList.contains("switch") ? openModal({ kicker: "외부 전송 동의", title: "외부 LLM 전송을 켤까요?", body: `<div class="warning-box"><strong>Tenant 데이터가 외부 Provider로 전송될 수 있습니다.</strong><p>Provider, purpose와 전송 데이터 범위를 검토한 뒤 Platform 정책 동의가 필요합니다.</p></div><label class="external-consent"><input type="checkbox" data-require-check /><span>데이터 최소화 및 Audit 정책을 확인했습니다.</span></label>`, confirm: "정책 검토 계속" }) : simpleInfo("Routing 선택", "허용된 Provider Profile과 9B 이하 local model 목록을 선택합니다."));
   control.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); control.click(); } });
@@ -178,6 +225,13 @@ document.querySelectorAll(".select-like, .switch").forEach((control) => {
 
 overlay.addEventListener("click", (event) => {
   if (event.target === overlay) { closeModal(); return; }
+  const startButton = event.target.closest("[data-start]");
+  if (startButton) {
+    const target = startButton.dataset.start;
+    closeModal();
+    if (target === "import") directImportModal(); else showScreen(target);
+    return;
+  }
   const inlineButton = event.target.closest(".segmented button, .code-toolbar button, .action-list button");
   if (!inlineButton) return;
   if (inlineButton.closest(".segmented")) {
@@ -188,6 +242,18 @@ overlay.addEventListener("click", (event) => {
   if (inlineButton.closest(".code-toolbar")) { toast("Rendered YAML을 clipboard에 복사했습니다."); return; }
   simpleInfo(inlineButton.textContent.trim(), `${inlineButton.textContent.trim()} 후속 화면의 설계 진입점입니다. 실행 전 대상과 영향을 다시 확인합니다.`);
 });
-document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !overlay.hidden) closeModal(); });
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !overlay.hidden) { closeModal(); return; }
+  if (event.key !== "Tab" || overlay.hidden) return;
+  const focusable = [...dialog.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]')];
+  if (!focusable.length) return;
+  const first = focusable[0]; const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+});
 window.addEventListener("popstate", () => showScreen(requestedScreen(), false));
 showScreen(requestedScreen(), false);
+if (requestedScreen() === "application-detail") {
+  const initialTab = new URLSearchParams(window.location.search).get("tab");
+  activateApplicationTab(initialTab || "overview", false);
+}

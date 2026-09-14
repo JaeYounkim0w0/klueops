@@ -4,6 +4,8 @@
 
 상태: HTML 시안 완료, 구현 미착수
 
+시안 회귀 확인은 mockup 디렉터리를 정적 서버로 연 뒤 `node smoke-test.mjs`와 `node capture-screenshots.mjs`로 재현한다. `CHROME_PATH`는 system Chrome을 사용할 때만 지정하며, 생략하면 Playwright bundled Chromium을 사용한다.
+
 ## Phase 2 최우선 선행 작업: P2-0 기존 제품 UI 현대화
 
 Application Delivery 화면을 구현하기 전에 현재 KlueOps 전체 화면을 이 HTML 시안의 완성도와 visual language로 현대화한다. 현재 UI의 프로토타입 인상을 만드는 화면별 spacing·typography 불일치, 단순 raw control, 약한 정보 위계, 밀집된 운영 정보와 일관되지 않은 feedback을 먼저 해소한다.
@@ -59,7 +61,7 @@ ui-mockups/index.html?screen=models
 - AI 제안은 사용자 입력과 시각적으로 구분하고 근거, assumption과 적용 전 diff를 표시한다.
 - Provider/model과 외부 전송 여부를 AI 실행 위치 가까이에 표시한다.
 
-`Deployments`는 좌측 상시 메뉴로 두지 않는다. 새 배포는 Values Studio에서 진입하는 Wizard이고, 실행 중 progress는 어느 화면에서나 여는 Job Center/Job Dock, 대상별 운영은 Deployed Applications와 Application Detail이 담당한다.
+`Deployments`는 좌측 상시 메뉴로 두지 않는다. Applications의 `Application 배포` chooser에서 보유 Library Chart(권장), 새 Chart 검색, URL/.tgz 직접 가져오기 중 시작점을 선택하고 Chart 확정 후 Values Studio부터 Wizard를 진행한다. 실행 중 progress는 어느 화면에서나 여는 Job Center/Job Dock, 대상별 운영은 Deployed Applications와 Application Detail이 담당한다.
 
 ## 3. Navigation
 
@@ -392,7 +394,7 @@ Import는 Cluster 상태를 변경하지 않으므로 exact phrase까지 요구�
 
 | Control | Overlay/상태 | Confirm 이후 |
 | --- | --- | --- |
-| `새 배포` | Discover로 이동 | 새 workflow 시작 |
+| `Application 배포` | 시작 chooser Modal: `Chart Library에서 선택`(기본·권장), `새 Chart 검색`, `URL 또는 .tgz 가져오기` | Library는 Chart/version 선택, 검색은 Discover, 직접 가져오기는 검사 Modal로 분기 |
 | Cluster/Status filter | release table filter | URL query 보존 |
 | Application row | 우측 health/endpoint/history 교체 | 별도 Confirm 없음 |
 | `…` | 상세/Audit/Uninstall 계획 action menu | Uninstall은 별도 exact confirmation 필요 |
@@ -402,7 +404,16 @@ Import는 Cluster 상태를 변경하지 않으므로 exact phrase까지 요구�
 
 ![Rollback exact confirmation](ui-mockups/screenshots/09-rollback-confirmation.png)
 
+![Application 배포 시작 선택](ui-mockups/screenshots/17-deployment-start.png)
+
 Uninstall은 Pod뿐 아니라 PVC, hook과 external resource 보존 여부를 계획 화면에서 먼저 보여주고 `release/namespace` exact phrase를 요구한다. 목록의 action menu에서 즉시 삭제하지 않는다.
+
+배포 시작 chooser 원칙:
+
+1. 사용자가 이미 보유한 승인 Chart를 가장 짧은 기본 경로로 둔다.
+2. Library가 비어 있으면 Empty State에서 검색과 직접 가져오기를 같은 맥락으로 안내한다.
+3. Discover는 Chart가 없는 사용자를 위한 검색 기능이며 배포 버튼의 암묵적 목적지가 아니다.
+4. chooser에는 “Cluster는 Target 단계에서 선택하며 지금은 Cluster를 변경하지 않는다”는 설명을 표시한다.
 
 ### 15.9 Application Detail
 
@@ -452,6 +463,25 @@ Uninstall은 Pod뿐 아니라 PVC, hook과 external resource 보존 여부를 �
 | Expired plan | 실행 차단, Preview 재생성만 제공 |
 | Permission changed | 실행 차단, 필요한 권한과 Cluster 관리자 문의 안내 |
 
+### 15.13 구현 필수 상태 Matrix
+
+| 상태 | 필수 화면 행동 |
+| --- | --- |
+| Loading | 기존 결과를 갑자기 지우지 않고 skeleton/progress와 수행 중인 작업을 설명 |
+| Empty Library | “아직 Chart가 없음”과 Discover/직접 가져오기 CTA 제공 |
+| No results | 검색어/필터 유지, 필터 초기화와 대체 검색 안내 |
+| Permission denied/changed | 실행 차단, 필요한 scope와 관리자 문의 경로 제공 |
+| Provider/Repository failure | 입력 유지, masking된 원인, 재시도/설정 수정 제공 |
+| Expired plan | 위험 실행 차단, Preview 재생성 CTA만 제공 |
+| Deploy failure/rollback | 실패 단계, atomic rollback, cleanup 잔여를 각각 표시 |
+| DNS manual action | 필요한 record type/name/value와 재검사 제공 |
+| Failed cleanup | 소유권별 남은 resource와 안전한 재시도/Console link 제공 |
+| Partial collection | 초보자용 제한 설명을 confidence 가까이에 표시하고 source 상세는 펼침 영역 제공 |
+
+HTML의 `상태 시안`은 이 Matrix의 대표 상태를 한 화면에서 비교하는 구현 계약이며, 각 실제 route에도 같은 공통 component로 적용한다.
+
+![필수 운영 상태 시안](ui-mockups/screenshots/18-required-states.png)
+
 ## 16. Responsive
 
 - 1280px 이상: sidebar + main + detail/assistant 3-column
@@ -459,6 +489,10 @@ Uninstall은 Pod뿐 아니라 PVC, hook과 external resource 보존 여부를 �
 - 899px 이하: sidebar 접힘, step별 단일 column
 - Values Editor와 Preview table은 horizontal scroll보다 field/card 재배치를 우선한다.
 - 위험 confirmation은 mobile에서도 viewport 아래로 숨지 않게 sticky action bar를 사용한다.
+
+![Applications mobile 390px](ui-mockups/screenshots/19-applications-mobile.png)
+
+![Applications tablet 900px](ui-mockups/screenshots/20-applications-tablet.png)
 
 ## 17. 접근성
 

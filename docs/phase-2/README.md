@@ -10,7 +10,7 @@ Phase 2의 첫 작업은 `P2-0 기존 제품 UI 현대화`다. Application Deliv
 
 Tenant별 Helm Chart 검색·보관, Custom Values, Cluster/Namespace 선택, HTTPRoute/Ingress Exposure와 Kubernetes 배포·Application 운영을 제공한다. GitOps, Chart template 편집과 외부 registry publish는 현재 범위가 아니다.
 
-`Deployments`는 독립 상시 메뉴가 아니다. 신규 배포는 Values에서 시작하는 Target/Exposure·Preview Wizard이고, 실행 중 작업은 전역 Job Center, 배포된 대상과 실패·진행 상태는 Deployed Applications, 작업 이력은 Application Detail의 History에서 확인한다. Kubernetes `Deployment` 리소스는 Workloads 탭에서 조회한다.
+`Deployments`는 독립 상시 메뉴가 아니다. Applications의 `Application 배포`는 보유 Library Chart(권장), 새 Chart 검색, URL/.tgz 가져오기 중 시작점을 고른 뒤 Values→Target/Exposure→Preview Wizard로 연결한다. 실행 중 작업은 전역 Job Center, 배포된 대상과 실패·진행 상태는 Deployed Applications, 작업 이력은 Application Detail의 History에서 확인한다. Kubernetes `Deployment` 리소스는 Workloads 탭에서 조회한다.
 
 Chart payload는 소규모 기본 설치에서 PostgreSQL에 보관하고 대규모 설치는 S3-compatible storage 또는 기존 OCI Registry adapter를 선택한다. Harbor/MinIO를 필수 dependency로 설치하지 않는다.
 
@@ -28,7 +28,7 @@ Local LLM은 특정 계열에 고정하지 않고 9B 이하 후보를 동일 fix
 | --- | --- |
 | 제품 범위 | 설계 완료 |
 | 아키텍처 | 설계 완료 |
-| UI/UX | Phase 2 시안 완료, P2-0 기존 제품 UI 현대화 요구사항 확정 |
+| UI/UX | Phase 2 상호작용·반응형·접근성·운영 상태 시안 완료, P2-0 기존 제품 UI 현대화 요구사항 확정 |
 | Backend/Frontend 구현 | 미착수 |
 | 로컬 Kubernetes 수용시험 | 미착수 |
 

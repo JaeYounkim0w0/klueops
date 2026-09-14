@@ -15,6 +15,8 @@ required_files=(
   "$delivery_root/ui-mockups/modals.css"
   "$delivery_root/ui-mockups/phase2-additions.css"
   "$delivery_root/ui-mockups/app.js"
+  "$delivery_root/ui-mockups/capture-screenshots.mjs"
+  "$delivery_root/ui-mockups/smoke-test.mjs"
 )
 
 required_screenshots=(
@@ -34,6 +36,10 @@ required_screenshots=(
   "14-local-models.png"
   "15-uninstall-plan.png"
   "16-local-model-add.png"
+  "17-deployment-start.png"
+  "18-required-states.png"
+  "19-applications-mobile.png"
+  "20-applications-tablet.png"
 )
 
 for file in "${required_files[@]}"; do
@@ -47,7 +53,7 @@ for screenshot in "${required_screenshots[@]}"; do
   }
 done
 
-for screen in discover library sources values exposure preview applications application-detail ai-settings models; do
+for screen in discover library sources values exposure preview applications application-detail states ai-settings models; do
   grep -q "data-screen-panel=\"$screen\"" "$delivery_root/ui-mockups/index.html" || {
     echo "Missing mockup screen: $screen" >&2
     exit 1
@@ -68,9 +74,14 @@ grep -q "DEPLOYING" "$delivery_root/product-requirements.md"
 grep -q "asyncJobId" "$delivery_root/architecture-design.md"
 grep -q "GLOBAL JOB CENTER" "$delivery_root/ui-mockups/app.js"
 grep -q 'class="deployment-map"' "$delivery_root/ui-mockups/index.html"
-grep -q 'phase2-additions.css?v=20260915' "$delivery_root/ui-mockups/index.html"
+grep -q 'phase2-additions.css?v=20260915b' "$delivery_root/ui-mockups/index.html"
 grep -q "P2-0 최우선 선행 요구사항" "$delivery_root/product-requirements.md"
 grep -q "P2-0 기존 제품 UI 현대화" "$delivery_root/ui-ux-screen-design.md"
 grep -q "P2-0 Frontend 기반 경계" "$delivery_root/architecture-design.md"
+grep -q "Application 배포" "$delivery_root/ui-ux-screen-design.md"
+grep -q 'data-app-tab-panel="history"' "$delivery_root/ui-mockups/index.html"
+grep -q 'role="switch"' "$delivery_root/ui-mockups/index.html"
+grep -q "function uninstallConfirmation" "$delivery_root/ui-mockups/app.js"
+grep -q "function deploymentStartModal" "$delivery_root/ui-mockups/app.js"
 
 echo "Phase 2 documents and UI artifacts are complete."

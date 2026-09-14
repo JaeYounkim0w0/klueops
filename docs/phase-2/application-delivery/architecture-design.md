@@ -13,6 +13,7 @@
 - Application 기능은 feature flag로 끌 수 있고 비활성화 시 Runner도 설치하지 않는다.
 - API와 port가 안정되고 독립 확장 요구가 생길 때만 Application Backend 서비스 추출을 검토한다.
 - `DeploymentPlan`은 URL로 재진입할 수 있는 만료형 Wizard 상태이며 독립 메뉴의 영속 resource가 아니다.
+- Applications의 배포 시작 chooser는 Library/Discover/Direct Import의 진입점만 결정한다. Chart version이 확정된 뒤에만 `DeploymentPlan`을 만들며, chooser나 catalog 탐색 단계에서는 Cluster write 권한을 요구하지 않는다.
 - 실행 추적은 기존 Async Job/Job Center, 대상별 영속 이력은 Application/ReleaseOperation projection을 사용한다.
 - Application Delivery 기능 개발 전 `P2-0`에서 기존 제품 전체 Frontend를 Phase 2 HTML 시안과 동일한 공통 design system으로 현대화한다.
 
