@@ -6,6 +6,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 required_files=(
   "docs/product/current-product-specification.md"
   "docs/product/remaining-development-items.md"
+  "docs/assets/screenshots/dashboard.png"
+  "docs/assets/screenshots/kubernetes-console-cookbook.png"
   "docs/development/tech-stack.md"
   "docs/development/backend-source-validation.md"
   "docs/architecture/hexagonal-architecture.md"

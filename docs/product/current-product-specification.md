@@ -211,6 +211,7 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - GitHub 공개 저장소를 새로 clone해 Backend 248 tests, Frontend 91 tests·production build, 문서·저장소 위생과 all-in-one Helm dry-run을 별도 cache 없이 재현했다.
 - Backend 186개, Command Runner 46개, Frontend production 19개 component의 CycloneDX SBOM에서 license 누락 0건과 allowlist 정책 통과를 확인했다. Frontend production dependency는 High 0/Critical 0이며 개발 도구의 알려진 취약점은 runtime과 분리해 `docs/security/dependency-policy.md`에 공개한다.
 - 공개 supply-chain workflow는 네 runtime container를 build·Trivy scan하고 runtime SBOM과 license gate를 실행한다. signed container workflow도 Command Runner를 포함한다. registry별 Cosign identity/issuer 검증은 자체 운영 배포자가 수행한다.
+- README의 Dashboard와 Kubernetes Console/Cook Book 화면은 별도 namespace의 실제 설치에서 캡처했으며 계정, cluster 식별자와 내부 주소를 공개용 값으로 마스킹했다. 문서 검증은 두 화면 asset의 존재를 확인한다.
 
 검증 명령과 최신 로컬 품질 증적은 `docs/operations/release-candidate-checklist.md`를 따른다. 문서와 스크립트의 `release-candidate` 명칭은 기존 자동화 호환을 위해 유지하며 상용 릴리스 판정을 의미하지 않는다.
 
@@ -221,7 +222,7 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 | 기능 개발 | 핵심 Kubernetes 운영, AI 분석/상담, Incident, 안전 명령과 관리 UI 구현 완료 |
 | 개발·데모 | 사용 가능 |
 | 내부 Pilot | 사용 가능, 실제 대상 cluster별 권한과 credential 확인 필요 |
-| 오픈소스 공개 | LICENSE, 저장소 위생, 기여 흐름과 clean-clone build/dry-run 완료. 별도 namespace의 신규 설치와 공개 CI 최초 통과 확인이 남아 있음 |
+| 오픈소스 공개 | LICENSE, 저장소 위생, 기여 흐름, clean-clone 검증, 별도 namespace 신규 설치, 공개 CI와 마스킹한 제품 화면 문서화 완료. 수정본이 나오지 않은 upstream runtime 취약점은 OSS-06으로 공개 추적 중 |
 | 자체 운영 배포 | 사용자가 환경별 TLS, IdP, Secret, 백업과 HA 책임을 검증해야 함 |
 | 대형 cluster 보장 | 현재 제품 범위 아님. 사용자가 bounded 기준을 넘는 규모를 요구하면 별도 SLO와 검증 범위를 정해야 함 |
 | Prometheus/GitOps | 현재 프로젝트 범위 제외 |

@@ -18,6 +18,22 @@ KlueOps는 Kubernetes 상태·이벤트·로그·구성 근거를 먼저 수집�
 - OIDC BFF, Tenant/Workspace/Cluster/Namespace 계층 권한과 credential 암호화
 - 한국어·영어 UI, AI Chat, 분석 비교와 운영자 feedback
 
+## 제품 화면
+
+### 운영 Dashboard
+
+클러스터 상태, 열린 Incident, 정책 위반, AI 분석과 진행 중인 작업을 한 화면에서 확인하고 우선 대응할 항목으로 이동합니다.
+
+![KlueOps 운영 Dashboard](docs/assets/screenshots/dashboard.png)
+
+### Kubernetes Console과 Cook Book
+
+등록한 클러스터의 고정된 범위 안에서 명령 안전 등급과 실행 근거를 확인하고, Cook Book 점검 명령을 작업 공간으로 가져와 실행 결과와 종료 코드를 검토합니다.
+
+![KlueOps Kubernetes Console과 Cook Book](docs/assets/screenshots/kubernetes-console-cookbook.png)
+
+화면은 Docker Desktop의 격리된 인수 환경에서 직접 검증한 결과이며 계정, 클러스터 식별자와 내부 주소는 공개용 값으로 마스킹했습니다. 상단의 보안 경고는 HTTP 기반 로컬 프로필임을 나타내며, 자체 운영 환경에서는 TLS와 Secure session cookie를 구성해야 합니다.
+
 ## 실행 구조
 
 ```mermaid
@@ -56,7 +72,7 @@ kubectl config current-context
 ./scripts/init/all-in-one.sh --dry-run
 ```
 
-2026-09-14에 공개 GitHub 저장소의 새 clone에서 Backend 248개 테스트, Frontend 91개 테스트·production build와 전체 Helm dry-run을 재현했습니다.
+2026-09-14에 공개 GitHub 저장소의 새 clone에서 Backend 248개 테스트, Frontend 91개 테스트·production build와 전체 Helm dry-run을 재현했습니다. 이어 별도 namespace에 실제 설치해 로그인, cluster 등록과 Cook Book 명령 실행까지 확인했습니다.
 
 ## 로컬 Kubernetes 설치
 
