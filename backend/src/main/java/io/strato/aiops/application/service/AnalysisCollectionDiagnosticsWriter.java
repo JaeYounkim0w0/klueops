@@ -12,7 +12,7 @@ final class AnalysisCollectionDiagnosticsWriter {
         if (diagnostics.collectionStages().isEmpty()) {
             return;
         }
-        ObjectNode analysisDiagnostics = root.with("analysisDiagnostics");
+        ObjectNode analysisDiagnostics = root.withObject("analysisDiagnostics");
         ObjectNode collection = analysisDiagnostics.putObject("collection");
         long successful = diagnostics.collectionStages().stream()
                 .filter(stage -> "SUCCEEDED".equals(stage.status())).count();

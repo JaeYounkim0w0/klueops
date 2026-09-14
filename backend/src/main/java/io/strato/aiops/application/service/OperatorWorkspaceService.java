@@ -33,7 +33,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -390,9 +389,7 @@ public class OperatorWorkspaceService {
             target.put(prefix.isBlank() ? "items" : prefix, abbreviate(node.toString(), 500));
             return;
         }
-        Iterator<java.util.Map.Entry<String, JsonNode>> fields = node.fields();
-        while (fields.hasNext()) {
-            var field = fields.next();
+        for (var field : node.properties()) {
             flattenSummary(prefix.isBlank() ? field.getKey() : prefix + "." + field.getKey(),
                     field.getValue(), target, depth + 1);
         }

@@ -361,9 +361,7 @@ public class OperationsPolicyEvaluator {
         if (!selector.isObject() || selector.isEmpty() || !labels.isObject()) {
             return false;
         }
-        var fields = selector.fields();
-        while (fields.hasNext()) {
-            var entry = fields.next();
+        for (var entry : selector.properties()) {
             if (!entry.getValue().asText().equals(labels.path(entry.getKey()).asText(null))) {
                 return false;
             }

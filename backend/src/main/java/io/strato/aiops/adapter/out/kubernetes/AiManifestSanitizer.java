@@ -8,8 +8,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import org.springframework.stereotype.Component;
 
-import java.util.Iterator;
-import java.util.Map;
 
 @Component
 class AiManifestSanitizer {
@@ -54,8 +52,7 @@ class AiManifestSanitizer {
                     if (entry instanceof ObjectNode item && item.has("value")) item.put("value", REDACTED);
                 });
             }
-            Iterator<Map.Entry<String, JsonNode>> fields = object.fields();
-            while (fields.hasNext()) redact(fields.next().getValue(), false);
+            object.properties().forEach(field -> redact(field.getValue(), false));
         } else if (node instanceof ArrayNode array) {
             array.forEach(item -> redact(item, false));
         }

@@ -382,9 +382,7 @@ public class IncidentIntelligenceService {
 
     private boolean labelsMatch(JsonNode selector, JsonNode labels) {
         if (!selector.isObject() || selector.isEmpty() || !labels.isObject()) return false;
-        var fields = selector.fields();
-        while (fields.hasNext()) {
-            var field = fields.next();
+        for (var field : selector.properties()) {
             if (!field.getValue().asText().equals(labels.path(field.getKey()).asText(null))) return false;
         }
         return true;

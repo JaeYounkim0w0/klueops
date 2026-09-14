@@ -144,7 +144,7 @@ public class KubernetesPortTopologyAnalyzer {
             return Map.of();
         }
         Map<String, String> result = new LinkedHashMap<>();
-        node.fields().forEachRemaining(entry -> result.put(entry.getKey(), text(entry.getValue().asText())));
+        node.properties().forEach(entry -> result.put(entry.getKey(), text(entry.getValue().asText())));
         return result;
     }
 
