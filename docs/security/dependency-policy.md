@@ -30,7 +30,7 @@
 
 2026-09-14 기준 `npm audit --omit=dev`는 production dependency High 0/Critical 0이다. 전체 개발 dependency에는 Moderate 3, High 7, Critical 2가 보고되며 Orval, Vite/Vitest와 관련 transitive build tooling이 포함된다. 현재 자동 수정은 major upgrade를 요구하므로 runtime 위험과 분리해 공개하고, generated-client·typecheck·unit/E2E 계약을 유지하는 독립 upgrade 작업으로 처리한다. 개발 의존성 결과는 CI artifact와 정기 점검에서 계속 추적한다.
 
-### 현재 container blocker
+### 현재 upstream container 위험
 
 최초 공개 CI scan에서 기존 NGINX 1.27 Alpine과 Temurin 17 Jammy runtime의 수정 가능한 OS 취약점이 확인되어 Frontend는 NGINX unprivileged 1.31.5/Alpine 3.24, Backend와 Command Runner는 Temurin 17 Noble로 갱신했다. 후속 scan에서 Java image의 Tomcat 10.1.55와 kubectl 1.34.1 취약점을 확인해 Tomcat 10.1.59와 같은 Kubernetes minor의 최신 patch인 kubectl 1.34.11로 갱신했다.
 
@@ -38,7 +38,7 @@
 
 Backend 후속 scan에서 사용하지 않는 MCP 기능의 전이 `mcp-core` 0.18.2와 Fabric8/Vert.x 경로의 Netty 4.1.135가 탐지됐다. MCP 전이 dependency는 제외하고 Netty는 4.1.137.Final로 고정했다. 이어 PostgreSQL JDBC 42.7.11의 High `CVE-2026-54291`을 확인해 수정본 42.7.12로 갱신했으며, 각 변경은 전체 Backend 회귀 테스트로 호환성을 검증한다.
 
-Command Runner의 kubectl 1.34.11은 Kubernetes 1.34 계열의 현재 최신 patch지만 Go 1.26.5로 빌드돼 수정 가능한 High 취약점 8건이 남아 있다. Trivy가 제시하는 최소 Go 수정본은 1.26.6이며, 다음 Kubernetes patch 일정은 2026-09-15다. 패키지 Backend는 kubectl을 실행하지 않으므로 중복 바이너리를 제거했고 Runner만 upstream 보안 patch를 기다린다. Keycloak과 kubectl의 두 upstream 항목이 해소되기 전 `supply-chain` workflow는 의도적으로 실패하며 OSS-06 완료로 판정하지 않는다.
+Command Runner의 kubectl 1.34.11은 Kubernetes 1.34 계열의 현재 최신 patch지만 Go 1.26.5로 빌드돼 수정 가능한 High 취약점 8건이 남아 있다. Trivy가 제시하는 최소 Go 수정본은 1.26.6이며, 다음 Kubernetes patch 일정은 2026-09-15다. 패키지 Backend는 kubectl을 실행하지 않으므로 중복 바이너리를 제거했고 Runner만 upstream 보안 patch를 기다린다. Keycloak과 kubectl의 두 upstream 항목이 해소되기 전 `supply-chain` workflow는 위험을 숨기지 않기 위해 의도적으로 실패한다. 공개 inventory, license 판정과 재검토 절차는 OSS-06 완료 기준을 충족하며 수정 image 적용은 `SEC-01`로 추적한다.
 
 ## 로컬 실행
 
@@ -50,3 +50,14 @@ npm audit --prefix frontend --omit=dev --audit-level=high
 ```
 
 생성된 `artifacts/sbom`과 audit 결과는 로컬 증빙이며 Git에 commit하지 않는다.
+
+## 자동 업데이트 정책
+
+`.github/dependabot.yml`은 매주 월요일 06:00(Asia/Seoul)에 다음 공개 dependency source를 확인한다.
+
+- Backend와 Command Runner의 Maven dependency
+- Frontend의 npm dependency
+- Backend, Command Runner, Frontend와 Keycloak의 Docker base image
+- GitHub Actions
+
+Maven과 npm의 minor/patch update는 component별로 묶어 pull request 수를 제한하고 major update는 독립적으로 검토한다. Dependabot pull request는 자동 merge하지 않으며 quality gate, generated client 계약, runtime SBOM/license gate와 관련 container scan을 통과한 뒤 병합한다. Dockerfile `ARG`를 이용해 URL에서 직접 받는 `kubectl` 같은 binary와 Helm values의 application image tag는 Dependabot이 관리하지 않으므로 upstream security 공지와 정기 supply-chain 실행으로 별도 추적한다.

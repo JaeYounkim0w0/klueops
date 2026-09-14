@@ -21,7 +21,7 @@
 | OSS-03 | 깨끗한 설치 재현 (완료) | 새 clone 검증과 격리 namespace 설치에서 build, test, 로컬 Kubernetes 설치, 로그인, cluster 등록 및 Cook Book 실행 재현 | 사전 요구사항부터 로그인·cluster 등록·Cook Book 실행까지 별도 지식 없이 성공 |
 | OSS-04 | 공개 문서 정리 (완료) | README에 기능, 구조, 빠른 시작, 지원 범위, 보안 주의사항과 마스킹한 실제 화면 예시 제공 | 신규 사용자가 프로젝트 목적과 실행 방법을 첫 화면에서 이해하고 모든 링크가 유효함 |
 | OSS-05 | 기여자 운영 기반 (완료) | 기여 규칙, 보안 제보, 행동강령, issue/PR template와 유지관리 범위 정리 | `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue/PR 흐름이 서로 일치함 |
-| OSS-06 | 의존성 공개 적합성 (진행) | Backend/Frontend/Runner/컨테이너의 SBOM, dependency license와 알려진 취약점 검토 | 사용 제한 의존성 없음, 알려진 위험과 업데이트 정책이 문서화됨 |
+| OSS-06 | 의존성 공개 적합성 (완료) | Backend/Frontend/Runner/컨테이너의 SBOM, dependency license, 알려진 취약점과 자동 업데이트 정책 공개 | 사용 제한 의존성 없음, 알려진 위험과 업데이트·재검토 정책이 문서화됨 |
 | OSS-07 | CI 공개 재현성 (완료) | 공개 CI에서 Backend, Frontend, OpenAPI/Orval, 문서, 보안·패키징 계약 실행 | 저장소 전용 Secret 없이 기본 pull request 검증이 통과하고 실패 artifact를 확인 가능 |
 
 루트 `LICENSE`에는 Apache License 2.0 전문을 두고 copyright owner를 `Jae Youn Kim`으로 명시했다. 현재 별도 고지가 필요한 제3자 자료가 없어 `NOTICE`는 만들지 않았다. `CODE_OF_CONDUCT.md`, 구조화된 bug/feature issue form, pull request template와 기여·보안 문서를 서로 맞춰 OSS-05를 완료했다.
@@ -41,7 +41,8 @@
 - README에 기능, 구조, Mermaid 실행 구조, clean-clone 빠른 시작, 설치·보안·지원 범위를 추가했다. 격리 설치에서 직접 확인한 Dashboard와 Kubernetes Console/Cook Book 화면은 계정, cluster 식별자와 내부 주소를 마스킹해 `docs/assets/screenshots/`에 두고 README에서 설명한다. 문서 검증은 두 화면 asset의 존재도 확인하므로 OSS-04를 완료했다.
 - Backend 186개, Command Runner 46개, Frontend production 19개 dependency의 license 누락 0건과 allowlist 통과를 확인했다. production npm audit는 High 0/Critical 0이고 개발 도구의 Moderate 3/High 7/Critical 2는 major upgrade 검증이 필요해 공개 정책에 기록했다.
 - `supply-chain` workflow가 PR, `main`, 주간 일정에서 runtime SBOM/license gate와 네 container Trivy scan을 실행하도록 추가했다. 공개 GitHub runner에서 quality gate가 통과했고, 성공·실패 여부와 무관하게 container별 SBOM artifact가 생성됨을 확인해 OSS-07을 완료했다.
-- 최초 container scan에서 Frontend/Java runtime의 수정 가능한 OS CVE를 확인해 NGINX unprivileged 1.31.5 Alpine 3.24와 Temurin 17 Noble로 기반 이미지를 갱신했다. 후속 scan에서 확인한 Tomcat은 10.1.59, Backend Netty는 4.1.137, PostgreSQL JDBC는 42.7.12로 보강하고 사용하지 않는 MCP 전이 dependency와 중복 kubectl을 제거했다. Command Runner의 최신 1.34 patch kubectl은 수정 Go toolchain을 포함한 다음 upstream patch가 필요하며, 최신 Keycloak 26.7.3의 Netty Critical `CVE-2026-75595`와 함께 공개 blocker로 유지한다.
+- 최초 container scan에서 Frontend/Java runtime의 수정 가능한 OS CVE를 확인해 NGINX unprivileged 1.31.5 Alpine 3.24와 Temurin 17 Noble로 기반 이미지를 갱신했다. 후속 scan에서 확인한 Tomcat은 10.1.59, Backend Netty는 4.1.137, PostgreSQL JDBC는 42.7.12로 보강하고 사용하지 않는 MCP 전이 dependency와 중복 kubectl을 제거했다. Command Runner의 최신 1.34 patch kubectl은 수정 Go toolchain을 포함한 다음 upstream patch가 필요하며, 최신 Keycloak 26.7.3의 Netty Critical `CVE-2026-75595`와 함께 `SEC-01` 대기 위험으로 추적한다.
+- Maven, npm, Docker와 GitHub Actions는 주간 Dependabot pull request로 갱신 후보를 받고 자동 merge 없이 기존 quality/supply-chain gate로 검토한다. 공개에 필요한 dependency inventory, license 판정, 위험 공개와 재검토 절차가 갖춰져 OSS-06을 완료했으며, 적용 가능한 upstream image가 없는 두 위험은 아래 `SEC-01`로 분리한다.
 
 ## 3. 공개를 차단하지 않는 운영 검증
 
@@ -55,6 +56,12 @@
 - 실제 조직 계정과 원격 cluster를 이용한 Tenant/RBAC 수용시험
 
 로컬에서는 앱·Keycloak DB 격리 복구, guarded Helm rollback, SBOM, production dependency audit, 배포 image identity, 네 역할과 두 Tenant 격리, A-1~A-6 및 bounded soak가 통과했다. 이 증적은 프로젝트 품질과 예제 배포의 신뢰성을 높이지만 외부 환경의 운영 보증을 의미하지 않는다.
+
+### SEC-01 upstream runtime 보안 patch 추적 (대기)
+
+Command Runner의 kubectl 1.34.11과 Keycloak 26.7.3 image에는 프로젝트가 단독으로 안전하게 교체할 수 없는 upstream dependency 취약점이 남아 있다. 이 상태는 위험을 숨기지 않고 소스와 검증 도구를 공개하는 것을 차단하지 않지만, 해당 image를 검토 없이 운영 환경에 배포해도 안전하다는 의미는 아니다.
+
+완료 기준: 같은 Kubernetes minor의 수정 kubectl과 수정된 Keycloak 안정 image를 적용하고 Runner/Kubernetes 명령 회귀, OIDC/Realm bootstrap 회귀와 네 container scan을 통과한다.
 
 ## 4. P1 우선 개선 후보
 
@@ -90,8 +97,8 @@
 
 ## 6. 다음 권장 실행 순서
 
-1. `OSS-06`: 수정 Go toolchain을 포함한 Kubernetes patch와 Netty 수정본을 포함한 Keycloak 안정 patch가 나오면 갱신하고 네 container scan을 통과시킨다.
-2. 개발 도구 dependency major upgrade를 generated-client, unit/E2E 계약과 함께 별도 검증한다.
-3. 공개 준비가 끝난 뒤 P1-03을 작은 characterization-test 단위로 계속 분리한다.
+1. `SEC-01`: 수정 Go toolchain을 포함한 Kubernetes patch와 Netty 수정본을 포함한 Keycloak 안정 patch가 나오면 갱신하고 네 container scan을 통과시킨다.
+2. Dependabot이 제안하는 개발 도구 major upgrade는 generated-client, unit/E2E 계약과 함께 별도 검증한다.
+3. P1-03을 작은 characterization-test 단위로 계속 분리한다.
 
 새 기능을 제안할 때는 이 문서에 단순 후보를 계속 덧붙이지 않는다. 사용자 가치, 운영 책임, 데이터/보안 경계, API/UI와 완료 기준이 확정된 큰 기능만 별도 feature 문서로 설계하고, 구현 완료 즉시 현재 제품 명세에 병합한다.

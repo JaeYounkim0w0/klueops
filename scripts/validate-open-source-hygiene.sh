@@ -25,6 +25,10 @@ fi
   echo "Generated OpenAPI client is missing." >&2
   exit 3
 }
+[[ -s .github/dependabot.yml ]] || {
+  echo "Dependabot update policy is missing." >&2
+  exit 3
+}
 
 scan_args=(
   --hidden
