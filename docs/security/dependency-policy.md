@@ -36,7 +36,7 @@
 
 최신 안정 Keycloak 26.7.3 image에는 2026-09-14 기준 `io.netty:netty-handler` 4.1.136.Final의 Critical `CVE-2026-75595`가 남아 있고 Trivy가 4.1.137.Final을 수정 버전으로 제시한다. 해당 library는 upstream Keycloak image에 포함되므로 임의 교체나 예외 처리하지 않는다. 수정된 Keycloak 안정 patch가 제공되면 image를 갱신하고 전체 identity 회귀 테스트와 container scan을 다시 수행한다.
 
-Backend 후속 scan에서 사용하지 않는 MCP 기능의 전이 `mcp-core` 0.18.2와 Fabric8/Vert.x 경로의 Netty 4.1.135가 탐지됐다. MCP 전이 dependency는 제외하고 Netty는 4.1.137.Final로 고정했으며 전체 Backend 회귀 테스트로 호환성을 검증한다.
+Backend 후속 scan에서 사용하지 않는 MCP 기능의 전이 `mcp-core` 0.18.2와 Fabric8/Vert.x 경로의 Netty 4.1.135가 탐지됐다. MCP 전이 dependency는 제외하고 Netty는 4.1.137.Final로 고정했다. 이어 PostgreSQL JDBC 42.7.11의 High `CVE-2026-54291`을 확인해 수정본 42.7.12로 갱신했으며, 각 변경은 전체 Backend 회귀 테스트로 호환성을 검증한다.
 
 Command Runner의 kubectl 1.34.11은 Kubernetes 1.34 계열의 현재 최신 patch지만 Go 1.26.5로 빌드돼 수정 가능한 High 취약점 8건이 남아 있다. Trivy가 제시하는 최소 Go 수정본은 1.26.6이며, 다음 Kubernetes patch 일정은 2026-09-15다. 패키지 Backend는 kubectl을 실행하지 않으므로 중복 바이너리를 제거했고 Runner만 upstream 보안 patch를 기다린다. Keycloak과 kubectl의 두 upstream 항목이 해소되기 전 `supply-chain` workflow는 의도적으로 실패하며 OSS-06 완료로 판정하지 않는다.
 
