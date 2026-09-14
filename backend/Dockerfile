@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn -q -DskipTests package
 
 # Run only the packaged jar on a smaller JRE image as a numeric non-root user.
-FROM eclipse-temurin:17-jre-noble
+FROM eclipse-temurin:25-jre-noble
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/* \
