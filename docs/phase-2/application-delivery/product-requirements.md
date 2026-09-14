@@ -8,7 +8,7 @@
 Application Delivery는 Tenant 사용자가 Helm Chart를 검색하거나 직접 등록하고, 원본 Chart를 변경하지 않은 채 Custom Values를 작성해 권한이 있는 Kubernetes Cluster와 Namespace에 배포하는 기능이다.
 
 ```text
-Chart 검색/등록 → Tenant Library → Custom Values → Preview → 승인 → Helm 배포 → Release 운영
+Chart 검색/등록 → Tenant Library → Custom Values → Target/Exposure → Preview → 승인 → Helm 배포 → Application 운영
 ```
 
 Application은 이 기능에서 하나의 Helm Release를 의미한다. 기존 Kubernetes workload 자동 발견, Argo CD/Flux 연동, GitOps Controller 제공은 포함하지 않는다.
@@ -23,6 +23,10 @@ Application은 이 기능에서 하나의 Helm Release를 의미한다. 기존 K
 - LLM이 사용자 요구와 sanitized Cluster capability를 근거로 Values patch를 제안한다.
 - Chart, Values, 생성 manifest, Cluster scope와 RBAC를 결정론적으로 검증한다.
 - preview, exact confirmation, async job, audit와 사후 health 검증을 거쳐 Helm install/upgrade/rollback/uninstall을 수행한다.
+- 기존 Namespace를 기본 대상으로 사용하고 권한·정책이 허용하는 경우에만 Namespace 생성을 지원한다.
+- Chart가 만든 Service를 Internal only, Chart-managed route 또는 KlueOps-managed HTTPRoute/Ingress로 노출한다.
+- 배포 후 Application 상세에서 Workload, Pod, Service, 접근 URL, Route/DNS/TLS와 Release history를 함께 운영한다.
+- Ollama endpoint의 설치 모델을 조회하고 9B 이하 모델을 관리자 승인으로 추가해 AI 목적별로 라우팅한다.
 - Application Delivery를 사용하지 않는 설치에서는 Helm Runner와 background work를 비활성화한다.
 
 ## 3. 비목표
@@ -53,16 +57,20 @@ Application은 이 기능에서 하나의 Helm Release를 의미한다. 기존 K
 Applications
 ├─ Discover
 │  ├─ Artifact Hub 검색
-│  └─ Repository/OCI/Upload 가져오기
+│  └─ URL로 Chart 직접 가져오기
 ├─ Chart Library
-│  ├─ Tenant Chart
-│  ├─ Immutable Chart Version
+│  ├─ Charts와 Immutable Version
+│  ├─ Sources: Helm Repository/OCI Registry
+│  ├─ Uploads
 │  └─ Values Profile
-└─ Releases
-   ├─ Install/Upgrade
-   ├─ Status/History
-   ├─ Rollback
-   └─ Uninstall
+├─ Deployed Applications
+│  ├─ Workloads/Pods
+│  ├─ Network & Endpoints
+│  ├─ Configuration/Resources
+│  └─ History/Operations
+└─ Operations
+   ├─ Install/Upgrade/Rollback/Uninstall
+   └─ Job progress와 cleanup
 ```
 
 ## 6. 핵심 사용자 흐름
@@ -88,6 +96,10 @@ Artifact Hub 공개 API는 package search, Helm package/version 상세, values, 
 
 Browser가 임의 URL을 직접 fetch하지 않는다. Backend가 허용 scheme, DNS/IP, redirect, TLS와 size를 검사해 SSRF를 차단한다. Private source credential은 Tenant scope로 암호화하며 저장 후 다시 표시하지 않는다.
 
+Discover의 `URL로 직접 가져오기`는 특정 Chart/version을 한 번 조회해 Tenant Library로 import하는 흐름이다. Chart Library의 `Sources`는 반복 사용할 Helm Repository/OCI Registry, credential, 동기화와 health를 영구 관리한다. 직접 가져오기 중 `이 Source를 Tenant에 저장`을 선택한 경우에만 Source가 등록된다.
+
+Import 상태는 `IMPORTING → VALIDATING → READY | REJECTED`로 노출하며 `READY` 이후 Chart Library에 배포 가능한 버전으로 표시한다.
+
 ### 6.3 Custom Values
 
 1. immutable Chart version을 선택한다.
@@ -96,23 +108,54 @@ Browser가 임의 URL을 직접 fetch하지 않는다. Backend가 허용 scheme,
 4. schema/type/unknown key와 Secret pattern을 검사한다.
 5. 저장 시 전체 values, parent revision, author, SHA-256과 redacted diff를 기록한다.
 
-### 6.4 배포
+### 6.4 대상과 Namespace
+
+1. 사용자는 Tenant와 Workspace에 연결되고 `application:deploy` 권한이 있는 Cluster를 선택한다.
+2. 기본적으로 접근 가능한 기존 Namespace만 선택한다.
+3. `namespace:create` capability와 Cluster 정책이 모두 허용할 때만 새 Namespace 생성을 제공한다.
+4. 새 Namespace 계획에는 ResourceQuota, LimitRange, 기본 NetworkPolicy와 소유 정책을 Preview한다.
+5. Application uninstall은 공유 Namespace를 삭제하지 않는다. KlueOps 전용 Namespace 삭제는 별도 plan과 exact confirmation을 요구한다.
+
+Release 이름은 `Cluster + Namespace` 안에서 유일해야 한다.
+
+### 6.5 Exposure와 도메인
+
+배포 Wizard에 `Exposure` 단계를 두고 다음 모드를 제공한다.
+
+| 모드 | 동작 | 기본값 |
+| --- | --- | --- |
+| `INTERNAL_ONLY` | Chart가 생성한 ClusterIP Service만 사용 | 기본 |
+| `CHART_MANAGED` | Chart Values로 Ingress/HTTPRoute/LoadBalancer를 생성 | Chart가 명시적으로 지원할 때 |
+| `KLUEOPS_MANAGED` | 렌더링된 Service/Port에 companion HTTPRoute 또는 Ingress 연결 | 사용자가 선택할 때 |
+
+KlueOps-managed Exposure 입력은 Gateway/Listener, hostname, path, backend Service/Port, TLS와 DNS mode다. 예를 들어 `nginx.cluster.co.kr`은 wildcard DNS가 Gateway를 가리키면 별도 DNS 변경 없이 hostname으로 사용한다. 그렇지 않으면 ExternalDNS/DNS Provider 연동을 사용하거나 `DNS 설정 필요` 상태와 필요한 record를 사용자에게 안내한다.
+
+HTTPRoute는 Gateway API capability, parent Gateway의 allowedRoutes, Service/Port와 `Accepted`/`ResolvedRefs` 조건을 사전·사후 검사한다. Gateway API가 없으면 정책에 따라 Ingress 또는 Internal only를 제안한다. Chart가 이미 Route를 생성하면 중복 companion resource를 만들지 않는다.
+
+TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-manager 연동만 사용한다. Certificate와 DNS를 자동 생성하는 것처럼 표시하지 않고 실제 연동 상태를 구분한다.
+
+### 6.6 배포
 
 1. Chart version과 Values Profile revision을 고정한다.
-2. Tenant에 속한 Cluster와 허용 Namespace를 선택한다.
-3. render, policy, live diff와 RBAC preflight를 실행한다.
-4. 생성·변경·삭제 resource, cluster-scope, hook와 위험 설정을 표시한다.
-5. exact confirmation 후 async Helm job을 시작한다.
-6. Job Dock에서 진행을 추적하고 성공 후 Release/Pod health를 검증한다.
+2. Tenant에 속한 Cluster, 허용 Namespace와 고유 Release 이름을 선택한다.
+3. Exposure mode와 Service/Port/hostname/TLS/DNS를 선택한다.
+4. render, policy, live diff와 RBAC/Gateway preflight를 실행한다.
+5. Helm resource와 companion resource의 생성·변경·삭제, cluster-scope, hook와 위험 설정을 표시한다.
+6. exact confirmation 후 async Helm job을 시작한다.
+7. Job Dock에서 진행을 추적하고 성공 후 Release/Pod/Endpoint health를 검증한다.
 
-### 6.5 Release 운영
+### 6.7 Application 운영
 
-- Status/manifest/values 조회
+- Overview, Workload/Pod health, restart와 Event 조회
+- Service, HTTPRoute/Ingress, Gateway, DNS/TLS 상태와 접근 URL 조회
+- 적용 Values, rendered resource와 companion resource 조회
 - Chart 또는 Values revision upgrade preview
 - Helm history와 revision rollback
-- uninstall preview와 exact confirmation
+- uninstall preview, PVC/DNS/TLS/companion resource 보존 선택과 exact confirmation
 - 실행 전후 resource snapshot, output hash와 Audit
 - Application/Namespace AI Analysis로 이동
+
+Application은 KlueOps가 배포한 Helm Release만 대상으로 하며 Cluster의 기존 workload 자동 발견과 소유권 편입은 하지 않는다. Uninstall은 Application Release와 연결된 companion resource만 정리하고 Tenant Library Chart는 삭제하지 않는다. Chart artifact 삭제는 별도의 `chart:manage` 작업이다.
 
 ## 7. Custom Values와 AI Assistant
 
@@ -159,13 +202,16 @@ Artifact Hub의 official/verified publisher 표시는 검색 판단 근거이지
 | --- | --- |
 | `chart:read` | Discover와 Tenant Library 조회 |
 | `chart:import` | 외부 Chart import와 `.tgz` upload |
-| `chart:manage` | source/credential, archive와 retention 관리 |
+| `chart:manage` | source/credential, archive, retention과 미사용 artifact 삭제 |
 | `values:edit` | Values Profile 생성·revision 저장·AI 제안 |
 | `application:read` | Release와 history 조회 |
 | `application:deploy` | install/upgrade와 preview |
 | `application:rollback` | Helm revision rollback |
-| `application:delete` | uninstall과 Library artifact 삭제 |
+| `application:delete` | uninstall plan 실행과 companion resource cleanup |
+| `application:exposure` | HTTPRoute/Ingress/DNS/TLS exposure 계획과 변경 |
+| `namespace:create` | 정책에 맞는 Namespace 생성 계획과 실행 |
 | `ai-provider:manage` | Provider profile과 Tenant 허용 정책 관리 |
+| `ai-model:manage` | Ollama local model 조회·다운로드·검증·삭제 |
 
 모든 object 조회와 mutation은 Tenant → Workspace → Cluster → Namespace scope를 application service에서 다시 평가한다. HTTP method나 Frontend 표시 여부만 신뢰하지 않는다.
 
@@ -177,12 +223,15 @@ Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한�
 2. 선택 version 다운로드, SHA-256 및 provenance 상태 표시
 3. Tenant A/B Chart와 Values Profile 상호 비노출
 4. schema form/YAML/AI patch의 동일 결과와 invalid key 차단
-5. manifest preview, 위험 resource와 RBAC preflight 표시
-6. install 성공, Release/Pod health와 audit 확인
-7. Values upgrade, history, rollback 성공
-8. uninstall preview, exact confirmation과 bounded cleanup
-9. Runner timeout/cancel/restart recovery와 Secret/output 마스킹
-10. Ollama/OpenAI/Google GenAI profile별 fake adapter 회귀 및 외부 전송 동의 검증
+5. 기존 Namespace 선택과 권한 있는 Namespace 생성 plan 검증
+6. Internal/Chart-managed/KlueOps-managed Exposure preview와 HTTPRoute condition 검증
+7. manifest preview, 위험 resource와 RBAC/Gateway preflight 표시
+8. install 성공, Application/Pod/Endpoint health와 audit 확인
+9. Values upgrade, history, rollback 성공
+10. uninstall preview, PVC/companion 보존 선택, exact confirmation과 bounded cleanup
+11. Runner timeout/cancel/restart recovery와 Secret/output 마스킹
+12. 9B 이하 Ollama model install/검증/목적별 routing과 사용 중 삭제 차단
+13. Ollama/OpenAI/Google GenAI profile별 fake adapter 회귀 및 외부 전송 동의 검증
 
 ## 11. 단계별 구현
 
@@ -192,6 +241,7 @@ Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한�
 | P2-B | Artifact Hub/repository/OCI/upload, Tenant Chart Library |
 | P2-C | Schema Form, YAML, Values Profile/version/diff |
 | P2-D | AI Provider profile과 Values Assistant |
-| P2-E | render/policy/RBAC/live diff와 승인 UX |
+| P2-E | target/Namespace, Exposure, render/policy/RBAC/Gateway/live diff와 승인 UX |
 | P2-F | Helm Runner install/upgrade/status/history/rollback/uninstall |
-| P2-G | AI Analysis/Incident 연결, 전체 수용시험과 문서화 |
+| P2-G | Deployed Application 상세, Endpoint, companion cleanup |
+| P2-H | AI Analysis/Incident 연결, 전체 수용시험과 문서화 |

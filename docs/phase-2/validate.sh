@@ -13,6 +13,7 @@ required_files=(
   "$delivery_root/ui-mockups/index.html"
   "$delivery_root/ui-mockups/styles.css"
   "$delivery_root/ui-mockups/modals.css"
+  "$delivery_root/ui-mockups/phase2-additions.css"
   "$delivery_root/ui-mockups/app.js"
 )
 
@@ -21,12 +22,18 @@ required_screenshots=(
   "02-library.png"
   "03-values-studio.png"
   "04-deployment-preview.png"
-  "05-releases.png"
+  "05-applications.png"
   "06-ai-provider-settings.png"
   "07-import-confirmation.png"
   "08-deploy-exact-confirmation.png"
   "09-rollback-confirmation.png"
   "10-provider-profile-modal.png"
+  "11-sources.png"
+  "12-exposure.png"
+  "13-application-detail.png"
+  "14-local-models.png"
+  "15-uninstall-plan.png"
+  "16-local-model-add.png"
 )
 
 for file in "${required_files[@]}"; do
@@ -40,7 +47,7 @@ for screenshot in "${required_screenshots[@]}"; do
   }
 done
 
-for screen in discover library values preview releases ai-settings; do
+for screen in discover library sources values exposure preview applications application-detail ai-settings models; do
   grep -q "data-screen-panel=\"$screen\"" "$delivery_root/ui-mockups/index.html" || {
     echo "Missing mockup screen: $screen" >&2
     exit 1
@@ -52,5 +59,9 @@ grep -q 'externalTransferAllowed=false' "$delivery_root/ai-provider-and-model-st
 grep -q "Backend/Frontend 구현.*미착수" "$phase2_root/README.md"
 grep -q "클릭·Popup·Confirmation 상세 명세" "$delivery_root/ui-ux-screen-design.md"
 grep -q "data-exact-input" "$delivery_root/ui-mockups/app.js"
+grep -q "Target & Exposure" "$delivery_root/ui-ux-screen-design.md"
+grep -q "Application Detail" "$delivery_root/ui-ux-screen-design.md"
+grep -q "Local Models" "$delivery_root/ui-ux-screen-design.md"
+grep -q "EMBEDDED_DB" "$delivery_root/architecture-design.md"
 
 echo "Phase 2 documents and UI artifacts are complete."

@@ -221,6 +221,55 @@ Platform Admin 화면은 다음 순서를 사용한다.
 
 Tenant Admin은 key를 보지 않고 purpose별 profile/model, 외부 전송과 fallback만 선택한다. 변경은 새 요청부터 적용하며 실행 중인 분석 job의 provider/model은 바꾸지 않는다.
 
+### 10.1 Ollama Local Model 관리
+
+Ollama Provider Profile에는 `Models 관리` 진입점을 제공한다. 현재 `qwen2.5-coder:7b`를 유지한 채 여러 model tag를 설치할 수 있으며 Router가 요청 purpose의 정확한 model tag를 Ollama 요청에 지정한다.
+
+```text
+Platform Admin
+→ AI Providers
+→ Default Ollama
+→ Models 관리
+→ 후보 또는 model tag 선택
+→ 크기/parameter/license 확인
+→ Download Job
+→ Capability/회귀 평가
+→ Tenant 사용 허용
+```
+
+Ollama API adapter는 다음 endpoint만 allowlist한다.
+
+| Endpoint | 용도 |
+| --- | --- |
+| `GET /api/tags` | 설치된 model, digest, size, parameter와 quantization 조회 |
+| `POST /api/show` | license, capability와 context metadata 검증 |
+| `POST /api/pull` | 승인된 model tag 다운로드와 progress streaming |
+| `DELETE /api/delete` | 미사용 model 삭제 |
+| `GET /api/ps` | 현재 loaded model과 memory 상태 조회 |
+
+공식 API: <https://docs.ollama.com/api/tags>, <https://docs.ollama.com/api/pull>, <https://docs.ollama.com/api-reference/show-model-details>, <https://docs.ollama.com/api/ps>
+
+- `parameter_size` 파싱 결과가 9B를 초과하거나 불명확하면 활성화하지 않는다.
+- 임의 URL/파일/Modelfile 입력은 MVP에서 허용하지 않고 Ollama library model tag만 받는다.
+- 다운로드 전 예상 크기, 남은 volume, license와 source를 보여준다.
+- model pull/delete는 Platform Admin 전용 async Job이며 중복 요청과 동시 download를 제한한다.
+- 현재 routing, fallback 또는 실행 중 Job이 참조하는 model은 삭제하지 않는다.
+- `DOWNLOADING → INSTALLED → VALIDATING → CANDIDATE → APPROVED | REJECTED` 상태를 기록한다.
+- Candidate는 회귀 fixture 실행에만 사용할 수 있고 Tenant production routing에는 Approved model만 노출한다.
+- 여러 model을 디스크에 보관할 수 있지만 loaded model 수, keep-alive와 요청 queue는 Provider profile resource budget으로 제한한다.
+
+### 10.2 목적별 Local routing
+
+Tenant Admin은 Platform이 허용한 Installed/Approved model 중에서 목적별로 선택한다.
+
+```text
+ANALYSIS    → Default Ollama / granite3.3:8b
+CHAT        → Default Ollama / qwen3.5:9b
+HELM_VALUES → Default Ollama / qwen3:8b
+```
+
+동일 Provider 안의 model 변경도 routing policy revision과 Audit을 남긴다. 첫 요청의 model load 지연, 평균 latency, schema validity와 최근 회귀 결과를 selector에 표시한다. 설치되어 있지 않거나 9B를 초과하거나 Approved가 아닌 model은 저장을 차단한다.
+
 ## 11. 비용과 관측성
 
 외부 Provider는 usage metadata가 있을 때 다음을 기록한다.

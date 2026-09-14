@@ -1,0 +1,70 @@
+.meaning-strip { display: grid; grid-template-columns: 1fr 42px 1fr; align-items: center; background: #eef5ff; border: 1px solid #c9dcfa; border-radius: 9px; margin-bottom: 17px; padding: 13px 18px; }
+.meaning-strip div { display: flex; flex-direction: column; gap: 4px; }
+.meaning-strip b { font-size: 11px; color: #1d5ba9; }
+.meaning-strip span { font-size: 10px; color: #62748d; }
+.meaning-strip i { text-align: center; color: #4f7ebc; font-style: normal; font-weight: 800; }
+.source-policy { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--line); border-radius: 9px; margin-top: 16px; padding: 14px 17px; }
+.source-policy strong { font-size: 11px; }
+.source-policy p { margin: 4px 0 0; color: #6f7d91; font-size: 10px; }
+.wide-stepper { max-width: 870px; }
+.wide-stepper i { width: 65px; }
+.exposure-grid { display: grid; grid-template-columns: minmax(680px, 1fr) 350px; gap: 17px; }
+.exposure-main { display: flex; flex-direction: column; gap: 13px; }
+.form-card, .endpoint-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.form-card .card-head p, .endpoint-card .card-head p { margin: 4px 0 0; color: #788597; font-size: 9px; }
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; padding: 17px; }
+.field-grid label { display: flex; flex-direction: column; gap: 7px; color: #536177; font-size: 10px; font-weight: 700; }
+.field-grid input, .field-grid select { height: 38px; border: 1px solid #d0d9e5; border-radius: 6px; background: #fff; padding: 0 10px; color: #26354b; }
+.field-grid input:disabled { background: #f3f5f8; color: #6d7a8d; }
+.choice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; padding: 16px 17px 2px; }
+.choice-grid button { display: flex; flex-direction: column; gap: 5px; min-height: 62px; border: 1px solid #d5dce6; border-radius: 7px; background: #fff; padding: 12px; text-align: left; color: #405067; }
+.choice-grid button.selected { border-color: #6ea7f4; background: #eef5ff; box-shadow: 0 0 0 1px #bcd7fb; }
+.choice-grid b { font-size: 10px; }
+.choice-grid span { color: #778496; font-size: 9px; }
+.route-fields { padding-top: 12px; }
+.capability-panel { box-shadow: var(--shadow); }
+.endpoint-preview { display: flex; flex-direction: column; gap: 5px; background: #eaf8f1; border-radius: 7px; margin-top: 16px; padding: 13px; }
+.endpoint-preview small { color: #4e806d; font-size: 8px; font-weight: 800; }
+.endpoint-preview strong { color: #126f4d; font-size: 12px; }
+.endpoint-preview span { color: #5f7c72; font-size: 9px; }
+.danger-outline { height: 38px; border: 1px solid #db777b; border-radius: 7px; background: #fff; color: #b63f44; padding: 0 15px; font-weight: 750; }
+.app-detail-head h1 { display: flex; align-items: center; gap: 10px; }
+.app-tabs { display: flex; gap: 2px; background: #fff; border: 1px solid var(--line); border-radius: 9px 9px 0 0; padding: 0 12px; }
+.app-tabs button { height: 46px; border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 0 13px; color: #68758a; font-size: 10px; }
+.app-tabs button.active { border-bottom-color: var(--blue); color: #185fbe; font-weight: 750; }
+.app-tabs span { background: #eef1f5; border-radius: 9px; padding: 2px 5px; margin-left: 3px; font-size: 8px; }
+.app-detail-grid { display: grid; grid-template-columns: minmax(680px, 1fr) 330px; gap: 17px; margin-top: 14px; }
+.application-main { display: flex; flex-direction: column; gap: 13px; }
+.app-summary { margin-bottom: 0; }
+.app-summary > div { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.app-summary .small-value { font-size: 15px; }
+.endpoint-card .card-head { padding: 13px 15px; }
+.endpoint-line { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid var(--line); }
+.endpoint-line div { display: flex; flex-direction: column; gap: 4px; }
+.endpoint-line small { color: #7a8799; font-size: 8px; font-weight: 800; }
+.endpoint-line a { color: #1765cc; font-size: 13px; font-weight: 750; text-decoration: none; }
+.route-chain { display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #f8fafc; }
+.route-chain span { min-width: 120px; color: #798698; font-size: 9px; line-height: 1.55; }
+.route-chain b { color: #27364c; font-size: 10px; }
+.route-chain i { color: #8c9aab; font-style: normal; }
+.condition-row { display: flex; gap: 8px; padding: 12px 15px; }
+.condition-row span { background: #eaf8f1; border-radius: 12px; color: #537568; padding: 5px 8px; font-size: 9px; }
+.condition-row b { color: #147552; }
+.ownership-panel h2 { margin: 0 0 12px; font-size: 15px; }
+.ownership-panel .kv { padding: 13px 0 17px; }
+.ownership-panel button + button { margin-top: 8px; }
+.resource-banner { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1.2fr; background: #17243b; border-radius: 9px; margin-bottom: 16px; padding: 16px 18px; color: #fff; }
+.resource-banner div { display: flex; flex-direction: column; gap: 5px; border-right: 1px solid #34445d; padding: 0 16px; }
+.resource-banner div:first-child { padding-left: 0; }
+.resource-banner div:last-child { border-right: 0; }
+.resource-banner small { color: #91a2b9; font-size: 8px; font-weight: 800; }
+.resource-banner strong { font-size: 11px; }
+.model-table td:first-child { display: flex; flex-direction: column; gap: 3px; }
+.model-table td small { color: #8290a2; font-size: 8px; }
+.model-flow { display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid var(--line); border-radius: 9px; margin-top: 15px; padding: 15px; }
+.model-flow div { display: flex; align-items: center; gap: 8px; }
+.model-flow b { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #eaf2ff; color: var(--blue); font-size: 10px; }
+.model-flow span { color: #3f4e65; font-size: 10px; line-height: 1.4; }
+.model-flow small { color: #8793a4; font-size: 8px; }
+.model-flow i { width: 55px; height: 1px; background: #d7dee7; margin: 0 12px; }
+@media (max-width: 1250px) { .exposure-grid, .app-detail-grid { grid-template-columns: 1fr; } .resource-banner { grid-template-columns: 1fr 1fr; gap: 14px; } }

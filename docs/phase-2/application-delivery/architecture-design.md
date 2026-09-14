@@ -20,10 +20,14 @@ flowchart LR
     BFF --> Delivery[Application Delivery Module]
     Delivery --> AH[Artifact Hub API]
     Delivery --> Sources[Helm / OCI Sources]
-    Delivery --> DB[(PostgreSQL Metadata + Chart Blob)]
+    Delivery --> DB[(PostgreSQL Metadata)]
+    Delivery --> Artifacts[ChartArtifactStorePort]
+    Artifacts --> Blob[(PostgreSQL bytea / S3)]
+    Artifacts --> Registry[External OCI Registry]
     Delivery --> AI[AI Provider Router]
     Delivery --> Runner[Helm Deployment Runner]
     Runner --> Cluster[Target Kubernetes Cluster]
+    Runner --> Gateway[Gateway API / Ingress]
 ```
 
 Frontend는 하나를 유지한다. Browser가 Artifact Hub, Chart repository, AI Provider 또는 Runner에 직접 접근하지 않는다.
@@ -36,7 +40,8 @@ io.strato.aiops.applicationdelivery
 │  ├─ chart
 │  ├─ values
 │  ├─ deployment
-│  └─ release
+│  ├─ exposure
+│  └─ application
 ├─ application
 │  ├─ port.in
 │  ├─ port.out
@@ -68,13 +73,16 @@ ArchUnit gate:
 - Chart artifact/version과 Values Profile 관리
 - AI Values suggestion orchestration
 - preview 요청과 정책 결과 조립
+- Cluster/Namespace target, Release name과 Namespace 생성 계획
+- Chart-managed/KlueOps-managed Exposure 계획과 Gateway/DNS/TLS capability 조립
 - exact confirmation과 async job lifecycle
-- Release metadata, history, audit와 사후 검증
+- Application, Release metadata, workload/endpoint health, history, audit와 사후 검증
 
 ### 4.2 Helm Deployment Runner
 
 - Chart archive 안전 검사와 bounded unpack
 - `helm lint`, `helm template`, install/upgrade/status/history/rollback/uninstall
+- Backend가 승인한 companion HTTPRoute/Ingress의 server-side apply/delete와 condition 조회
 - argv allowlist, namespace/release 고정과 timeout/cancel
 - 임시 kubeconfig, registry config, Chart와 Values의 job 종료 cleanup
 - NDJSON progress와 bounded stdout/stderr
@@ -82,6 +90,14 @@ ArchUnit gate:
 Runner는 DB, Ollama, Artifact Hub와 사용자 Browser에 접근하지 않는다. Backend만 token-authenticated ClusterIP로 호출하고 NetworkPolicy로 target API/source registry egress를 제한한다.
 
 ### 4.3 Chart 저장
+
+metadata는 항상 PostgreSQL에 저장하고 artifact payload는 `ChartArtifactStorePort` 뒤에서 배포 profile에 따라 선택한다.
+
+| Profile | Payload 저장 | 대상 | 판단 |
+| --- | --- | --- | --- |
+| `EMBEDDED_DB` | PostgreSQL `bytea` | 개인·개발·소규모 | 기본값, 추가 인프라 없음 |
+| `OBJECT_STORAGE` | S3-compatible object | 많은 Tenant/Chart, 큰 backup | 운영 권장 선택지 |
+| `EXTERNAL_OCI` | 기존 OCI registry를 digest로 참조하고 정책에 따라 cache | 조직 registry 보유 환경 | Registry 신규 설치 불필요 |
 
 MVP는 새 필수 인프라를 추가하지 않기 위해 gzip package를 PostgreSQL `bytea`로 저장한다.
 
@@ -91,7 +107,11 @@ MVP는 새 필수 인프라를 추가하지 않기 위해 gzip package를 Postgr
 - compressed/uncompressed size, file count와 path 검사
 - chart payload를 application log, audit 또는 AI prompt에 기록하지 않음
 
-`ChartArtifactStorePort`를 두어 대규모 설치는 이후 S3-compatible adapter로 교체할 수 있게 한다. DB backup 크기와 복구 시간을 readiness에 표시한다.
+`OBJECT_STORAGE`는 DB에 object key, digest, size와 backend type만 저장한다. `EXTERNAL_OCI`도 mutable tag가 아니라 digest로 고정하며 source 장애와 rollback을 견뎌야 하는 정책에서는 immutable local cache를 유지한다. DB backup 크기와 복구 시간을 readiness에 표시한다.
+
+KlueOps는 Harbor나 MinIO를 기본 dependency로 설치하지 않는다. 기존 인프라가 있으면 adapter로 연결하고 없는 소규모 설치는 Embedded DB를 사용한다.
+
+Helm OCI 참고: <https://docs.helm.sh/docs/topics/registries/>
 
 ## 5. Domain model
 
@@ -122,13 +142,39 @@ ValuesRevision
 DeploymentPlan
 - id, tenantId, workspaceId, clusterId, namespace
 - chartVersionId, valuesRevisionId, releaseName
+- namespacePlanId, exposurePlanId
 - renderedManifestHash, policyResultJson, expiresAt
 - confirmationText, status
 
-ApplicationRelease
+Application
 - id, tenantId, workspaceId, clusterId, namespace
+- name, currentReleaseId, health, endpointHealth
+
+ApplicationRelease
+- id, applicationId
 - releaseName, chartVersionId, valuesRevisionId
 - helmRevision, status, health, lastOperationId
+
+NamespacePlan
+- id, clusterId, namespace, mode: EXISTING | CREATE
+- quotaJson, limitRangeJson, networkPolicyProfile, policyResult
+
+ExposurePlan
+- id, applicationId, mode: INTERNAL_ONLY | CHART_MANAGED | KLUEOPS_MANAGED
+- routeKind: NONE | HTTP_ROUTE | INGRESS
+- gatewayRef, listenerName, hostname, path
+- backendService, backendPort, tlsMode, tlsSecretRef, dnsMode
+- renderedResourceHash, policyResult, expiresAt
+
+ApplicationEndpoint
+- id, applicationId, exposurePlanId
+- url, routeRef, gatewayAddress, dnsStatus, tlsStatus
+- acceptedStatus, resolvedRefsStatus, lastVerifiedAt
+
+ManagedCompanionResource
+- id, applicationId, operationId
+- apiVersion, kind, namespace, name, manifestHash
+- lifecycleStatus, retainedAt
 
 ReleaseOperation
 - id, releaseId, planId
@@ -165,7 +211,19 @@ interface HelmRunnerPort {
     OperationHandle execute(ApprovedHelmOperation operation);
     void cancel(OperationId operationId);
 }
+
+interface ExposureCapabilityPort {
+    ExposureCapabilities inspect(ClusterId clusterId, Namespace namespace);
+    ExposureStatus status(ExposureReference reference);
+}
+
+interface ManagedResourceRunnerPort {
+    ManagedResourceResult apply(ApprovedCompanionResources resources);
+    ManagedResourceResult delete(ApprovedCompanionResources resources);
+}
 ```
+
+Runner는 임의 YAML을 받지 않는다. Backend가 schema와 allowlist로 만든 HTTPRoute/Ingress companion resource만 typed request로 전달하며 Cluster/Namespace/Gateway/Service는 plan과 일치해야 한다.
 
 ## 7. API 초안
 
@@ -176,6 +234,9 @@ POST   /api/v2/application-delivery/charts/import
 POST   /api/v2/application-delivery/charts/upload
 GET    /api/v2/application-delivery/charts
 GET    /api/v2/application-delivery/charts/{chartId}/versions
+GET    /api/v2/application-delivery/chart-sources
+POST   /api/v2/application-delivery/chart-sources
+POST   /api/v2/application-delivery/chart-sources/{sourceId}/validate
 
 POST   /api/v2/application-delivery/values-profiles
 POST   /api/v2/application-delivery/values-profiles/{id}/revisions
@@ -185,7 +246,16 @@ GET    /api/v2/application-delivery/values-profiles/{id}/diff
 POST   /api/v2/application-delivery/plans
 GET    /api/v2/application-delivery/plans/{planId}
 POST   /api/v2/application-delivery/plans/{planId}/execute
+GET    /api/v2/application-delivery/targets/{clusterId}/namespaces
+POST   /api/v2/application-delivery/namespace-plans
+GET    /api/v2/application-delivery/exposure-capabilities/{clusterId}/{namespace}
+POST   /api/v2/application-delivery/exposure-plans
 
+GET    /api/v2/application-delivery/applications
+GET    /api/v2/application-delivery/applications/{applicationId}
+GET    /api/v2/application-delivery/applications/{applicationId}/resources
+GET    /api/v2/application-delivery/applications/{applicationId}/endpoints
+POST   /api/v2/application-delivery/applications/{applicationId}/refresh
 GET    /api/v2/application-delivery/releases
 GET    /api/v2/application-delivery/releases/{releaseId}
 POST   /api/v2/application-delivery/releases/{releaseId}/upgrade-plans
@@ -199,20 +269,35 @@ POST   /api/v2/application-delivery/releases/{releaseId}/uninstall-plans
 
 ```mermaid
 flowchart TD
-    Input[Chart + Values + Target] --> Archive[Archive safety]
+    Input[Chart + Values + Target + Exposure] --> Archive[Archive safety]
     Archive --> Metadata[Chart metadata/schema]
     Metadata --> Lint[helm lint]
     Lint --> Render[helm template]
     Render --> Policy[Manifest policy]
     Policy --> RBAC[SSAR/RBAC preflight]
-    RBAC --> Live[Live release/resource diff]
+    RBAC --> Gateway[Gateway/Route/DNS/TLS preflight]
+    Gateway --> Live[Live release + companion diff]
     Live --> Plan[Immutable expiring plan]
     Plan --> Confirm[Exact confirmation]
     Confirm --> Execute[Runner execute]
-    Execute --> Verify[Release + workload verification]
+    Execute --> Verify[Release + workload + endpoint verification]
 ```
 
 위험 신호는 `BLOCKED`, `REQUIRES_APPROVAL`, `WARNING`, `PASSED`로 표시한다. CRD, cluster-wide RBAC, webhook, privileged/host access, hook Job와 PVC 삭제 가능성은 별도 승인 없이는 실행하지 않는다.
+
+### 8.1 Exposure 실행 순서
+
+1. `helm template` 결과에서 Service와 chart-managed Ingress/HTTPRoute를 식별한다.
+2. Chart-managed route가 있으면 중복 companion 생성을 차단한다.
+3. KlueOps-managed mode는 Gateway API CRD, Gateway/Listener allowedRoutes, backend Service/Port와 RBAC를 검사한다.
+4. Helm install/upgrade 성공 후 승인된 companion resource를 적용한다.
+5. HTTPRoute `Accepted`와 `ResolvedRefs`, Gateway address, DNS와 TLS를 각각 독립 상태로 수집한다.
+6. Route 적용 실패 시 `REQUIRED` 정책은 Helm rollback, `BEST_EFFORT` 정책은 Application을 `RUNNING_ENDPOINT_DEGRADED`로 표시하고 cleanup/재시도를 제공한다.
+7. Rollback/Uninstall은 operation journal의 companion resource를 같은 plan에서 변경·정리한다.
+
+Wildcard DNS가 Gateway를 가리키는 경우 hostname만 등록한다. 그렇지 않으면 선택형 DNS Provider/ExternalDNS adapter가 있을 때만 자동화를 제공하고, 없는 경우 필요한 record와 `MANUAL_ACTION_REQUIRED`를 표시한다.
+
+Gateway API 참고: <https://gateway-api.sigs.k8s.io/reference/api-types/httproute/>, <https://gateway-api.sigs.k8s.io/guides/user-guides/http-routing/>
 
 ## 9. Chart acquisition 보안
 
@@ -236,6 +321,8 @@ flowchart TD
 - `--atomic`, `--wait`, timeout과 cleanup-on-fail 정책을 Chart 위험 등급별로 결정한다.
 - stdout/stderr는 Secret masking 후 상한까지 streaming하고 원본은 저장하지 않는다.
 - 취소/Pod 재시작 후 Helm release 상태를 조회해 `SUCCEEDED`, `FAILED`, `UNKNOWN_REQUIRES_REVIEW`로 복구한다.
+- Namespace 생성, Exposure apply와 cleanup도 동일 operation journal, idempotency key와 bounded retry를 사용한다.
+- Helm uninstall과 companion cleanup은 단계별 결과를 남기며 PVC, DNS와 TLS 보존 선택을 plan 밖에서 변경하지 않는다.
 
 ## 11. Feature flag와 배포
 
@@ -245,10 +332,16 @@ portal:
     enabled: false
     maximumChartBytes: 20971520
     maximumRenderedBytes: 5242880
+    artifactStore:
+      type: embedded-db
     artifactHub:
       enabled: true
     helmRunner:
       enabled: false
+    exposure:
+      gatewayApi: true
+      ingressFallback: false
+      dnsAutomation: false
 ```
 
 비활성화 시 메뉴와 API는 capability endpoint에 나타나지 않고 Runner Deployment/Service/NetworkPolicy를 렌더링하지 않는다. 기존 Cluster 분석과 Command Runner 동작에는 영향이 없어야 한다.
@@ -272,6 +365,12 @@ portal:
 - Tenant A/B object scope와 capability matrix test
 - fake AI provider의 schema/timeout/masking test
 - ephemeral namespace에서 install → upgrade → rollback → uninstall E2E
+- 기존/신규 Namespace 권한, quota와 uninstall 시 Namespace 보존 test
+- Internal/Chart-managed/KlueOps-managed Exposure와 중복 Route 차단 test
+- HTTPRoute Accepted/ResolvedRefs, Gateway allowedRoutes, DNS/TLS partial 상태 test
+- Application Workload/Pod/Endpoint 조회와 Tenant scope test
+- companion apply 실패, Helm rollback, uninstall cleanup과 retained resource test
+- Embedded DB/Object Storage/External OCI artifact store contract test
 - CRD/RBAC/hook/privileged/PVC 위험 Chart 차단 test
 - Runner cancel/restart/idempotency와 output truncation test
 - Application 기능 비활성화 시 기존 quality gate regression

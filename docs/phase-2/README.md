@@ -6,9 +6,11 @@
 
 ## Application Delivery
 
-Tenant별 Helm Chart 검색, 보관, Custom Values 작성과 Kubernetes Cluster 배포를 제공한다. GitOps, Chart template 편집과 외부 registry publish는 현재 범위가 아니다.
+Tenant별 Helm Chart 검색·보관, Custom Values, Cluster/Namespace 선택, HTTPRoute/Ingress Exposure와 Kubernetes 배포·Application 운영을 제공한다. GitOps, Chart template 편집과 외부 registry publish는 현재 범위가 아니다.
 
-Local LLM은 특정 계열에 고정하지 않고 9B 이하 후보를 동일 fixture로 평가한다. 외부 OpenAI/Google GenAI 연동은 Provider Profile과 Tenant별 데이터 외부 전송 동의를 통해 선택적으로 제공한다.
+Chart payload는 소규모 기본 설치에서 PostgreSQL에 보관하고 대규모 설치는 S3-compatible storage 또는 기존 OCI Registry adapter를 선택한다. Harbor/MinIO를 필수 dependency로 설치하지 않는다.
+
+Local LLM은 특정 계열에 고정하지 않고 9B 이하 후보를 동일 fixture로 평가한다. Ollama model 추가·검증·승인과 목적별 routing을 제공하며 외부 OpenAI/Google GenAI 연동은 Provider Profile과 Tenant별 데이터 외부 전송 동의를 통해 선택적으로 제공한다.
 
 - [제품 요구사항](application-delivery/product-requirements.md)
 - [아키텍처 설계](application-delivery/architecture-design.md)
