@@ -53,6 +53,10 @@ rg -q 'AIOPS_AUDIT_TIMEOUT_SECONDS' "${ROOT_DIR}/scripts/validate-supply-chain.s
   echo "Supply-chain audit must have a bounded timeout." >&2
   exit 5
 }
+rg -q 'validate-dependency-licenses.sh' "${ROOT_DIR}/scripts/validate-supply-chain.sh" || {
+  echo "Supply-chain gate must validate dependency licenses." >&2
+  exit 5
+}
 rg -q 'kill "KILL", -\$pid' "${ROOT_DIR}/scripts/validate-supply-chain.sh" || {
   echo "Supply-chain timeout must terminate the complete npm audit process group." >&2
   exit 5

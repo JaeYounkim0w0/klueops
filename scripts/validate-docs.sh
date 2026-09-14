@@ -14,6 +14,7 @@ required_files=(
   "docs/development/testing-strategy.md"
   "docs/development/documentation-standards.md"
   "docs/security/masking-policy.md"
+  "docs/security/dependency-policy.md"
   "docs/user-guide/K8s-AI-Ops-Platform-menu-guide.docx"
   "docs/user-guide/update_menu_guide.py"
   "SECURITY.md"

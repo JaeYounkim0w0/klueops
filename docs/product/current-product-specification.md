@@ -1,6 +1,6 @@
 # KlueOps Current Product Specification
 
-기준일: 2026-09-11
+기준일: 2026-09-14
 
 ## 1. 문서 목적
 
@@ -193,7 +193,7 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 
 ## 9. 현재 검증 기준
 
-2026-09-11 기준 최신 통합 증빙은 다음과 같다.
+2026-09-14 기준 최신 통합 증빙은 다음과 같다.
 
 - Backend: PostgreSQL 17 Testcontainers, Flyway V1~V28 포함 248 tests 통과
 - Command Runner: 5 tests 통과
@@ -208,7 +208,9 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - bounded 부하 검증 500 ConfigMap·동시성 20/50/100 통과. 동기화 100 요청과 AI 100 요청은 각각 1 Job으로 합쳐졌고 pagination p95 632ms/p99 646ms, AI 완료 53.5초·fallback 0, cancel 16ms, SSE 100 연결 정리가 통과했다.
 - 위 수용 증빙을 명시한 제품 준비성 보고서 `artifacts/product-readiness/product-readiness-20260911T075600Z.json`에서 CORE, COMMERCIAL, QUALITY, DOCS 전체 gate 통과
 - guarded Helm rollback으로 revision 52→53→54 전환 및 네 Deployment image identity 유지 검증 통과
-- Backend/Frontend CycloneDX SBOM, Frontend production dependency High 0/Critical 0, 실제 배포 Pod image digest 기록과 signed release workflow 계약 검증 통과. registry별 Cosign identity/issuer와 container OS CVE 정책은 자체 운영 배포자가 선택적으로 검증한다.
+- GitHub 공개 저장소를 새로 clone해 Backend 248 tests, Frontend 91 tests·production build, 문서·저장소 위생과 all-in-one Helm dry-run을 별도 cache 없이 재현했다.
+- Backend 186개, Command Runner 46개, Frontend production 19개 component의 CycloneDX SBOM에서 license 누락 0건과 allowlist 정책 통과를 확인했다. Frontend production dependency는 High 0/Critical 0이며 개발 도구의 알려진 취약점은 runtime과 분리해 `docs/security/dependency-policy.md`에 공개한다.
+- 공개 supply-chain workflow는 네 runtime container를 build·Trivy scan하고 runtime SBOM과 license gate를 실행한다. signed container workflow도 Command Runner를 포함한다. registry별 Cosign identity/issuer 검증은 자체 운영 배포자가 수행한다.
 
 검증 명령과 최신 로컬 품질 증적은 `docs/operations/release-candidate-checklist.md`를 따른다. 문서와 스크립트의 `release-candidate` 명칭은 기존 자동화 호환을 위해 유지하며 상용 릴리스 판정을 의미하지 않는다.
 
@@ -219,7 +221,7 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 | 기능 개발 | 핵심 Kubernetes 운영, AI 분석/상담, Incident, 안전 명령과 관리 UI 구현 완료 |
 | 개발·데모 | 사용 가능 |
 | 내부 Pilot | 사용 가능, 실제 대상 cluster별 권한과 credential 확인 필요 |
-| 오픈소스 공개 | LICENSE·저장소 위생·깨끗한 설치 재현이 남아 있음 |
+| 오픈소스 공개 | LICENSE, 저장소 위생, 기여 흐름과 clean-clone build/dry-run 완료. 별도 namespace의 신규 설치와 공개 CI 최초 통과 확인이 남아 있음 |
 | 자체 운영 배포 | 사용자가 환경별 TLS, IdP, Secret, 백업과 HA 책임을 검증해야 함 |
 | 대형 cluster 보장 | 현재 제품 범위 아님. 사용자가 bounded 기준을 넘는 규모를 요구하면 별도 SLO와 검증 범위를 정해야 함 |
 | Prometheus/GitOps | 현재 프로젝트 범위 제외 |

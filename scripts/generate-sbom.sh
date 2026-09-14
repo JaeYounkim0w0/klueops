@@ -18,13 +18,25 @@ echo "[SBOM] generating Backend CycloneDX inventory"
 )
 cp "${ROOT_DIR}/backend/target/bom.json" "${OUTPUT_DIR}/backend.cdx.json"
 
+echo "[SBOM] generating Command Runner CycloneDX inventory"
+(
+  cd "${ROOT_DIR}/command-runner"
+  mvn -q -Dmaven.repo.local="${ROOT_DIR}/.m2/repository" \
+    org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom \
+    -Dcyclonedx.outputFormat=json -Dcyclonedx.includeTestScope=false
+)
+cp "${ROOT_DIR}/command-runner/target/bom.json" "${OUTPUT_DIR}/command-runner.cdx.json"
+
 echo "[SBOM] generating Frontend production CycloneDX inventory"
 (
   cd "${ROOT_DIR}/frontend"
   npm sbom --omit=dev --sbom-format cyclonedx
 ) >"${OUTPUT_DIR}/frontend.cdx.json"
 
-for sbom in "${OUTPUT_DIR}/backend.cdx.json" "${OUTPUT_DIR}/frontend.cdx.json"; do
+for sbom in \
+  "${OUTPUT_DIR}/backend.cdx.json" \
+  "${OUTPUT_DIR}/command-runner.cdx.json" \
+  "${OUTPUT_DIR}/frontend.cdx.json"; do
   [[ "$(jq -r '.bomFormat' "${sbom}")" == "CycloneDX" ]] || {
     echo "Invalid CycloneDX document: ${sbom}" >&2
     exit 3

@@ -22,6 +22,8 @@ jobs:
             context: frontend
           - component: keycloak
             context: keycloak
+          - component: command-runner
+            context: command-runner
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

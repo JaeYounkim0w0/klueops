@@ -52,7 +52,7 @@ if rg -l "${scan_args[@]}" -e "${credential_pattern}" .; then
 fi
 
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  tracked_generated="$(git ls-files -- .codex artifacts backend/data frontend/test-results frontend/playwright-report)"
+  tracked_generated="$(git ls-files -- .codex artifacts backend/data frontend/test-results frontend/playwright-report ':(glob)**/.DS_Store')"
   if [[ -n "${tracked_generated}" ]]; then
     echo "Local generated files are tracked and must be removed from the Git index:" >&2
     printf '%s\n' "${tracked_generated}" >&2
@@ -60,7 +60,7 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   fi
   history_local_paths="$(git rev-list --objects --all \
     | awk 'NF > 1 { print $2 }' \
-    | rg '(^|/)(\.codex|artifacts|target|node_modules|test-results|playwright-report)(/|$)' \
+    | rg '(^|/)(\.codex|artifacts|target|node_modules|test-results|playwright-report)(/|$)|(^|/)\.DS_Store$' \
     || true)"
   if [[ -n "${history_local_paths}" ]]; then
     echo "A local-only path exists in reachable Git history." >&2

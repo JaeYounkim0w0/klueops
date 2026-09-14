@@ -14,6 +14,7 @@
 8. [테스트 전략](development/testing-strategy.md)
 9. [문서 관리 규칙](development/documentation-standards.md)
 10. [대규모 cluster 부하·soak 시험](development/large-cluster-soak.md)
+11. [의존성·라이선스 정책](security/dependency-policy.md)
 
 ## 문서 그룹
 
@@ -37,6 +38,7 @@
 - 통합 품질 검증: [Release Candidate Checklist](operations/release-candidate-checklist.md). 파일명과 스크립트명은 기존 자동화 호환을 위해 유지한다.
 - 제품 준비 실행: [Product Readiness Runbook](operations/product-readiness-runbook.md)
 - 사용자 안내서: [User Guide](user-guide/README.md)
+- 의존성·라이선스·취약점: [Dependency and License Policy](security/dependency-policy.md)
 
 저장소 공개와 외부 기여 규칙은 루트 `SECURITY.md`, `CONTRIBUTING.md`를 함께 따른다. 이 프로젝트는 고객 상용 릴리스 승인을 목표로 하지 않으며, 루트 `LICENSE`가 확정돼야 오픈소스 저장소로 공개할 수 있다.
 

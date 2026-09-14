@@ -18,11 +18,11 @@
 | --- | --- | --- | --- |
 | OSS-01 | 라이선스 확정 (완료) | Apache-2.0, copyright owner `Jae Youn Kim`, 루트 `LICENSE` 반영. 현재 별도 고지 대상이 없어 `NOTICE`는 두지 않음 | 저장소의 사용·수정·재배포 조건이 명확하고 주요 의존성 라이선스와 충돌 없음 |
 | OSS-02 | 저장소 비밀정보 점검 (완료) | 전체 Git history와 현재 tree에서 credential, 개인 경로, 내부 주소, 고객 데이터와 대용량 artifact 검사 | 탐지 결과 검토 완료, 실제 비밀정보 제거·폐기·회전, 예시는 명백한 placeholder만 사용 |
-| OSS-03 | 깨끗한 설치 재현 | 새 clone 또는 빈 작업 디렉터리에서 문서만으로 build, test, Docker/Compose 및 로컬 Kubernetes 설치 재현 | 사전 요구사항부터 로그인·cluster 등록·Cook Book 실행까지 별도 지식 없이 성공 |
-| OSS-04 | 공개 문서 정리 | README에 기능, 구조, 빠른 시작, 지원 범위, 보안 주의사항과 실제 화면 예시 제공 | 신규 사용자가 프로젝트 목적과 실행 방법을 첫 화면에서 이해하고 모든 링크가 유효함 |
+| OSS-03 | 깨끗한 설치 재현 (진행) | 새 clone 또는 빈 작업 디렉터리에서 문서만으로 build, test, Docker/Compose 및 로컬 Kubernetes 설치 재현 | 사전 요구사항부터 로그인·cluster 등록·Cook Book 실행까지 별도 지식 없이 성공 |
+| OSS-04 | 공개 문서 정리 (진행) | README에 기능, 구조, 빠른 시작, 지원 범위, 보안 주의사항과 실제 화면 예시 제공 | 신규 사용자가 프로젝트 목적과 실행 방법을 첫 화면에서 이해하고 모든 링크가 유효함 |
 | OSS-05 | 기여자 운영 기반 (완료) | 기여 규칙, 보안 제보, 행동강령, issue/PR template와 유지관리 범위 정리 | `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue/PR 흐름이 서로 일치함 |
-| OSS-06 | 의존성 공개 적합성 | Backend/Frontend/Runner/컨테이너의 SBOM, dependency license와 알려진 취약점 검토 | 사용 제한 의존성 없음, 알려진 위험과 업데이트 정책이 문서화됨 |
-| OSS-07 | CI 공개 재현성 | 공개 CI에서 Backend, Frontend, OpenAPI/Orval, 문서, 보안·패키징 계약 실행 | 저장소 전용 Secret 없이 기본 pull request 검증이 통과하고 실패 artifact를 확인 가능 |
+| OSS-06 | 의존성 공개 적합성 (진행) | Backend/Frontend/Runner/컨테이너의 SBOM, dependency license와 알려진 취약점 검토 | 사용 제한 의존성 없음, 알려진 위험과 업데이트 정책이 문서화됨 |
+| OSS-07 | CI 공개 재현성 (진행) | 공개 CI에서 Backend, Frontend, OpenAPI/Orval, 문서, 보안·패키징 계약 실행 | 저장소 전용 Secret 없이 기본 pull request 검증이 통과하고 실패 artifact를 확인 가능 |
 
 루트 `LICENSE`에는 Apache License 2.0 전문을 두고 copyright owner를 `Jae Youn Kim`으로 명시했다. 현재 별도 고지가 필요한 제3자 자료가 없어 `NOTICE`는 만들지 않았다. `CODE_OF_CONDUCT.md`, 구조화된 bug/feature issue form, pull request template와 기여·보안 문서를 서로 맞춰 OSS-05를 완료했다.
 
@@ -36,6 +36,10 @@
 - OpenAPI 기반 Orval client는 clean clone 검증에 필요한 source artifact이므로 `frontend/src/api/generated/` ignore 규칙을 제거했다.
 - `backend/data`, Maven `target`, Frontend test result에는 개인 절대 경로가 포함될 수 있으므로 로컬 생성물로만 유지한다. 현재 ignore 규칙과 도달 가능한 Git history에서 추적되지 않음을 확인했다.
 - `scripts/validate-open-source-hygiene.sh`는 현재 tree와 도달 가능한 Git history의 개발자 주소·경로, 고신뢰 credential 패턴, `.codex` 및 로컬 artifact 경로, ignore 계약을 검사한다. `.git`이 없는 복사본에서는 history/index 검사를 건너뛴 사실을 출력한다.
+- 2026-09-14 GitHub 새 clone에서 Backend 248 tests, Frontend 91 tests·production build, 문서·저장소 위생과 all-in-one Helm dry-run이 통과했다. 기존 로컬 Kubernetes의 네 Deployment도 `1/1 Ready`다. 별도 namespace에서 신규 설치부터 로그인·cluster 등록·Cook Book 실행까지 재현해야 OSS-03을 완료한다.
+- README에 기능, 구조, Mermaid 실행 구조, clean-clone 빠른 시작, 설치·보안·지원 범위를 추가했다. 공개용으로 마스킹한 실제 제품 화면을 추가하면 OSS-04를 완료한다.
+- Backend 186개, Command Runner 46개, Frontend production 19개 dependency의 license 누락 0건과 allowlist 통과를 확인했다. production npm audit는 High 0/Critical 0이고 개발 도구의 Moderate 3/High 7/Critical 2는 major upgrade 검증이 필요해 공개 정책에 기록했다.
+- `supply-chain` workflow가 PR, `main`, 주간 일정에서 runtime SBOM/license gate와 네 container Trivy scan을 실행하도록 추가했다. 최초 공개 CI 실행과 artifact를 확인한 뒤 OSS-06/07을 완료한다.
 
 ## 3. 공개를 차단하지 않는 운영 검증
 
@@ -84,9 +88,10 @@
 
 ## 6. 다음 권장 실행 순서
 
-1. `OSS-03`: 깨끗한 clone 기준 quickstart와 로컬 Kubernetes 설치를 재현한다.
-2. `OSS-04`: README의 기능·구조·빠른 시작·지원 범위와 실제 화면 예시를 외부 사용자 관점에서 정리한다.
-3. `OSS-06`과 `OSS-07`: dependency license/CVE 결과와 공개 CI를 확정한다.
-4. 공개 준비가 끝난 뒤 P1-03을 작은 characterization-test 단위로 계속 분리한다.
+1. `OSS-06`과 `OSS-07`: 새 `main`의 quality/supply-chain workflow 최초 결과와 SBOM artifact를 확인한다.
+2. `OSS-03`: 충돌 없는 별도 namespace에서 신규 설치, 로그인, cluster 등록과 Cook Book 실행을 재현한다.
+3. `OSS-04`: 공개용으로 마스킹한 실제 제품 화면을 README에 추가한다.
+4. 개발 도구 dependency major upgrade를 generated-client, unit/E2E 계약과 함께 별도 검증한다.
+5. 공개 준비가 끝난 뒤 P1-03을 작은 characterization-test 단위로 계속 분리한다.
 
 새 기능을 제안할 때는 이 문서에 단순 후보를 계속 덧붙이지 않는다. 사용자 가치, 운영 책임, 데이터/보안 경계, API/UI와 완료 기준이 확정된 큰 기능만 별도 feature 문서로 설계하고, 구현 완료 즉시 현재 제품 명세에 병합한다.

@@ -39,13 +39,14 @@ run_with_timeout() {
 }
 
 "${ROOT_DIR}/scripts/generate-sbom.sh"
+"${ROOT_DIR}/scripts/validate-dependency-licenses.sh"
 
 workflow="${ROOT_DIR}/.github/workflows/signed-container-release.yml"
 [[ -s "${workflow}" ]] || { echo "Signed image release workflow is missing." >&2; exit 3; }
 rg -q 'aquasecurity/trivy-action' "${workflow}"
 rg -q 'anchore/sbom-action' "${workflow}"
 rg -q 'cosign sign --yes' "${workflow}"
-for component in backend frontend keycloak; do
+for component in backend frontend keycloak command-runner; do
   rg -q "component: ${component}" "${workflow}"
 done
 
@@ -116,6 +117,6 @@ if [[ "${AIOPS_SUPPLY_CHAIN_PRODUCTION:-false}" == true ]]; then
 fi
 
 cat >"${ARTIFACT_DIR}/result.json" <<EOF
-{"status":"PASSED","productionFrontend":{"high":${high},"critical":${critical}},"backendSbom":"../sbom/backend.cdx.json","frontendSbom":"../sbom/frontend.cdx.json","signedImageWorkflow":"../../.github/workflows/signed-container-release.yml","deployedImageEvidence":"${deployment_evidence}","signatureEvidence":"${signature_evidence}"}
+{"status":"PASSED","productionFrontend":{"high":${high},"critical":${critical}},"backendSbom":"../sbom/backend.cdx.json","commandRunnerSbom":"../sbom/command-runner.cdx.json","frontendSbom":"../sbom/frontend.cdx.json","signedImageWorkflow":"../../.github/workflows/signed-container-release.yml","deployedImageEvidence":"${deployment_evidence}","signatureEvidence":"${signature_evidence}"}
 EOF
 echo "Supply-chain gate passed for packaged runtime dependencies."
