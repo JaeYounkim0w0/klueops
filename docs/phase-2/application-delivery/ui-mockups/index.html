@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KlueOps Phase 2 · Application Delivery UI Concept</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">K</span><span>KlueOps</span></div>
+      <div class="phase-label">PHASE 2 · UI CONCEPT</div>
+      <nav aria-label="주 메뉴">
+        <p class="nav-section">OPERATIONS</p>
+        <button class="nav-item"><span>⌁</span>Overview</button>
+        <button class="nav-item"><span>◎</span>Clusters</button>
+        <button class="nav-item"><span>⌘</span>Cook Book</button>
+        <p class="nav-section">APPLICATION DELIVERY</p>
+        <button class="nav-item" data-screen="discover"><span>⌕</span>Discover</button>
+        <button class="nav-item" data-screen="library"><span>▦</span>Chart Library</button>
+        <button class="nav-item" data-screen="values"><span>≡</span>Values Studio</button>
+        <button class="nav-item" data-screen="preview"><span>◇</span>Deployments</button>
+        <button class="nav-item" data-screen="releases"><span>↻</span>Releases</button>
+        <p class="nav-section">ADMIN</p>
+        <button class="nav-item" data-screen="ai-settings"><span>✦</span>AI Providers</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="avatar">AK</div>
+        <div><strong>aiops-admin</strong><small>Platform Admin</small></div>
+        <span>···</span>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div class="context-select"><small>TENANT</small><strong>Platform Engineering⌄</strong></div>
+        <div class="divider"></div>
+        <div class="context-select"><small>WORKSPACE</small><strong>Production⌄</strong></div>
+        <div class="top-actions"><button class="icon-btn" aria-label="검색">⌕</button><button class="icon-btn" aria-label="작업 센터">◷<span class="dot"></span></button><button class="help">?</button></div>
+      </header>
+
+      <div class="concept-banner"><strong>설계 시안</strong> 이 화면은 Phase 2 UX 검토용이며 현재 제품에 구현된 기능이 아닙니다.</div>
+
+      <section class="screen" data-screen-panel="discover">
+        <div class="page-head"><div><p class="eyebrow">APPLICATION DELIVERY</p><h1>Helm Chart 탐색</h1><p>공개 카탈로그에서 검증된 Chart를 찾아 Tenant 보관함으로 가져옵니다.</p></div><button class="secondary">＋ 소스 추가</button></div>
+        <div class="search-row"><span>⌕</span><input value="nginx" aria-label="Helm Chart 검색" /><button class="primary">Artifact Hub 검색</button></div>
+        <div class="filter-row"><button class="chip active">Helm</button><button class="chip">Verified publisher</button><button class="chip">Official</button><button class="chip">Security report</button><span class="result-count">1,284 results</span></div>
+        <div class="split-layout">
+          <div class="result-list">
+            <article class="result-card selected"><div class="package-logo blue">NG</div><div class="grow"><div class="title-line"><h3>nginx</h3><span class="verified">✓ Verified</span></div><p>NGINX Open Source packaged by Bitnami</p><div class="meta"><span>bitnami</span><span>v18.2.4</span><span>7.2M downloads</span><span>Updated 2d ago</span></div></div><span class="risk safe">Low risk</span></article>
+            <article class="result-card"><div class="package-logo orange">IN</div><div class="grow"><div class="title-line"><h3>ingress-nginx</h3><span class="verified">✓ Official</span></div><p>Ingress controller for Kubernetes using NGINX</p><div class="meta"><span>kubernetes</span><span>v4.12.1</span><span>56.8M downloads</span></div></div><span class="risk safe">Low risk</span></article>
+            <article class="result-card"><div class="package-logo violet">NG</div><div class="grow"><div class="title-line"><h3>nginx</h3></div><p>A community maintained nginx deployment</p><div class="meta"><span>community-charts</span><span>v1.4.0</span><span>18K downloads</span></div></div><span class="risk warn">Review</span></article>
+          </div>
+          <aside class="detail-panel">
+            <div class="detail-title"><div class="package-logo blue large">NG</div><div><h2>bitnami/nginx</h2><p>Version 18.2.4 · App 1.27.3</p></div></div>
+            <div class="trust-grid"><div><small>PUBLISHER</small><strong>✓ Verified</strong></div><div><small>SIGNATURE</small><strong>Metadata only</strong></div><div><small>VULNERABILITIES</small><strong class="green">0 critical</strong></div><div><small>LICENSE</small><strong>Apache-2.0</strong></div></div>
+            <h3>가져오기 전 확인</h3><ul class="check-list"><li>Chart archive digest 기록</li><li>values.yaml 및 schema 인덱싱</li><li>Provenance는 제공된 경우 검증</li><li>Template은 신뢰하지 않는 입력으로 처리</li></ul>
+            <div class="notice"><strong>Artifact Hub는 검색 카탈로그입니다.</strong><p>KlueOps가 원본 Helm/OCI 저장소에서 archive를 받아 검증하고 Tenant Library에 보관합니다.</p></div>
+            <button class="primary full" data-toast="Import 작업이 Job Center에 등록되었습니다.">Tenant Library로 가져오기</button>
+          </aside>
+        </div>
+      </section>
+
+      <section class="screen" data-screen-panel="library">
+        <div class="page-head"><div><p class="eyebrow">APPLICATION DELIVERY</p><h1>Chart Library</h1><p>Tenant가 승인한 Helm Chart와 버전을 안전하게 관리합니다.</p></div><div><button class="secondary">＋ Repository</button><button class="primary">↑ .tgz 업로드</button></div></div>
+        <div class="stat-row"><div class="stat"><small>CHARTS</small><b>12</b><span>3 sources</span></div><div class="stat"><small>VERSIONS</small><b>38</b><span>digest deduplicated</span></div><div class="stat"><small>ACTIVE RELEASES</small><b>17</b><span class="green">16 healthy</span></div><div class="stat"><small>STORAGE</small><b>184 MB</b><span>20 MiB / artifact</span></div></div>
+        <div class="table-card"><div class="table-tools"><div class="small-search">⌕ <span>Chart 이름, source 검색</span></div><button class="chip active">All</button><button class="chip">Update available 3</button><button class="chip">Needs review 1</button></div>
+          <table><thead><tr><th>CHART</th><th>SOURCE</th><th>VERSIONS</th><th>TRUST</th><th>RELEASES</th><th>UPDATED</th><th></th></tr></thead><tbody>
+            <tr class="row-selected"><td><div class="cell-title"><span class="package-logo blue mini">NG</span><div><strong>nginx</strong><small>Web server</small></div></div></td><td>Artifact Hub · bitnami</td><td><strong>18.2.4</strong> <span class="tag">+4</span></td><td><span class="risk safe">Verified</span></td><td>5</td><td>2 days ago</td><td>›</td></tr>
+            <tr><td><div class="cell-title"><span class="package-logo orange mini">RD</span><div><strong>redis</strong><small>In-memory database</small></div></div></td><td>OCI · registry-1</td><td><strong>20.1.1</strong> <span class="tag">+7</span></td><td><span class="risk safe">Signed</span></td><td>3</td><td>6 days ago</td><td>›</td></tr>
+            <tr><td><div class="cell-title"><span class="package-logo violet mini">KF</span><div><strong>kafka</strong><small>Event streaming</small></div></div></td><td>Upload · team-data</td><td><strong>31.0.0</strong></td><td><span class="risk warn">Review</span></td><td>2</td><td>12 days ago</td><td>›</td></tr>
+          </tbody></table>
+        </div>
+        <div class="bottom-detail"><div><small>SELECTED CHART</small><h2>nginx <span>18.2.4</span></h2><p><code>sha256:a04c…81d9</code> · 8.4 MiB · imported by aiops-admin</p></div><div class="version-flow"><span class="version current">18.2.4<br><small>current</small></span><span>←</span><span class="version">18.2.3</span><span>←</span><span class="version">18.1.8</span></div><button class="primary" data-screen="values">Values 설정</button></div>
+      </section>
+
+      <section class="screen" data-screen-panel="values">
+        <div class="page-head compact"><div><p class="eyebrow">NGINX · 18.2.4</p><h1>Values Studio</h1><p>Chart template은 변경하지 않고 Custom Values만 저장합니다.</p></div><div class="mode-tabs"><button class="active">Form</button><button>YAML</button><button>Diff</button></div></div>
+        <div class="studio-layout">
+          <aside class="values-nav"><div class="small-search">⌕ <span>Values 검색</span></div><button class="active">▣ Common <span>8</span></button><button>▤ Image <span>5</span></button><button>⇄ Service <span>7</span></button><button>⌁ Ingress <span>12</span></button><button>▥ Resources <span>6</span></button><button>♧ Autoscaling <span>9</span></button><button>⌾ Metrics <span>4</span></button><div class="schema-state">✓ values.schema.json<br><small>Schema coverage 86%</small></div></aside>
+          <div class="values-form"><div class="form-head"><div><h2>Common settings</h2><p>Schema와 values.yaml을 기준으로 입력 형식을 검증합니다.</p></div><span class="saved">✓ Draft saved</span></div>
+            <label>Name override<input placeholder="Optional release name override" /></label>
+            <div class="form-grid"><label>Replica count <input value="3" /></label><label>Update strategy <select><option>RollingUpdate</option></select></label></div>
+            <label class="toggle-label"><span><strong>Pod anti-affinity</strong><small>가능하면 서로 다른 노드에 Pod를 배치합니다.</small></span><input type="checkbox" checked /></label>
+            <h3>Container resources</h3><div class="resource-grid"><label>CPU request<input value="250m" /></label><label>Memory request<input value="256Mi" /></label><label>CPU limit<input value="1" /></label><label>Memory limit<input value="512Mi" /></label></div>
+            <div class="validation-ok">✓ 14개 변경 값이 schema를 통과했습니다. 알 수 없는 key는 없습니다.</div>
+          </div>
+          <aside class="ai-panel"><div class="ai-title"><span class="spark">✦</span><div><h3>Values Assistant</h3><p>Local Ollama · 평가 프로필</p></div><span class="local-badge">LOCAL</span></div>
+            <div class="provider-inline"><span>Model</span><strong>granite3.3:8b⌄</strong></div>
+            <div class="privacy-line">⌂ 외부 전송 없음 · Secret 제외</div>
+            <div class="chat-bubble user">트래픽이 많고 가용성이 중요한 운영용 설정을 제안해줘.</div>
+            <div class="chat-bubble ai">고가용성을 위해 replica, anti-affinity와 resource request 변경을 제안합니다. Chart schema에 존재하는 key만 사용했습니다.</div>
+            <div class="patch-card"><div><strong>제안 Patch</strong><span>3 changes</span></div><pre><span>replicaCount:</span> <b>3</b>
+affinity:
+  podAntiAffinity:
+    <span>type:</span> <b>preferred</b>
+resources:
+  requests:
+    <span>cpu:</span> <b>250m</b></pre><button class="secondary full" data-toast="검증된 Patch를 Form에 적용했습니다.">검증 후 적용</button></div>
+            <div class="prompt-row"><input placeholder="원하는 운영 조건을 입력하세요"/><button>↑</button></div>
+          </aside>
+        </div>
+        <div class="action-bar"><span><b>Draft:</b> prod-ha-v3 · 14 changed values</span><div><button class="secondary">초기화</button><button class="secondary">Values 저장</button><button class="primary" data-screen="preview">배포 미리보기 →</button></div></div>
+      </section>
+
+      <section class="screen" data-screen-panel="preview">
+        <div class="page-head compact"><div><p class="eyebrow">NEW DEPLOYMENT</p><h1>배포 미리보기</h1><p>실제 변경 전 렌더링 결과와 정책 검사를 확인합니다.</p></div></div>
+        <div class="stepper"><div class="done"><b>1</b><span>Chart</span></div><i></i><div class="done"><b>2</b><span>Values</span></div><i></i><div class="active"><b>3</b><span>Preview</span></div><i></i><div><b>4</b><span>Confirm</span></div></div>
+        <div class="preview-grid"><div class="preview-main"><div class="target-card"><div><small>TARGET</small><h3>prod-seoul / payments</h3><p>Release <strong>payments-web</strong> · nginx 18.2.4</p></div><button class="secondary">변경</button></div>
+          <div class="summary-cards"><div><small>CREATE</small><b class="green">＋ 4</b></div><div><small>UPDATE</small><b class="blue-text">↻ 2</b></div><div><small>DELETE</small><b>0</b></div><div><small>HOOKS</small><b>1</b></div></div>
+          <div class="diff-card"><div class="card-head"><h3>Rendered manifest diff</h3><div><button class="chip active">Deployment</button><button class="chip">Service</button><button class="chip">ConfigMap</button></div></div><pre class="diff"><span class="muted">@@ spec.template.spec.containers[0] @@</span>
+  resources:
+    requests:
+<span class="plus">+     cpu: 250m</span>
+<span class="plus">+     memory: 256Mi</span>
+    limits:
+<span class="plus">+     cpu: "1"</span>
+<span class="plus">+     memory: 512Mi</span>
+
+  replicas:
+<span class="minus">-   1</span>
+<span class="plus">+   3</span></pre></div></div>
+          <aside class="checks-panel"><h2>Preflight checks</h2><div class="check-row pass"><b>✓</b><div><strong>Chart integrity</strong><small>Digest matches imported artifact</small></div></div><div class="check-row pass"><b>✓</b><div><strong>Values schema</strong><small>14 changes valid</small></div></div><div class="check-row pass"><b>✓</b><div><strong>Kubernetes dry-run</strong><small>6 resources accepted</small></div></div><div class="check-row pass"><b>✓</b><div><strong>Tenant policy</strong><small>Namespace and quota allowed</small></div></div><div class="check-row warn"><b>!</b><div><strong>Image tag policy</strong><small>Mutable tag “latest” detected</small></div></div><div class="notice warn-box"><strong>1개 경고를 확인하세요.</strong><p>차단 항목은 없지만 운영 배포 전 immutable image tag를 권장합니다.</p></div><button class="link-btn">전체 렌더링 YAML 보기 ↗</button></aside>
+        </div>
+        <div class="action-bar danger-zone"><div><strong>배포는 Cluster 상태를 변경합니다.</strong><span>확정 단계에서 <code>payments-web</code>을 정확히 입력합니다.</span></div><div><button class="secondary">이전</button><button class="primary" data-toast="확정 대화상자 시안: release 이름을 입력해야 합니다.">확정 단계로 →</button></div></div>
+      </section>
+
+      <section class="screen" data-screen-panel="releases">
+        <div class="page-head"><div><p class="eyebrow">APPLICATION DELIVERY</p><h1>Helm Releases</h1><p>Tenant가 KlueOps로 배포한 Release의 상태와 이력을 관리합니다.</p></div><button class="primary" data-screen="discover">＋ 새 배포</button></div>
+        <div class="stat-row"><div class="stat"><small>HEALTHY</small><b class="green">16</b><span>of 17 releases</span></div><div class="stat"><small>PROGRESSING</small><b class="blue-text">1</b><span>upgrade running</span></div><div class="stat"><small>FAILED</small><b>0</b><span>last 24 hours</span></div><div class="stat"><small>DRIFT</small><b class="orange-text">2</b><span>informational</span></div></div>
+        <div class="split-layout release-layout"><div class="table-card release-table"><div class="table-tools"><div class="small-search">⌕ <span>Release 검색</span></div><button class="chip active">All clusters</button><button class="chip">All status</button></div><table><thead><tr><th>RELEASE</th><th>CLUSTER / NAMESPACE</th><th>CHART</th><th>STATUS</th><th>REVISION</th></tr></thead><tbody><tr class="row-selected"><td><strong>payments-web</strong><small>Updated 12m ago</small></td><td>prod-seoul / payments</td><td>nginx 18.2.4</td><td><span class="status healthy">● Healthy</span></td><td>7</td></tr><tr><td><strong>checkout-cache</strong><small>Updated 3h ago</small></td><td>prod-seoul / checkout</td><td>redis 20.1.1</td><td><span class="status healthy">● Healthy</span></td><td>4</td></tr><tr><td><strong>events</strong><small>Updated 8m ago</small></td><td>dev-busan / platform</td><td>kafka 31.0.0</td><td><span class="status progressing">● Progressing</span></td><td>2</td></tr></tbody></table></div>
+          <aside class="detail-panel release-detail"><div class="release-head"><div><small>RELEASE</small><h2>payments-web</h2><span class="status healthy">● Healthy</span></div><button class="more">···</button></div><div class="kv"><span>Cluster</span><strong>prod-seoul</strong><span>Namespace</span><strong>payments</strong><span>Chart</span><strong>nginx 18.2.4</strong><span>Last action</span><strong>Upgrade succeeded</strong></div><h3>Revision history</h3><div class="timeline"><div class="current"><b>7</b><p><strong>Upgrade · prod-ha-v3</strong><small>aiops-admin · 12m ago</small></p><span>Current</span></div><div><b>6</b><p><strong>Upgrade · prod-ha-v2</strong><small>platform-user · 6d ago</small></p></div><div><b>5</b><p><strong>Rollback to revision 4</strong><small>aiops-admin · 12d ago</small></p></div></div><div class="release-actions"><button class="secondary">Values Diff</button><button class="secondary">Rollback</button><button class="primary">Upgrade</button></div></aside></div>
+      </section>
+
+      <section class="screen" data-screen-panel="ai-settings">
+        <div class="page-head"><div><p class="eyebrow">PLATFORM ADMIN · AI</p><h1>AI Provider 설정</h1><p>Credential은 Platform이 관리하고 Tenant는 허용된 모델만 목적별로 선택합니다.</p></div><button class="primary">＋ Provider Profile</button></div>
+        <div class="external-warning"><span>▣</span><div><strong>외부 LLM은 Tenant 데이터 반출 설정입니다.</strong><p>기본값은 Local only입니다. 외부 전송을 허용해도 Secret, kubeconfig, raw manifest는 제외됩니다.</p></div><button>정책 보기</button></div>
+        <div class="provider-grid"><article class="provider-card selected"><div class="provider-icon ollama">OL</div><div class="grow"><div class="title-line"><h3>Default Ollama</h3><span class="status healthy">● Connected</span></div><p>http://ollama.aiops.svc:11434</p><div class="model-line"><span>Current</span><strong>qwen2.5-coder:7b</strong></div><div class="candidate"><span>평가 후보</span><b>granite3.3:8b</b><small>9B 이하 정책 · 회귀평가 전</small></div></div><button class="more">···</button></article>
+          <article class="provider-card"><div class="provider-icon openai">AI</div><div class="grow"><div class="title-line"><h3>OpenAI Production</h3><span class="status disabled">Not configured</span></div><p>External managed provider</p><div class="model-line"><span>Credential</span><strong>Existing Secret 필요</strong></div><button class="secondary">설정</button></div></article>
+          <article class="provider-card"><div class="provider-icon google">G</div><div class="grow"><div class="title-line"><h3>Google GenAI</h3><span class="status disabled">Not configured</span></div><p>Gemini API · external</p><div class="model-line"><span>Credential</span><strong>API key 필요</strong></div><button class="secondary">설정</button></div></article></div>
+        <div class="routing-card"><div class="card-head"><div><h2>Tenant AI Routing</h2><p>Platform Engineering · 변경은 새 요청부터 적용됩니다.</p></div><span class="local-badge">EXTERNAL OFF</span></div><table><thead><tr><th>PURPOSE</th><th>PRIMARY PROFILE</th><th>MODEL</th><th>EXTERNAL TRANSFER</th><th>FALLBACK</th></tr></thead><tbody><tr><td><strong>AI Analysis</strong><small>Kubernetes RCA</small></td><td><span class="select-like">Default Ollama⌄</span></td><td><span class="select-like">granite3.3:8b · 후보⌄</span></td><td><span class="switch off"></span> Off</td><td>Deterministic section</td></tr><tr><td><strong>AI Chat</strong><small>운영 질의</small></td><td><span class="select-like">Default Ollama⌄</span></td><td><span class="select-like">qwen2.5-coder:7b⌄</span></td><td><span class="switch off"></span> Off</td><td>없음</td></tr><tr><td><strong>Helm Values</strong><small>Patch 제안</small></td><td><span class="select-like">Default Ollama⌄</span></td><td><span class="select-like">granite3.3:8b · 후보⌄</span></td><td><span class="switch off"></span> Off</td><td>Form 편집 유지</td></tr></tbody></table><div class="routing-foot"><span>ⓘ 후보 모델은 regression gate 통과 후 활성 기본값으로 승격됩니다.</span><button class="primary" data-toast="Routing 정책 저장 시안입니다.">변경 저장</button></div></div>
+      </section>
+
+      <div class="toast" role="status" aria-live="polite"></div>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
