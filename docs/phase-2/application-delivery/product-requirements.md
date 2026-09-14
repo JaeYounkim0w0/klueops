@@ -1,6 +1,7 @@
 # Phase 2 Application Delivery Product Requirements
 
-기준일: 2026-09-14  
+기준일: 2026-09-15
+
 상태: 설계 완료, 구현 미착수
 
 ## 1. 제품 정의
@@ -12,6 +13,8 @@ Chart 검색/등록 → Tenant Library → Custom Values → Target/Exposure →
 ```
 
 Application은 이 기능에서 하나의 Helm Release를 의미한다. 기존 Kubernetes workload 자동 발견, Argo CD/Flux 연동, GitOps Controller 제공은 포함하지 않는다.
+
+이 문서에서 `Deployment`는 문맥에 따라 구분한다. `배포 Wizard`는 새 Application을 만드는 일시적 흐름, `배포 작업`은 Job Center가 추적하는 비동기 operation, Kubernetes `Deployment`는 Application의 Workload resource다. 혼동을 막기 위해 독립 메뉴 이름으로 `Deployments`를 사용하지 않는다.
 
 ## 2. 목표
 
@@ -67,11 +70,13 @@ Applications
 │  ├─ Workloads/Pods
 │  ├─ Network & Endpoints
 │  ├─ Configuration/Resources
-│  └─ History/Operations
-└─ Operations
-   ├─ Install/Upgrade/Rollback/Uninstall
-   └─ Job progress와 cleanup
+│  └─ History: Install/Upgrade/Rollback/Uninstall
+└─ (전역 공통) Job Center
+   ├─ 실행 중·최근 Job progress
+   └─ 실패 단계, rollback/cleanup과 대상 Application 연결
 ```
+
+Job Center는 Applications의 하위 메뉴가 아니라 import, model download 등 모든 장시간 작업이 공유하는 기존 전역 surface다. 별도 Application `Operations` 화면이나 `Deployments` 메뉴를 추가하지 않는다.
 
 ## 6. 핵심 사용자 흐름
 
@@ -142,7 +147,8 @@ TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-m
 4. render, policy, live diff와 RBAC/Gateway preflight를 실행한다.
 5. Helm resource와 companion resource의 생성·변경·삭제, cluster-scope, hook와 위험 설정을 표시한다.
 6. exact confirmation 후 async Helm job을 시작한다.
-7. Job Dock에서 진행을 추적하고 성공 후 Release/Pod/Endpoint health를 검증한다.
+7. 요청이 수락되면 Application을 `DEPLOYING` 상태로 만들어 Deployed Applications에 즉시 표시하고 Job Center/Job Dock에서 진행을 추적한다.
+8. 성공 후 Release/Pod/Endpoint health를 검증하고, 실패 시 Application에 실패 단계와 안전한 retry/cleanup 동작을 표시한다.
 
 ### 6.7 Application 운영
 
@@ -154,6 +160,8 @@ TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-m
 - uninstall preview, PVC/DNS/TLS/companion resource 보존 선택과 exact confirmation
 - 실행 전후 resource snapshot, output hash와 Audit
 - Application/Namespace AI Analysis로 이동
+
+Deployed Applications에는 `DEPLOYING`, `UPGRADING`, `ROLLING_BACK`, `UNINSTALLING` 같은 진행 상태와 `FAILED`도 포함한다. 전역 Job Center는 실행 단위의 queue/progress/cancel/retry를 담당하고, Application Detail의 History는 해당 Application에 귀속된 완료·실패 operation과 Audit을 영구 조회한다. 동일한 operation을 별도 화면에 중복 저장하지 않는다.
 
 Application은 KlueOps가 배포한 Helm Release만 대상으로 하며 Cluster의 기존 workload 자동 발견과 소유권 편입은 하지 않는다. Uninstall은 Application Release와 연결된 companion resource만 정리하고 Tenant Library Chart는 삭제하지 않는다. Chart artifact 삭제는 별도의 `chart:manage` 작업이다.
 

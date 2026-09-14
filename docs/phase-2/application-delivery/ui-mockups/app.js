@@ -81,7 +81,11 @@ function exactBody(summary, exact, warning) {
 }
 
 function jobResult(name) {
-  openModal({ kicker: "JOB CENTER", title: `${name} 작업이 시작되었습니다`, body: `<div class="job-progress"><div><span>요청 검증</span><strong>완료</strong></div><div><span>Runner 작업 대기</span><strong>진행 중</strong></div><div class="progress-track"><i></i></div><p>화면을 닫아도 작업은 계속됩니다. 우측 상단 Job Center에서 상태를 확인할 수 있습니다.</p></div>`, confirm: "Job Center 보기", onConfirm: () => toast("Job Center drawer를 열었습니다.") });
+  openModal({ kicker: "JOB CENTER", title: `${name} 작업이 시작되었습니다`, body: `<div class="job-progress"><div><span>요청 검증</span><strong>완료</strong></div><div><span>Runner 작업 대기</span><strong>진행 중</strong></div><div class="progress-track"><i></i></div><p>화면을 닫아도 작업은 계속됩니다. 우측 상단 Job Center에서 상태를 확인할 수 있습니다.</p></div>`, confirm: "Job Center 보기", onConfirm: jobCenterModal });
+}
+
+function jobCenterModal() {
+  openModal({ kicker: "GLOBAL JOB CENTER", title: "실행 중·최근 작업", body: `<div class="job-list"><div><b>Helm install · payments-web</b><span class="status progressing">● Running 42%</span><small>Application에서 DEPLOYING 상태로 확인 가능</small></div><div><b>Chart import · bitnami/nginx</b><span class="status progressing">● Running 62%</span><small>완료 후 Chart Library로 이동</small></div><div><b>Ollama model download · granite3.3:8b</b><span class="status healthy">✓ Completed</span><small>Local Models에서 검증 상태 확인</small></div></div><div class="info-box">Application 작업의 완료·실패 이력은 대상 Application의 History에 영구 보존됩니다.</div>`, confirm: "닫기" });
 }
 
 function sourceModal() {
@@ -116,14 +120,14 @@ function actionFor(button) {
   if (button.closest(".mode-tabs")) return () => { button.parentElement.querySelectorAll("button").forEach((item) => item.classList.remove("active")); button.classList.add("active"); toast(`${label} 편집 모드로 전환했습니다.`); };
   if (button.closest(".segmented")) return () => { button.parentElement.querySelectorAll("button").forEach((item) => item.classList.remove("active")); button.classList.add("active"); };
   if (button.getAttribute("aria-label") === "검색") return () => openModal({ kicker: "GLOBAL SEARCH", title: "KlueOps 전체 검색", body: `${formField("검색어")}<p class="modal-note">Cluster, Release, Chart와 Cook Book을 Tenant 권한 범위에서 검색합니다.</p>`, confirm: "검색" });
-  if (button.getAttribute("aria-label") === "작업 센터") return () => openModal({ kicker: "JOB CENTER", title: "실행 중인 작업", body: `<div class="job-list"><div><b>Chart import · bitnami/nginx</b><span class="status progressing">● Running 62%</span></div><div><b>Release upgrade · events</b><span class="status healthy">✓ Completed</span></div></div>`, confirm: "전체 작업 보기" });
+  if (button.getAttribute("aria-label") === "작업 센터") return jobCenterModal;
   if (button.getAttribute("aria-label") === "대화상자 닫기") return closeModal;
 
   const actions = {
     "Overview": () => simpleInfo("1차 기능 화면", "실제 제품의 Overview route로 이동합니다. Phase 2 시안에서는 현재 화면을 유지합니다."),
     "Clusters": () => simpleInfo("Cluster 선택", "등록된 Cluster 목록에서 Application Delivery 대상과 권한을 확인합니다."),
     "Cook Book": () => simpleInfo("Cook Book", "점검 절차 화면으로 이동하는 기존 1차 기능 링크입니다."),
-    "?": () => simpleInfo("Application Delivery 도움말", "Discover → Library → Values → Preview → Release 순서로 진행합니다. 위험 작업은 실행 전에 별도 확인이 필요합니다."),
+    "?": () => simpleInfo("Application Delivery 도움말", "Discover → Library → Values → Target/Exposure → Preview → Application 순서로 진행합니다. 실행 중 progress는 Job Center, 완료·실패 이력은 Application History에서 확인합니다."),
     "↗ URL로 직접 가져오기": directImportModal,
     "＋ Source 등록": sourceModal,
     "Artifact Hub 검색": () => toast("Artifact Hub에서 ‘nginx’ 검색 결과 1,284건을 불러왔습니다."),

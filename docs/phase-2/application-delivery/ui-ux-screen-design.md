@@ -1,6 +1,7 @@
 # Phase 2 Application Delivery UI/UX Screen Design
 
-기준일: 2026-09-14  
+기준일: 2026-09-15
+
 상태: HTML 시안 완료, 구현 미착수
 
 ## 1. 시안 실행
@@ -33,6 +34,8 @@ ui-mockups/index.html?screen=models
 - AI 제안은 사용자 입력과 시각적으로 구분하고 근거, assumption과 적용 전 diff를 표시한다.
 - Provider/model과 외부 전송 여부를 AI 실행 위치 가까이에 표시한다.
 
+`Deployments`는 좌측 상시 메뉴로 두지 않는다. 새 배포는 Values Studio에서 진입하는 Wizard이고, 실행 중 progress는 어느 화면에서나 여는 Job Center/Job Dock, 대상별 운영은 Deployed Applications와 Application Detail이 담당한다.
+
 ## 3. Navigation
 
 ```text
@@ -60,6 +63,8 @@ ui-mockups/index.html?screen=models
 
 Feature가 비활성화되면 Applications 하위 메뉴 전체를 숨기고 직접 URL은 기능 비활성 Problem Detail 화면으로 연결한다.
 
+Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 여는 overlay panel이다. Install/Upgrade/Rollback/Uninstall 외에도 Chart import와 Local Model download를 함께 보여주며 각 항목에서 관련 Application, Chart 또는 Provider로 이동한다.
+
 ## 4. 화면 목록
 
 | ID | 화면 | 핵심 목표 |
@@ -74,6 +79,18 @@ Feature가 비활성화되면 Applications 하위 메뉴 전체를 숨기고 직
 | AD-08 | Application Detail | Workload/Pod/Endpoint/Configuration/History/Uninstall |
 | AI-01 | AI Provider Settings | Local/외부 Provider profile과 Tenant routing 관리 |
 | AI-02 | Local Models | 9B 이하 Ollama model download/검증/승인/삭제 보호 |
+
+### 4.1 Deployment 기능 배치
+
+| 사용자가 찾는 것 | 제공 위치 | 표시 범위 |
+| --- | --- | --- |
+| 새 Helm 배포 설정 | Values Studio → Target & Exposure → Deployment Preview | 실행 전 만료형 Wizard |
+| 실행 중 배포와 진행률 | 전역 Job Center와 하단 Job Dock | 현재 사용자 권한 범위의 async Job |
+| 배포 중·완료·실패 Application | Deployed Applications | `DEPLOYING`부터 `FAILED`까지 |
+| 특정 Application의 작업 이력 | Application Detail → History | Install/Upgrade/Rollback/Uninstall과 Audit |
+| Kubernetes `Deployment` resource | Application Detail → Workloads | Ready, Pod, restart, Event와 Console link |
+
+따라서 Deployment 기능이 사라진 것이 아니라 실행 전·실행 중·실행 후 책임으로 분리됐다. 독립 `Deployments` 메뉴와 별도 `Operations` 화면은 만들지 않는다.
 
 ## 5. AD-01 Discover
 
@@ -192,6 +209,8 @@ Feature가 비활성화되면 Applications 하위 메뉴 전체를 숨기고 직
 
 - Tenant/Workspace/Cluster/Namespace filter
 - Application status, Pod/Endpoint health, Chart/Values revision, 마지막 작업과 운영자
+- install 요청이 수락된 즉시 `DEPLOYING` row를 만들고 진행률/Job Center link를 표시
+- 실패한 최초 install도 `FAILED` row로 유지해 실패 단계, retry와 cleanup에 접근 가능
 - detail에서 workload health, Helm history, Values diff와 Audit timeline
 - `Upgrade 계획`, `Rollback 계획`, `Uninstall 계획`은 서로 다른 modal/workflow
 
@@ -258,7 +277,7 @@ HTML 시안의 모든 `button`에는 동작이 연결되어 있다. 화면 이�
 | 좌측 Phase 2 메뉴 | 해당 화면으로 이동하고 URL `screen` query 갱신 | Browser back/forward 복원 |
 | Overview/Clusters/Cook Book | 1차 기능으로 이동한다는 안내 Modal | 시안에서는 현재 Phase 2 화면 유지 |
 | 상단 검색 | 전체 검색 Modal과 검색어 입력 | 검색 실행 또는 취소 |
-| Job Center | 실행/완료 작업 Modal | 전체 작업 보기로 Job Center 진입 |
+| Job Center | 전역 Overlay; 유형, 대상, progress, 실패 단계와 최근 결과 표시 | 항목 클릭 시 관련 Application/Chart/Provider로 이동 |
 | 도움말 `?` | 전체 배포 흐름 도움말 Modal | 닫기 |
 | Modal `×`, 취소, backdrop, `Esc` | 변경 없이 닫기 | 원래 trigger로 focus 복원 |
 | 성공한 단순 동작 | 우측 하단 Toast, 2.6초 후 자동 닫힘 | `aria-live=polite`로 결과 전달 |

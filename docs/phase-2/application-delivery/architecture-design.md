@@ -1,6 +1,7 @@
 # Phase 2 Application Delivery Architecture
 
-기준일: 2026-09-14  
+기준일: 2026-09-15
+
 상태: 설계 완료, 구현 미착수
 
 ## 1. 결정
@@ -11,6 +12,8 @@
 - 원본 Chart는 immutable artifact로 저장하고 Custom은 Values Profile만 지원한다.
 - Application 기능은 feature flag로 끌 수 있고 비활성화 시 Runner도 설치하지 않는다.
 - API와 port가 안정되고 독립 확장 요구가 생길 때만 Application Backend 서비스 추출을 검토한다.
+- `DeploymentPlan`은 URL로 재진입할 수 있는 만료형 Wizard 상태이며 독립 메뉴의 영속 resource가 아니다.
+- 실행 추적은 기존 Async Job/Job Center, 대상별 영속 이력은 Application/ReleaseOperation projection을 사용한다.
 
 ## 2. 논리 구조
 
@@ -148,7 +151,8 @@ DeploymentPlan
 
 Application
 - id, tenantId, workspaceId, clusterId, namespace
-- name, currentReleaseId, health, endpointHealth
+- name, currentReleaseId?, lifecycleStatus, health, endpointHealth
+- lifecycleStatus: DEPLOYING | ACTIVE | UPGRADING | ROLLING_BACK | UNINSTALLING | FAILED
 
 ApplicationRelease
 - id, applicationId
@@ -160,7 +164,7 @@ NamespacePlan
 - quotaJson, limitRangeJson, networkPolicyProfile, policyResult
 
 ExposurePlan
-- id, applicationId, mode: INTERNAL_ONLY | CHART_MANAGED | KLUEOPS_MANAGED
+- id, deploymentPlanId, mode: INTERNAL_ONLY | CHART_MANAGED | KLUEOPS_MANAGED
 - routeKind: NONE | HTTP_ROUTE | INGRESS
 - gatewayRef, listenerName, hostname, path
 - backendService, backendPort, tlsMode, tlsSecretRef, dnsMode
@@ -177,11 +181,15 @@ ManagedCompanionResource
 - lifecycleStatus, retainedAt
 
 ReleaseOperation
-- id, releaseId, planId
+- id, applicationId, releaseId?, planId, asyncJobId
 - type: INSTALL | UPGRADE | ROLLBACK | UNINSTALL | REFRESH
 - status, requestedBy, startedAt, completedAt
 - outputHash, errorCode, maskedError
 ```
+
+Install 실행이 `202 Accepted`되면 같은 transaction에서 `Application(DEPLOYING)`, `ReleaseOperation`과 Async Job 연결을 만든다. 따라서 Helm 완료 전에도 Deployed Applications에서 대상과 상태를 찾을 수 있다. 성공 시 `ACTIVE`와 current Release를 확정하고 실패 시 `FAILED`와 안전한 retry/cleanup action을 제공한다. Uninstall 완료 후에는 기본 목록에서 제외하되 History/Audit 보존 정책에 따라 tombstone을 유지한다.
+
+Job Center는 Async Job의 queue, progress, cancel과 일시적 실행 출력을 보여주는 전역 read model이다. Application Detail의 History는 `ReleaseOperation`을 기준으로 해당 대상의 install/upgrade/rollback/uninstall 결과와 Audit을 보여준다. 두 화면은 같은 `asyncJobId`로 연결하며 별도 Application Operations aggregate나 중복 API를 만들지 않는다.
 
 Secret-like Values는 평문 검색, diff와 AI 전송에서 제외한다. DB 저장이 필요한 경우 기존 AES-256-GCM master key 계약으로 전체 Values payload를 암호화하고 key name과 mask만 UI에 노출한다.
 
@@ -251,10 +259,11 @@ POST   /api/v2/application-delivery/namespace-plans
 GET    /api/v2/application-delivery/exposure-capabilities/{clusterId}/{namespace}
 POST   /api/v2/application-delivery/exposure-plans
 
-GET    /api/v2/application-delivery/applications
+GET    /api/v2/application-delivery/applications?lifecycleStatus=...
 GET    /api/v2/application-delivery/applications/{applicationId}
 GET    /api/v2/application-delivery/applications/{applicationId}/resources
 GET    /api/v2/application-delivery/applications/{applicationId}/endpoints
+GET    /api/v2/application-delivery/applications/{applicationId}/operations
 POST   /api/v2/application-delivery/applications/{applicationId}/refresh
 GET    /api/v2/application-delivery/releases
 GET    /api/v2/application-delivery/releases/{releaseId}
@@ -263,7 +272,7 @@ POST   /api/v2/application-delivery/releases/{releaseId}/rollback-plans
 POST   /api/v2/application-delivery/releases/{releaseId}/uninstall-plans
 ```
 
-모든 mutation은 idempotency key와 request/correlation ID를 받고 RFC 9457 Problem Detail을 반환한다. 장시간 동작은 `202 Accepted`와 기존 Async Job ID를 반환해 Job Dock에서 추적한다.
+모든 mutation은 idempotency key와 request/correlation ID를 받고 RFC 9457 Problem Detail을 반환한다. 장시간 동작은 `202 Accepted`와 기존 Async Job ID를 반환해 Job Center/Job Dock에서 추적한다. 전역 Job 조회 API는 기존 Platform Job API를 재사용하며 Application Delivery 전용 복제 endpoint를 만들지 않는다.
 
 ## 8. Preview pipeline
 

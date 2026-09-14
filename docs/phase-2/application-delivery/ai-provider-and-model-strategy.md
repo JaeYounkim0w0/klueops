@@ -1,6 +1,7 @@
 # Phase 2 AI Provider and Model Strategy
 
-기준일: 2026-09-14  
+기준일: 2026-09-15
+
 상태: 설계 완료, 구현 미착수
 
 ## 1. 현재 기준과 문제
@@ -257,6 +258,8 @@ Ollama API adapter는 다음 endpoint만 allowlist한다.
 - `DOWNLOADING → INSTALLED → VALIDATING → CANDIDATE → APPROVED | REJECTED` 상태를 기록한다.
 - Candidate는 회귀 fixture 실행에만 사용할 수 있고 Tenant production routing에는 Approved model만 노출한다.
 - 여러 model을 디스크에 보관할 수 있지만 loaded model 수, keep-alive와 요청 queue는 Provider profile resource budget으로 제한한다.
+
+Model download/validation Job도 배포 작업과 같은 전역 Job Center에 나타나지만 Application History에는 포함하지 않는다. Job Center는 실행 유형과 대상 link로 `MODEL_DOWNLOAD`, `CHART_IMPORT`, `HELM_OPERATION`을 구분한다.
 
 ### 10.2 목적별 Local routing
 

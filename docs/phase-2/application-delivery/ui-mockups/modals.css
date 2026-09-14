@@ -41,8 +41,9 @@
 .progress-track i { display: block; width: 62%; height: 100%; background: var(--blue); }
 .job-progress p { font-size: 10px; color: #718094; line-height: 1.5; }
 .job-list { display: flex; flex-direction: column; gap: 10px; }
-.job-list > div { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--line); border-radius: 7px; padding: 12px; }
+.job-list > div { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 5px 12px; border: 1px solid var(--line); border-radius: 7px; padding: 12px; }
 .job-list b { font-size: 10px; }
+.job-list small { flex-basis: 100%; color: var(--muted); font-size: 9px; }
 .step-mini { display: flex; justify-content: space-between; background: #f1f5fa; border-radius: 7px; padding: 10px; margin-bottom: 15px; font-size: 9px; color: #8390a1; }
 .step-mini b { color: var(--blue); }
 .external-consent { display: flex; gap: 9px; align-items: flex-start; background: #fff7e9; border-radius: 7px; padding: 11px; font-size: 10px; }
