@@ -1,8 +1,8 @@
 package io.strato.aiops.config;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.ClientHttpRequestFactories;
-import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
 import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,10 +19,9 @@ public class AiHttpClientConfig {
     ) {
         Duration connectTimeout = Duration.ofMillis(connectTimeoutMs);
         Duration readTimeout = Duration.ofMillis(readTimeoutMs);
-        return builder -> builder.requestFactory(ClientHttpRequestFactories.get(
-                ClientHttpRequestFactorySettings.DEFAULTS
-                        .withConnectTimeout(connectTimeout)
-                        .withReadTimeout(readTimeout)
+        return builder -> builder.requestFactory(ClientHttpRequestFactoryBuilder.detect().build(
+                ClientHttpRequestFactorySettings.defaults()
+                        .withTimeouts(connectTimeout, readTimeout)
         ));
     }
 }
