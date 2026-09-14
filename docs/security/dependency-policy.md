@@ -34,7 +34,9 @@
 
 최초 공개 CI scan에서 기존 NGINX 1.27 Alpine과 Temurin 17 Jammy runtime의 수정 가능한 OS 취약점이 확인되어 Frontend는 NGINX unprivileged 1.31.5/Alpine 3.24, Backend와 Command Runner는 Temurin 17 Noble로 갱신했다. 후속 scan에서 Java image의 Tomcat 10.1.55와 kubectl 1.34.1 취약점을 확인해 Tomcat 10.1.59와 같은 Kubernetes minor의 최신 patch인 kubectl 1.34.11로 갱신했다.
 
-최신 안정 Keycloak 26.7.3 image에는 2026-09-14 기준 `io.netty:netty-handler` 4.1.136.Final의 Critical `CVE-2026-75595`가 남아 있고 Trivy가 4.1.137.Final을 수정 버전으로 제시한다. 해당 library는 upstream Keycloak image에 포함되므로 임의 교체나 예외 처리하지 않는다. 수정된 Keycloak 안정 patch가 제공되면 image를 갱신하고 전체 identity 회귀 테스트와 container scan을 다시 수행한다. 이 항목이 해소되기 전 `supply-chain` workflow는 의도적으로 실패하며 OSS-06 완료로 판정하지 않는다.
+최신 안정 Keycloak 26.7.3 image에는 2026-09-14 기준 `io.netty:netty-handler` 4.1.136.Final의 Critical `CVE-2026-75595`가 남아 있고 Trivy가 4.1.137.Final을 수정 버전으로 제시한다. 해당 library는 upstream Keycloak image에 포함되므로 임의 교체나 예외 처리하지 않는다. 수정된 Keycloak 안정 patch가 제공되면 image를 갱신하고 전체 identity 회귀 테스트와 container scan을 다시 수행한다.
+
+Command Runner의 kubectl 1.34.11은 Kubernetes 1.34 계열의 현재 최신 patch지만 Go 1.26.5로 빌드돼 수정 가능한 High 취약점 8건이 남아 있다. Trivy가 제시하는 최소 Go 수정본은 1.26.6이며, 다음 Kubernetes patch 일정은 2026-09-15다. 패키지 Backend는 kubectl을 실행하지 않으므로 중복 바이너리를 제거했고 Runner만 upstream 보안 patch를 기다린다. 두 upstream 항목이 해소되기 전 `supply-chain` workflow는 의도적으로 실패하며 OSS-06 완료로 판정하지 않는다.
 
 ## 로컬 실행
 

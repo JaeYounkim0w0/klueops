@@ -40,7 +40,7 @@
 - README에 기능, 구조, Mermaid 실행 구조, clean-clone 빠른 시작, 설치·보안·지원 범위를 추가했다. 공개용으로 마스킹한 실제 제품 화면을 추가하면 OSS-04를 완료한다.
 - Backend 186개, Command Runner 46개, Frontend production 19개 dependency의 license 누락 0건과 allowlist 통과를 확인했다. production npm audit는 High 0/Critical 0이고 개발 도구의 Moderate 3/High 7/Critical 2는 major upgrade 검증이 필요해 공개 정책에 기록했다.
 - `supply-chain` workflow가 PR, `main`, 주간 일정에서 runtime SBOM/license gate와 네 container Trivy scan을 실행하도록 추가했다. 공개 GitHub runner에서 quality gate가 통과했고, 성공·실패 여부와 무관하게 container별 SBOM artifact가 생성됨을 확인해 OSS-07을 완료했다.
-- 최초 container scan에서 Frontend/Java runtime의 수정 가능한 OS CVE를 확인해 NGINX unprivileged 1.31.5 Alpine 3.24와 Temurin 17 Noble로 기반 이미지를 갱신했다. 후속 scan에서 확인한 Tomcat과 kubectl 취약점은 각각 10.1.59와 1.34.11로 보강했다. 최신 Keycloak 26.7.3의 Netty Critical `CVE-2026-75595`는 upstream 수정 patch가 없어 공개 blocker로 유지한다.
+- 최초 container scan에서 Frontend/Java runtime의 수정 가능한 OS CVE를 확인해 NGINX unprivileged 1.31.5 Alpine 3.24와 Temurin 17 Noble로 기반 이미지를 갱신했다. 후속 scan에서 확인한 Tomcat은 10.1.59로 보강했고 Backend에서 사용하지 않는 중복 kubectl을 제거했다. Command Runner의 최신 1.34 patch kubectl은 수정 Go toolchain을 포함한 다음 upstream patch가 필요하며, 최신 Keycloak 26.7.3의 Netty Critical `CVE-2026-75595`와 함께 공개 blocker로 유지한다.
 
 ## 3. 공개를 차단하지 않는 운영 검증
 
@@ -89,7 +89,7 @@
 
 ## 6. 다음 권장 실행 순서
 
-1. `OSS-06`: Netty 수정본을 포함한 Keycloak 안정 patch가 나오면 갱신하고 네 container scan을 통과시킨다.
+1. `OSS-06`: 수정 Go toolchain을 포함한 Kubernetes patch와 Netty 수정본을 포함한 Keycloak 안정 patch가 나오면 갱신하고 네 container scan을 통과시킨다.
 2. `OSS-03`: 충돌 없는 별도 namespace에서 신규 설치, 로그인, cluster 등록과 Cook Book 실행을 재현한다.
 3. `OSS-04`: 공개용으로 마스킹한 실제 제품 화면을 README에 추가한다.
 4. 개발 도구 dependency major upgrade를 generated-client, unit/E2E 계약과 함께 별도 검증한다.

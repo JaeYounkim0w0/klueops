@@ -34,7 +34,7 @@
 - 대화형 터미널은 viewport 높이를 제한하고 자체 scrollback을 사용한다. 키 입력과 툴바의 아래쪽 이동 버튼은 최신 prompt로 복귀하며 ResizeObserver가 레이아웃 변화에 맞춰 TTY 크기를 다시 계산한다.
 - 한국어/영어와 desktop/mobile responsive layout
 - 별도 화면 밀도 선택은 제거했다. 간결한 context/section 간격을 기본으로 사용하되 터미널은 읽기 쉬운 12px 글꼴과 화면 높이에 반응하는 300~420px viewport를 유지한다.
-- Backend container image에 checksum 검증한 `kubectl` 포함. Docker BuildKit의 대상 아키텍처를 사용하고 값이 없으면 컨테이너 아키텍처를 감지하므로 AMD64/ARM64에서 같은 Dockerfile을 사용한다.
+- 패키지 Backend container에는 `kubectl`을 포함하지 않는다. 별도 Command Runner image만 checksum 검증한 `kubectl`을 포함하고 Docker BuildKit 대상 아키텍처를 사용하므로 AMD64/ARM64에서 같은 Dockerfile을 사용한다.
 - OpenAPI annotation과 Flyway `V25__kubernetes_console.sql`
 
 ## 2026-09-09 Closed Loop Runner 완료

@@ -16,7 +16,7 @@
 - Cluster 상세와 resource YAML 상세에서 context가 미리 채워진 Kubernetes Console로 이동한다.
 - Console은 namespace, quick task, manifest editor, 실시간 출력, 검색/줄바꿈/복사/다운로드, history/favorite를 제공한다.
 - 한국어/영어, desktop/mobile 재배치, 긴 명령·출력 overflow를 공통 stylesheet로 처리한다.
-- Backend image에 checksum 검증된 kubectl을 포함한다.
+- 패키지 Backend image에는 kubectl을 포함하지 않으며, 비대화형 명령은 checksum 검증된 kubectl을 가진 Command Runner에서만 실행한다.
 - `kubectl exec -it`와 `attach -it`는 REST 일회성 ticket과 동일 사용자 WebSocket, Fabric8 TTY 채널로 연결한다.
 - xterm.js가 stdin, Ctrl-C와 터미널 resize를 전달하며 연결 종료, 15분 idle timeout, 출력 상한과 실행 결과를 Audit/History에 남긴다.
 - Pod 리소스 상세에서 해당 Pod와 namespace가 미리 채워진 터미널로 바로 이동한다.

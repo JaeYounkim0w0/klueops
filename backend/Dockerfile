@@ -8,16 +8,8 @@ RUN mvn -q -DskipTests package
 
 # Run only the packaged jar on a smaller JRE image as a numeric non-root user.
 FROM eclipse-temurin:17-jre-noble
-ARG KUBECTL_VERSION=v1.34.11
-ARG TARGETARCH
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
-    && kubectl_arch="${TARGETARCH:-$(dpkg --print-architecture)}" \
-    && curl -fsSLo /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${kubectl_arch}/kubectl" \
-    && curl -fsSLo /tmp/kubectl.sha256 "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${kubectl_arch}/kubectl.sha256" \
-    && echo "$(cat /tmp/kubectl.sha256)  /tmp/kubectl" | sha256sum --check \
-    && install -o root -g root -m 0755 /tmp/kubectl /usr/local/bin/kubectl \
-    && rm -f /tmp/kubectl /tmp/kubectl.sha256 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system aiops \
     && useradd --system --gid aiops --home-dir /app aiops
