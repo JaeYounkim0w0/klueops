@@ -1,5 +1,5 @@
 # Build the Spring Boot artifact with JDK 17; Maven never enters the runtime image.
-FROM maven:3.9.11-eclipse-temurin-17 AS build
+FROM maven:3.9.15-eclipse-temurin-26 AS build
 WORKDIR /workspace
 COPY pom.xml ./
 RUN mvn -q -DskipTests dependency:go-offline
