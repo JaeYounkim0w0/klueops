@@ -1,0 +1,159 @@
+.trust-center-page {
+  max-width: 1500px;
+}
+
+.trust-hero-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-top: 3px solid #2f6eb8;
+  border-bottom: 1px solid #d9e2ec;
+  background: #f8fbff;
+  padding: 22px 24px;
+}
+
+.trust-hero-band h2,
+.trust-hero-band p {
+  margin: 8px 0 0;
+}
+
+.trust-hero-band p {
+  max-width: 800px;
+  color: #52657a;
+}
+
+.trust-hero-band > strong {
+  color: #1f5fae;
+  font-size: 42px;
+}
+
+.trust-hero-band > strong small {
+  font-size: 18px;
+}
+
+.trust-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.trust-metric-grid article {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #d9e2ec;
+  background: #fff;
+  padding: 16px;
+}
+
+.trust-metric-grid span,
+.trust-metric-grid small,
+.trust-list small {
+  color: #667085;
+}
+
+.trust-metric-grid strong {
+  color: #1d2939;
+  font-size: 26px;
+}
+
+.trust-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.trust-list {
+  display: grid;
+}
+
+.trust-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #e6edf4;
+  padding: 12px 0;
+}
+
+.trust-list article:first-child {
+  border-top: 0;
+}
+
+.trust-list article > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.trust-list strong,
+.trust-list small {
+  overflow-wrap: anywhere;
+}
+
+.trust-contract-panel {
+  overflow: hidden;
+}
+
+.contract-evaluation-body {
+  display: grid;
+  gap: 16px;
+}
+
+.trust-metric-grid.compact {
+  margin: 0;
+}
+
+.contract-category-table {
+  overflow: auto;
+  max-width: 100%;
+  border: 1px solid #d9e2ec;
+}
+
+.contract-category-table table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+}
+
+.contract-category-table th,
+.contract-category-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e6edf4;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.contract-category-table th:first-child,
+.contract-category-table td:first-child {
+  text-align: left;
+}
+
+.contract-evaluation-note {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  color: #667085;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .trust-metric-grid,
+  .trust-two-column {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .trust-hero-band,
+  .trust-list article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .trust-metric-grid,
+  .trust-two-column {
+    grid-template-columns: 1fr;
+  }
+}

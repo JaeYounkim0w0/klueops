@@ -1,0 +1,48 @@
+global:
+  productionMode: false
+
+portal:
+  enabled: true
+  frontend:
+    service:
+      type: NodePort
+      nodePort: 30081
+  database:
+    host: host.docker.internal
+    name: aiops
+    sslMode: prefer
+    runtimeExistingSecret: aiops-portal-db
+  crypto:
+    masterKeyExistingSecret: aiops-portal-master-key
+  ai:
+    baseUrl: http://host.docker.internal:11434
+  session:
+    cookieSecure: false
+  ingress:
+    enabled: false
+
+authentication:
+  mode: managed-keycloak
+  publicBaseUrl: http://127.0.0.1:30081
+  managedKeycloak:
+    replicas: 1
+    publicUrl: http://auth.aiops.local:30080
+    additionalPortalUrls:
+      - http://127.0.0.1:5173
+    publicService:
+      enabled: true
+      nodePort: 30080
+
+postgresql:
+  host: host.docker.internal
+  port: 5432
+  sslMode: prefer
+  bootstrapMode: automatic
+  bootstrapExistingSecret: aiops-postgresql-bootstrap
+  networkCidr: ""
+
+# Docker Desktop resolves host.docker.internal dynamically. A static ipBlock
+# cannot represent that host, so the portable local profile disables egress
+# isolation. Enable it with an explicit postgresql.networkCidr in real clusters.
+networkPolicy:
+  enabled: false

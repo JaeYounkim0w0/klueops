@@ -1,0 +1,139 @@
+{{- if .Values.portal.enabled }}
+{{- $fullname := include "aiops.fullname" . }}
+{{- $oidcSecret := ternary .Values.authentication.managedKeycloak.clientExistingSecret .Values.authentication.externalOidc.clientExistingSecret (eq .Values.authentication.mode "managed-keycloak") }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $fullname }}-backend
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-backend
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.portal.backend.replicas }}
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "aiops.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "aiops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+      annotations:
+        checksum/backend-config: {{ include (print $.Template.BasePath "/backend-config.yaml") . | sha256sum }}
+        checksum/backend-oidc: {{ include (print $.Template.BasePath "/backend-oidc-config.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ $fullname }}-backend
+      terminationGracePeriodSeconds: 45
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      {{- if .Values.portal.topologySpread.enabled }}
+      topologySpreadConstraints:
+        - maxSkew: {{ .Values.portal.topologySpread.maxSkew }}
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: {{ .Values.portal.topologySpread.whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "aiops.name" . }}
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/component: backend
+      {{- end }}
+      containers:
+        - name: backend
+          image: {{ include "aiops.image" .Values.portal.backend.image }}
+          imagePullPolicy: {{ .Values.portal.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: {{ $fullname }}-backend
+            - configMapRef:
+                name: {{ $fullname }}-backend-oidc
+          env:
+            - name: AIOPS_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.portal.database.runtimeExistingSecret }}
+                  key: username
+            - name: AIOPS_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.portal.database.runtimeExistingSecret }}
+                  key: password
+            - name: AIOPS_LOCAL_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.portal.crypto.masterKeyExistingSecret }}
+                  key: master-key
+            - name: AIOPS_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $oidcSecret }}
+                  key: client-secret
+            {{- if .Values.portal.commandRunner.enabled }}
+            - name: AIOPS_COMMAND_RUNNER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.portal.commandRunner.tokenExistingSecret }}
+                  key: token
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            failureThreshold: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.portal.backend.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

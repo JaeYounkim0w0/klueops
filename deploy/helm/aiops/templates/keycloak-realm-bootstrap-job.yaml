@@ -1,0 +1,84 @@
+{{- if eq (include "aiops.managedKeycloakEnabled" .) "true" }}
+{{- $adminSecret := required "authentication.managedKeycloak.adminExistingSecret is required" .Values.authentication.managedKeycloak.adminExistingSecret }}
+{{- $clientSecret := required "authentication.managedKeycloak.clientExistingSecret is required" .Values.authentication.managedKeycloak.clientExistingSecret }}
+{{- $initialAdminSecret := required "authentication.managedKeycloak.initialAdminExistingSecret is required" .Values.authentication.managedKeycloak.initialAdminExistingSecret }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "aiops.fullname" . }}-keycloak-realm-bootstrap
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak-realm-bootstrap
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 180
+  template:
+    metadata:
+      labels:
+        {{- include "aiops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: keycloak-realm-bootstrap
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: bootstrap
+          image: quay.io/keycloak/keycloak:26.7.3
+          imagePullPolicy: IfNotPresent
+          command: ["bash", "/opt/aiops/bootstrap-keycloak-realm.sh"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: KEYCLOAK_URL
+              value: {{ printf "http://%s-keycloak:8080" (include "aiops.fullname" .) | quote }}
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $adminSecret }}
+                  key: username
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $adminSecret }}
+                  key: password
+            - name: AIOPS_PUBLIC_URL
+              value: {{ .Values.authentication.publicBaseUrl | quote }}
+            - name: AIOPS_ADDITIONAL_PUBLIC_URLS
+              value: {{ join "," .Values.authentication.managedKeycloak.additionalPortalUrls | quote }}
+            - name: AIOPS_AUTH_PUBLIC_URL
+              value: {{ .Values.authentication.managedKeycloak.publicUrl | quote }}
+            - name: AIOPS_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $clientSecret }}
+                  key: client-secret
+            - name: AIOPS_INITIAL_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $initialAdminSecret }}
+                  key: username
+            - name: AIOPS_INITIAL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $initialAdminSecret }}
+                  key: password
+          volumeMounts:
+            - name: bootstrap-script
+              mountPath: /opt/aiops
+              readOnly: true
+      volumes:
+        - name: bootstrap-script
+          configMap:
+            name: {{ include "aiops.fullname" . }}-keycloak-realm-bootstrap
+            defaultMode: 0555
+{{- end }}

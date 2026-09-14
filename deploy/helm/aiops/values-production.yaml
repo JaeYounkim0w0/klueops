@@ -1,0 +1,67 @@
+global:
+  productionMode: true
+
+portal:
+  enabled: true
+  backend:
+    replicas: 2
+    image:
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  frontend:
+    replicas: 2
+    image:
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  commandRunner:
+    enabled: true
+    replicas: 2
+    image:
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    tokenExistingSecret: ""
+  database:
+    host: ""
+    port: 5432
+    name: aiops
+    sslMode: require
+    runtimeExistingSecret: ""
+  crypto:
+    masterKeyExistingSecret: ""
+  session:
+    cookieSecure: true
+  ingress:
+    enabled: true
+    className: nginx
+    host: aiops.example.invalid
+    authenticationHost: auth.example.invalid
+    tlsSecretName: aiops-portal-tls
+    authenticationTlsSecretName: aiops-auth-tls
+  pdb:
+    enabled: true
+    minAvailable: 1
+  topologySpread:
+    enabled: true
+    maxSkew: 1
+    whenUnsatisfiable: DoNotSchedule
+
+authentication:
+  mode: managed-keycloak
+  publicBaseUrl: https://aiops.example.invalid
+  managedKeycloak:
+    # Bundled identity is a single-instance convenience profile. Use external-oidc
+    # for an independently operated, highly available identity service.
+    replicas: 1
+    image:
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    publicUrl: https://auth.example.invalid
+    database:
+      runtimeExistingSecret: ""
+    adminExistingSecret: ""
+    clientExistingSecret: ""
+    initialAdminExistingSecret: ""
+
+postgresql:
+  host: ""
+  port: 5432
+  sslMode: require
+  bootstrapMode: manual
+  bootstrapExistingSecret: ""
+  networkCidr: ""

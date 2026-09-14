@@ -1,0 +1,13 @@
+{{- if eq (include "aiops.managedKeycloakEnabled" .) "true" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aiops.fullname" . }}-keycloak-realm-bootstrap
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak-realm-bootstrap
+data:
+  bootstrap-keycloak-realm.sh: |
+{{ .Files.Get "files/bootstrap-keycloak-realm.sh" | indent 4 }}
+{{- end }}
+

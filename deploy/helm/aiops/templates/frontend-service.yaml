@@ -1,0 +1,22 @@
+{{- if .Values.portal.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aiops.fullname" . }}-frontend
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  type: {{ .Values.portal.frontend.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "aiops.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: frontend
+  ports:
+    - name: http
+      port: {{ .Values.portal.frontend.service.port }}
+      targetPort: http
+      {{- if eq .Values.portal.frontend.service.type "NodePort" }}
+      nodePort: {{ required "portal.frontend.service.nodePort is required for NodePort" .Values.portal.frontend.service.nodePort }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,24 @@
+{{- if and (eq (include "aiops.managedKeycloakEnabled" .) "true") .Values.authentication.managedKeycloak.publicService.enabled }}
+{{- $nodePort := int .Values.authentication.managedKeycloak.publicService.nodePort }}
+{{- if or (lt $nodePort 30000) (gt $nodePort 32767) }}
+{{- fail "authentication.managedKeycloak.publicService.nodePort must be between 30000 and 32767" }}
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aiops.fullname" . }}-keycloak-public
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak-public
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: {{ include "aiops.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: keycloak
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      nodePort: {{ $nodePort }}
+{{- end }}

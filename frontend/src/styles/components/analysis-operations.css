@@ -1,0 +1,181 @@
+/* Ownership for the extracted Analysis Runbook and Issue Group components. */
+.analysis-runbook-panel,
+.analysis-issue-group-component,
+.analysis-text-detail-modal,
+.analysis-resource-detail-modal,
+.analysis-log-detail-modal {
+  min-width: 0;
+  contain: layout style;
+}
+
+.analysis-log-intelligence-component {
+  min-width: 0;
+  contain: layout style;
+  background: #f8fbff;
+}
+
+.analysis-collection-runtime {
+  margin-top: 14px;
+  border-top: 1px solid #d9e2ec;
+  padding-top: 12px;
+}
+
+.analysis-collection-runtime > header,
+.analysis-collection-runtime > header > div {
+  display: flex;
+  min-width: 0;
+}
+
+.analysis-collection-runtime > header {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.analysis-collection-runtime > header > div {
+  flex-direction: column;
+  gap: 3px;
+}
+
+.analysis-runtime-status {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #eef2f6;
+  color: #344054;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.analysis-runtime-status.is-success {
+  background: #dcfae6;
+  color: #067647;
+}
+
+.analysis-runtime-status.is-warning {
+  background: #fef0c7;
+  color: #93370d;
+}
+
+.analysis-runtime-status.is-danger {
+  background: #fee4e2;
+  color: #b42318;
+}
+
+.analysis-collection-runtime details {
+  margin-top: 10px;
+}
+
+.analysis-collection-runtime summary {
+  cursor: pointer;
+  color: #344054;
+  font-weight: 600;
+}
+
+.analysis-collection-runtime ul {
+  margin-top: 8px;
+}
+
+.analysis-log-intelligence-component .analysis-log-intelligence-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.analysis-log-intelligence-component .analysis-log-intelligence-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analysis-log-intelligence-component .analysis-log-intelligence-list article {
+  align-content: start;
+}
+
+.analysis-log-intelligence-component .analysis-log-intelligence-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.analysis-log-intelligence-component .analysis-log-intelligence-heading small {
+  grid-column: 2;
+}
+
+.analysis-log-intelligence-component .analysis-log-intelligence-list article > code {
+  display: block;
+  min-width: 0;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344054;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 800px) {
+  .analysis-log-intelligence-component .analysis-log-intelligence-list {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-log-intelligence-component > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .analysis-log-intelligence-component .analysis-log-intelligence-summary {
+    justify-content: flex-start;
+  }
+
+  .analysis-collection-runtime > header {
+    flex-direction: column;
+  }
+}
+
+.analysis-text-detail-modal .analysis-text-detail-sections {
+  min-width: 0;
+}
+
+.analysis-resource-detail-modal .resource-detail-grid,
+.analysis-resource-detail-modal .resource-summary-json {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.analysis-log-detail-modal .log-result-list,
+.analysis-log-detail-modal .log-result pre {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.analysis-runbook-panel > header,
+.analysis-issue-group-component > header {
+  min-width: 0;
+}
+
+.analysis-runbook-panel .runbook-action-body,
+.analysis-issue-group-component .analysis-issue-group-card {
+  min-width: 0;
+}
+
+.analysis-runbook-panel .runbook-action-body code,
+.analysis-issue-group-component .analysis-long-text-preview,
+.analysis-issue-group-component .analysis-reference-list span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 700px) {
+  .analysis-runbook-panel > header,
+  .analysis-issue-group-component > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .analysis-runbook-panel .runbook-summary {
+    width: 100%;
+  }
+}

@@ -1,0 +1,48 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          aiops:
+            provider: aiops
+            client-id: ${AIOPS_OIDC_CLIENT_ID}
+            client-secret: ${AIOPS_OIDC_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: ${AIOPS_OIDC_SCOPES:openid,profile,email}
+        provider:
+          aiops:
+            issuer-uri: ${AIOPS_OIDC_ISSUER_URI}
+            authorization-uri: ${AIOPS_OIDC_AUTHORIZATION_URI:}
+            token-uri: ${AIOPS_OIDC_TOKEN_URI:}
+            jwk-set-uri: ${AIOPS_OIDC_JWK_SET_URI:}
+            user-info-uri: ${AIOPS_OIDC_USER_INFO_URI:}
+            user-name-attribute: ${AIOPS_OIDC_USER_NAME_ATTRIBUTE:sub}
+  session:
+    store-type: jdbc
+    timeout: ${AIOPS_SESSION_TIMEOUT:30m}
+    jdbc:
+      initialize-schema: never
+
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${AIOPS_SESSION_COOKIE_SECURE:true}
+
+aiops:
+  security:
+    session:
+      absolute-timeout: ${AIOPS_SESSION_ABSOLUTE_TIMEOUT:8h}
+    oidc-groups-claim: ${AIOPS_OIDC_GROUPS_CLAIM:groups}
+    oidc-provider:
+      explicit-endpoints-enabled: ${AIOPS_OIDC_EXPLICIT_ENDPOINTS_ENABLED:false}
+      issuer-uri: ${AIOPS_OIDC_ISSUER_URI}
+      authorization-uri: ${AIOPS_OIDC_AUTHORIZATION_URI:}
+      token-uri: ${AIOPS_OIDC_TOKEN_URI:}
+      jwk-set-uri: ${AIOPS_OIDC_JWK_SET_URI:}
+      user-info-uri: ${AIOPS_OIDC_USER_INFO_URI:}
+      user-name-attribute: ${AIOPS_OIDC_USER_NAME_ATTRIBUTE:sub}

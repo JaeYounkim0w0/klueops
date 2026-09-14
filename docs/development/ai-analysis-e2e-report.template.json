@@ -1,0 +1,15 @@
+{
+  "reportVersion": "1.0",
+  "environment": "customer-staging",
+  "sourceVersion": "",
+  "executedAt": "",
+  "tester": "",
+  "scenarios": [
+    { "scenarioId": "A-1", "cluster": "qa-2", "namespace": "nginx", "status": "PENDING", "analysisId": "", "jobId": "", "evidence": [], "notes": "" },
+    { "scenarioId": "A-2", "cluster": "ops-01", "namespace": "nginx", "status": "PENDING", "analysisId": "", "jobId": "", "evidence": [], "notes": "" },
+    { "scenarioId": "A-3", "cluster": "qa-2", "namespace": "nginx", "status": "PENDING", "analysisId": "", "jobId": "", "evidence": [], "notes": "" },
+    { "scenarioId": "A-4", "cluster": "qa-2", "namespace": "nginx", "status": "PENDING", "analysisId": "", "jobId": "", "evidence": [], "notes": "" },
+    { "scenarioId": "A-5", "cluster": "qa-2", "namespace": "nginx", "status": "PENDING", "analysisId": "", "jobId": "", "evidence": [], "notes": "" },
+    { "scenarioId": "A-6", "cluster": "qa-2", "namespace": "nginx", "status": "PENDING", "analysisId": "", "jobId": "", "evidence": [], "notes": "" }
+  ]
+}

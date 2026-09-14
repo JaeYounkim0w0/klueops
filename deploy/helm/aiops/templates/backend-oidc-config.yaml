@@ -1,0 +1,55 @@
+{{- $mode := .Values.authentication.mode }}
+{{- $fullname := include "aiops.fullname" . }}
+{{- if eq $mode "managed-keycloak" }}
+{{- $clientSecret := required "authentication.managedKeycloak.clientExistingSecret is required" .Values.authentication.managedKeycloak.clientExistingSecret }}
+{{- $publicRealm := printf "%s/realms/aiops" (trimSuffix "/" .Values.authentication.managedKeycloak.publicUrl) }}
+{{- $internalRealm := printf "http://%s-keycloak:8080/realms/aiops" $fullname }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-backend-oidc
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend-oidc
+  annotations:
+    aiops.io/client-secret-name: {{ $clientSecret | quote }}
+    aiops.io/client-secret-key: client-secret
+data:
+  AIOPS_OIDC_EXPLICIT_ENDPOINTS_ENABLED: "true"
+  AIOPS_OIDC_CLIENT_ID: aiops-bff
+  AIOPS_OIDC_ISSUER_URI: {{ $publicRealm | quote }}
+  AIOPS_OIDC_AUTHORIZATION_URI: {{ printf "%s/protocol/openid-connect/auth" $publicRealm | quote }}
+  AIOPS_OIDC_TOKEN_URI: {{ printf "%s/protocol/openid-connect/token" $internalRealm | quote }}
+  AIOPS_OIDC_JWK_SET_URI: {{ printf "%s/protocol/openid-connect/certs" $internalRealm | quote }}
+  AIOPS_OIDC_USER_INFO_URI: {{ printf "%s/protocol/openid-connect/userinfo" $internalRealm | quote }}
+  AIOPS_OIDC_USER_NAME_ATTRIBUTE: sub
+{{- else if eq $mode "external-oidc" }}
+{{- $clientSecret := required "authentication.externalOidc.clientExistingSecret is required" .Values.authentication.externalOidc.clientExistingSecret }}
+{{- $issuer := required "authentication.externalOidc.issuerUri is required" .Values.authentication.externalOidc.issuerUri }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-backend-oidc
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend-oidc
+  annotations:
+    aiops.io/client-secret-name: {{ $clientSecret | quote }}
+    aiops.io/client-secret-key: client-secret
+data:
+  AIOPS_OIDC_EXPLICIT_ENDPOINTS_ENABLED: {{ ternary "true" "false" (not (empty .Values.authentication.externalOidc.tokenUri)) | quote }}
+  AIOPS_OIDC_CLIENT_ID: aiops-bff
+  AIOPS_OIDC_ISSUER_URI: {{ $issuer | quote }}
+  {{- with .Values.authentication.externalOidc.authorizationUri }}
+  AIOPS_OIDC_AUTHORIZATION_URI: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.authentication.externalOidc.tokenUri }}
+  AIOPS_OIDC_TOKEN_URI: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.authentication.externalOidc.jwkSetUri }}
+  AIOPS_OIDC_JWK_SET_URI: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.authentication.externalOidc.userInfoUri }}
+  AIOPS_OIDC_USER_INFO_URI: {{ . | quote }}
+  {{- end }}
+{{- end }}

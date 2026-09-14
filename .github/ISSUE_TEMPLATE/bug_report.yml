@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a reproducible problem in KlueOps
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve KlueOps. Do not report security vulnerabilities here; follow the security policy instead. Remove credentials, personal data, and customer identifiers from all evidence.
+  - type: checkboxes
+    id: preparation
+    attributes:
+      label: Preparation
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I reproduced this with the current main branch or documented why that was not possible.
+          required: true
+        - label: This report does not contain a security vulnerability or secret.
+          required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem
+      description: What happened, and which KlueOps feature was affected?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Configure ...
+        2. Open ...
+        3. Run ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Actual behavior and masked evidence
+      description: Add screenshots or short logs only after masking tokens, kubeconfig data, internal addresses, and customer information.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the KlueOps commit, installation method, Kubernetes version/distribution, OS, and browser when relevant.
+    validations:
+      required: true

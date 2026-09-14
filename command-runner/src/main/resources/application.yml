@@ -1,0 +1,19 @@
+server:
+  port: 8090
+  shutdown: graceful
+spring:
+  application:
+    name: klueops-command-runner
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+runner:
+  token: ${AIOPS_RUNNER_TOKEN}
+  kubectl-path: ${AIOPS_RUNNER_KUBECTL_PATH:kubectl}
+  replay-retention-seconds: ${AIOPS_RUNNER_REPLAY_RETENTION_SECONDS:900}

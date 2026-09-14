@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security policy
+    url: https://github.com/JaeYounkim0w0/klueops/security/policy
+    about: Do not disclose suspected vulnerabilities in a public issue.

@@ -1,0 +1,1 @@
+ALTER TABLE analysis_sessions ADD COLUMN locale VARCHAR(10) NOT NULL DEFAULT 'ko-KR';

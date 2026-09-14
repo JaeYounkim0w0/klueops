@@ -1,0 +1,120 @@
+{{- if eq (include "aiops.managedKeycloakEnabled" .) "true" }}
+{{- $databaseSecret := required "authentication.managedKeycloak.database.runtimeExistingSecret is required" .Values.authentication.managedKeycloak.database.runtimeExistingSecret }}
+{{- $adminSecret := required "authentication.managedKeycloak.adminExistingSecret is required" .Values.authentication.managedKeycloak.adminExistingSecret }}
+{{- $databaseHost := required "postgresql.host is required for managed Keycloak" .Values.postgresql.host }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aiops.fullname" . }}-keycloak
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+spec:
+  replicas: {{ .Values.authentication.managedKeycloak.replicas }}
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "aiops.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: keycloak
+  template:
+    metadata:
+      labels:
+        {{- include "aiops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: keycloak
+    spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: keycloak
+          image: {{ if .Values.authentication.managedKeycloak.image.digest }}{{ printf "%s@%s" .Values.authentication.managedKeycloak.image.repository .Values.authentication.managedKeycloak.image.digest }}{{ else }}{{ printf "%s:%s" .Values.authentication.managedKeycloak.image.repository .Values.authentication.managedKeycloak.image.tag }}{{ end }}
+          imagePullPolicy: {{ .Values.authentication.managedKeycloak.image.pullPolicy }}
+          args:
+            - start
+            - --optimized
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL_HOST
+              value: {{ $databaseHost | quote }}
+            - name: KC_DB_URL_PORT
+              value: {{ .Values.postgresql.port | quote }}
+            - name: KC_DB_URL_DATABASE
+              value: {{ .Values.authentication.managedKeycloak.database.name | quote }}
+            - name: KC_DB_URL_PROPERTIES
+              value: {{ printf "?sslmode=%s" .Values.postgresql.sslMode | quote }}
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $databaseSecret }}
+                  key: username
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $databaseSecret }}
+                  key: password
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $adminSecret }}
+                  key: username
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $adminSecret }}
+                  key: password
+            - name: KC_HOSTNAME
+              value: {{ .Values.authentication.managedKeycloak.publicUrl | quote }}
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_METRICS_ENABLED
+              value: "true"
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: management
+            failureThreshold: 30
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: management
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: management
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.authentication.managedKeycloak.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+{{- end }}
+

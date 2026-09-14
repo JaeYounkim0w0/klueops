@@ -1,0 +1,37 @@
+{{- if .Values.portal.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aiops.fullname" . }}-backend
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+data:
+  SPRING_PROFILES_ACTIVE: postgres,security-oidc
+  AIOPS_DATASOURCE_URL: {{ printf "jdbc:postgresql://%s:%v/%s?sslmode=%s" (include "aiops.portalDatabaseHost" .) .Values.portal.database.port .Values.portal.database.name .Values.portal.database.sslMode | quote }}
+  AIOPS_AI_BASE_URL: {{ .Values.portal.ai.baseUrl | quote }}
+  AIOPS_AI_MODEL: {{ .Values.portal.ai.model | quote }}
+  AIOPS_PUBLIC_BASE_URL: {{ .Values.authentication.publicBaseUrl | quote }}
+  AIOPS_CREDENTIAL_REVEAL_ENABLED: "false"
+  AIOPS_VALIDATION_LAB_LIVE_ENABLED: "false"
+  AIOPS_SESSION_COOKIE_SECURE: {{ .Values.portal.session.cookieSecure | quote }}
+  AIOPS_SESSION_TIMEOUT: {{ .Values.portal.session.timeout | quote }}
+  AIOPS_SESSION_ABSOLUTE_TIMEOUT: {{ .Values.portal.session.absoluteTimeout | quote }}
+  AIOPS_COMMAND_TIMEOUT_SECONDS: {{ .Values.portal.commandConsole.timeoutSeconds | quote }}
+  AIOPS_COMMAND_STREAM_TIMEOUT_SECONDS: {{ .Values.portal.commandConsole.streamTimeoutSeconds | quote }}
+  AIOPS_TERMINAL_IDLE_SECONDS: {{ .Values.portal.commandConsole.terminalIdleSeconds | quote }}
+  AIOPS_COMMAND_MAXIMUM_OUTPUT_BYTES: {{ .Values.portal.commandConsole.maximumOutputBytes | quote }}
+  AIOPS_COMMAND_RECOVERY_MINIMUM_AGE_SECONDS: {{ .Values.portal.commandConsole.recoveryMinimumAgeSeconds | quote }}
+  AIOPS_COMMAND_RECOVERY_INTERVAL_MS: {{ .Values.portal.commandConsole.recoveryIntervalMs | quote }}
+  AIOPS_COMMAND_VERIFICATION_TIMEOUT_SECONDS: {{ .Values.portal.commandConsole.verificationTimeoutSeconds | quote }}
+  AIOPS_COMMAND_USER_CONCURRENCY: {{ .Values.portal.commandConsole.limits.userCommands | quote }}
+  AIOPS_TERMINAL_USER_CONCURRENCY: {{ .Values.portal.commandConsole.limits.userTerminals | quote }}
+  AIOPS_COMMAND_CLUSTER_CONCURRENCY: {{ .Values.portal.commandConsole.limits.clusterCommands | quote }}
+  AIOPS_TERMINAL_CLUSTER_CONCURRENCY: {{ .Values.portal.commandConsole.limits.clusterTerminals | quote }}
+  AIOPS_COMMAND_USER_STARTS_PER_MINUTE: {{ .Values.portal.commandConsole.limits.userStartsPerMinute | quote }}
+  AIOPS_COMMAND_CLUSTER_STARTS_PER_MINUTE: {{ .Values.portal.commandConsole.limits.clusterStartsPerMinute | quote }}
+  AIOPS_COMMAND_RUNNER_MODE: {{ ternary "remote" "local" .Values.portal.commandRunner.enabled | quote }}
+  {{- if .Values.portal.commandRunner.enabled }}
+  AIOPS_COMMAND_RUNNER_URL: {{ printf "http://%s-command-runner:8090" (include "aiops.fullname" .) | quote }}
+  {{- end }}
+{{- end }}

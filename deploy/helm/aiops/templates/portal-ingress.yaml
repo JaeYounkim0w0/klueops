@@ -1,0 +1,47 @@
+{{- if and .Values.portal.enabled .Values.portal.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "aiops.fullname" . }}-portal
+  labels:
+    {{- include "aiops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingress
+  {{- with .Values.portal.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.portal.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  tls:
+    - hosts: [{{ .Values.portal.ingress.host | quote }}]
+      secretName: {{ .Values.portal.ingress.tlsSecretName }}
+    {{- if eq .Values.authentication.mode "managed-keycloak" }}
+    - hosts: [{{ .Values.portal.ingress.authenticationHost | quote }}]
+      secretName: {{ .Values.portal.ingress.authenticationTlsSecretName }}
+    {{- end }}
+  rules:
+    - host: {{ .Values.portal.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "aiops.fullname" . }}-frontend
+                port:
+                  name: http
+    {{- if eq .Values.authentication.mode "managed-keycloak" }}
+    - host: {{ .Values.portal.ingress.authenticationHost | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "aiops.fullname" . }}-keycloak
+                port:
+                  name: http
+    {{- end }}
+{{- end }}

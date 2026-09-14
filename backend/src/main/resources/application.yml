@@ -1,0 +1,144 @@
+spring:
+  application:
+    name: klueops-backend
+  mvc:
+    async:
+      request-timeout: ${AIOPS_AI_STREAM_TIMEOUT_MS:330000}
+  profiles:
+    default: local
+  ai:
+    ollama:
+      base-url: ${AIOPS_AI_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${AIOPS_AI_MODEL:qwen2.5-coder:7b}
+  datasource:
+    url: ${AIOPS_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5432/aiops}
+    username: ${AIOPS_DATASOURCE_USERNAME:raguser}
+    password: ${AIOPS_DATASOURCE_PASSWORD:}
+    driver-class-name: ${AIOPS_DATASOURCE_DRIVER:org.postgresql.Driver}
+    hikari:
+      pool-name: aiops-postgres-pool
+      minimum-idle: ${AIOPS_DB_POOL_MIN_IDLE:2}
+      maximum-pool-size: ${AIOPS_DB_POOL_MAX_SIZE:10}
+      connection-timeout: ${AIOPS_DB_CONNECTION_TIMEOUT_MS:10000}
+      validation-timeout: ${AIOPS_DB_VALIDATION_TIMEOUT_MS:5000}
+      idle-timeout: ${AIOPS_DB_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${AIOPS_DB_MAX_LIFETIME_MS:1800000}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    connect-retries: ${AIOPS_DB_MIGRATION_CONNECT_RETRIES:10}
+    connect-retries-interval: ${AIOPS_DB_MIGRATION_RETRY_SECONDS:2}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+aiops:
+  security:
+    credential-reveal-enabled: ${AIOPS_CREDENTIAL_REVEAL_ENABLED:false}
+    public-base-url: ${AIOPS_PUBLIC_BASE_URL:http://127.0.0.1:5173}
+  crypto:
+    local-master-key: ${AIOPS_LOCAL_MASTER_KEY:local-development-master-key}
+  ai:
+    provider: ollama
+    model: ${AIOPS_AI_MODEL:qwen2.5-coder:7b}
+    base-url: ${AIOPS_AI_BASE_URL:http://localhost:11434}
+    connect-timeout-ms: ${AIOPS_AI_CONNECT_TIMEOUT_MS:10000}
+    timeout-ms: ${AIOPS_AI_TIMEOUT_MS:300000}
+    temperature: ${AIOPS_AI_TEMPERATURE:0.1}
+    analysis:
+      max-context-chars: ${AIOPS_AI_ANALYSIS_MAX_CONTEXT_CHARS:60000}
+      section-timeout-ms: ${AIOPS_AI_ANALYSIS_SECTION_TIMEOUT_MS:180000}
+    chat-memory:
+      max-messages: ${AIOPS_AI_CHAT_MEMORY_MAX_MESSAGES:20}
+    chat-stream:
+      heartbeat-ms: ${AIOPS_AI_CHAT_HEARTBEAT_MS:15000}
+  cluster-logs:
+    heartbeat-ms: ${AIOPS_CLUSTER_LOG_HEARTBEAT_MS:15000}
+    max-stream-duration-ms: ${AIOPS_CLUSTER_LOG_MAX_STREAM_DURATION_MS:1800000}
+    max-target-pods: ${AIOPS_CLUSTER_LOG_MAX_TARGET_PODS:50}
+  sync:
+    default-interval-seconds: 300
+  jobs:
+    maximum-runtime-seconds: ${AIOPS_JOB_MAXIMUM_RUNTIME_SECONDS:900}
+    recovery-interval-ms: ${AIOPS_JOB_RECOVERY_INTERVAL_MS:60000}
+  executors:
+    analysis-job:
+      core-size: ${AIOPS_ANALYSIS_JOB_CORE_SIZE:2}
+      max-size: ${AIOPS_ANALYSIS_JOB_MAX_SIZE:4}
+      queue-capacity: ${AIOPS_ANALYSIS_JOB_QUEUE_CAPACITY:50}
+    analysis-section:
+      core-size: ${AIOPS_ANALYSIS_SECTION_CORE_SIZE:3}
+      max-size: ${AIOPS_ANALYSIS_SECTION_MAX_SIZE:6}
+      queue-capacity: ${AIOPS_ANALYSIS_SECTION_QUEUE_CAPACITY:50}
+    cluster-sync:
+      core-size: ${AIOPS_CLUSTER_SYNC_CORE_SIZE:2}
+      max-size: ${AIOPS_CLUSTER_SYNC_MAX_SIZE:4}
+      queue-capacity: ${AIOPS_CLUSTER_SYNC_QUEUE_CAPACITY:100}
+    command-console:
+      core-size: ${AIOPS_COMMAND_CONSOLE_CORE_SIZE:4}
+      max-size: ${AIOPS_COMMAND_CONSOLE_MAX_SIZE:12}
+      queue-capacity: ${AIOPS_COMMAND_CONSOLE_QUEUE_CAPACITY:100}
+  command-console:
+    enabled: ${AIOPS_COMMAND_CONSOLE_ENABLED:true}
+    kubectl-path: ${AIOPS_KUBECTL_PATH:kubectl}
+    timeout-seconds: ${AIOPS_COMMAND_TIMEOUT_SECONDS:60}
+    stream-timeout-seconds: ${AIOPS_COMMAND_STREAM_TIMEOUT_SECONDS:900}
+    maximum-output-bytes: ${AIOPS_COMMAND_MAXIMUM_OUTPUT_BYTES:1048576}
+    recovery-minimum-age-seconds: ${AIOPS_COMMAND_RECOVERY_MINIMUM_AGE_SECONDS:90}
+    recovery-interval-ms: ${AIOPS_COMMAND_RECOVERY_INTERVAL_MS:30000}
+    verification-timeout-seconds: ${AIOPS_COMMAND_VERIFICATION_TIMEOUT_SECONDS:15}
+    limits:
+      user-commands: ${AIOPS_COMMAND_USER_CONCURRENCY:5}
+      user-terminals: ${AIOPS_TERMINAL_USER_CONCURRENCY:3}
+      cluster-commands: ${AIOPS_COMMAND_CLUSTER_CONCURRENCY:50}
+      cluster-terminals: ${AIOPS_TERMINAL_CLUSTER_CONCURRENCY:20}
+      user-starts-per-minute: ${AIOPS_COMMAND_USER_STARTS_PER_MINUTE:30}
+      cluster-starts-per-minute: ${AIOPS_COMMAND_CLUSTER_STARTS_PER_MINUTE:120}
+    terminal-ticket-seconds: ${AIOPS_TERMINAL_TICKET_SECONDS:30}
+    terminal-idle-seconds: ${AIOPS_TERMINAL_IDLE_SECONDS:900}
+    runner:
+      mode: ${AIOPS_COMMAND_RUNNER_MODE:local}
+      url: ${AIOPS_COMMAND_RUNNER_URL:http://127.0.0.1:8090}
+      token: ${AIOPS_COMMAND_RUNNER_TOKEN:local-development-runner-token-change-me}
+  kubernetes:
+    connect-timeout-ms: ${AIOPS_KUBERNETES_CONNECT_TIMEOUT_MS:5000}
+    request-timeout-ms: ${AIOPS_KUBERNETES_REQUEST_TIMEOUT_MS:10000}
+    watch:
+      retry-base-ms: ${AIOPS_WATCH_RETRY_BASE_MS:5000}
+      retry-max-ms: ${AIOPS_WATCH_RETRY_MAX_MS:120000}
+      renewal-ms: ${AIOPS_WATCH_RENEWAL_MS:600000}
+      polling-failure-threshold: ${AIOPS_WATCH_POLLING_FAILURE_THRESHOLD:3}
+      polling-recovery-threshold: ${AIOPS_WATCH_POLLING_RECOVERY_THRESHOLD:3}
+      polling-interval-ms: ${AIOPS_WATCH_POLLING_INTERVAL_MS:30000}
+  analysis:
+    log-tail-lines: ${AIOPS_ANALYSIS_LOG_TAIL_LINES:80}
+    max-log-chars: ${AIOPS_ANALYSIS_MAX_LOG_CHARS:4000}
+    max-log-pods: ${AIOPS_ANALYSIS_MAX_LOG_PODS:20}
+    max-collection-failures: ${AIOPS_ANALYSIS_MAX_COLLECTION_FAILURES:6}
+  validation-lab:
+    live-enabled: ${AIOPS_VALIDATION_LAB_LIVE_ENABLED:false}
+    allow-production: ${AIOPS_VALIDATION_LAB_ALLOW_PRODUCTION:false}
+    namespace-prefix: ${AIOPS_VALIDATION_LAB_NAMESPACE_PREFIX:aiops-validation-}
+    maximum-ttl-seconds: ${AIOPS_VALIDATION_LAB_MAXIMUM_TTL_SECONDS:900}
+    observation-timeout-ms: ${AIOPS_VALIDATION_LAB_OBSERVATION_TIMEOUT_MS:15000}
+    cleanup-interval-ms: ${AIOPS_VALIDATION_LAB_CLEANUP_INTERVAL_MS:60000}
+    required-confirmation: ${AIOPS_VALIDATION_LAB_REQUIRED_CONFIRMATION:RUN LIVE VALIDATION}

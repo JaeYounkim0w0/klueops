@@ -1,0 +1,154 @@
+nameOverride: ""
+fullnameOverride: ""
+
+global:
+  productionMode: false
+  imagePullSecrets: []
+
+portal:
+  enabled: true
+  backend:
+    image:
+      repository: aiops/backend
+      tag: 0.1.0
+      digest: ""
+      pullPolicy: IfNotPresent
+    replicas: 1
+    service:
+      port: 8080
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+  frontend:
+    image:
+      repository: aiops/frontend
+      tag: 0.1.0
+      digest: ""
+      pullPolicy: IfNotPresent
+    replicas: 1
+    service:
+      type: ClusterIP
+      port: 80
+      nodePort: null
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  database:
+    host: ""
+    port: 5432
+    name: aiops
+    sslMode: prefer
+    runtimeExistingSecret: ""
+  crypto:
+    masterKeyExistingSecret: ""
+  ai:
+    baseUrl: http://ollama:11434
+    model: qwen2.5-coder:7b
+  session:
+    cookieSecure: false
+    timeout: 30m
+    absoluteTimeout: 8h
+  commandConsole:
+    timeoutSeconds: 60
+    streamTimeoutSeconds: 900
+    terminalIdleSeconds: 900
+    maximumOutputBytes: "1048576"
+    recoveryMinimumAgeSeconds: 90
+    recoveryIntervalMs: 30000
+    verificationTimeoutSeconds: 15
+    limits:
+      userCommands: 5
+      userTerminals: 3
+      clusterCommands: 50
+      clusterTerminals: 20
+      userStartsPerMinute: 30
+      clusterStartsPerMinute: 120
+  commandRunner:
+    enabled: true
+    image:
+      repository: aiops/command-runner
+      tag: 0.1.0
+      digest: ""
+      pullPolicy: IfNotPresent
+    tokenExistingSecret: aiops-command-runner
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: "1"
+        memory: 512Mi
+    temporaryStorageLimit: 256Mi
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    host: aiops.local
+    authenticationHost: auth.aiops.local
+    tlsSecretName: ""
+    authenticationTlsSecretName: ""
+  pdb:
+    enabled: false
+    minAvailable: 1
+  topologySpread:
+    enabled: false
+    maxSkew: 1
+    whenUnsatisfiable: ScheduleAnyway
+
+authentication:
+  mode: managed-keycloak
+  publicBaseUrl: http://aiops.local
+  managedKeycloak:
+    image:
+      repository: aiops/keycloak
+      tag: 26.7.3-1
+      digest: ""
+      pullPolicy: IfNotPresent
+    replicas: 1
+    publicUrl: http://auth.aiops.local
+    additionalPortalUrls: []
+    publicService:
+      enabled: false
+      nodePort: 30080
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "2"
+        memory: 1536Mi
+    database:
+      name: keycloak
+      user: keycloak_app
+      runtimeExistingSecret: aiops-keycloak-db
+    adminExistingSecret: aiops-keycloak-admin
+    clientExistingSecret: aiops-keycloak-client
+    initialAdminExistingSecret: aiops-initial-platform-admin
+  externalOidc:
+    issuerUri: ""
+    authorizationUri: ""
+    tokenUri: ""
+    jwkSetUri: ""
+    userInfoUri: ""
+    clientExistingSecret: ""
+
+postgresql:
+  host: ""
+  port: 5432
+  sslMode: prefer
+  bootstrapMode: automatic
+  bootstrapExistingSecret: ""
+  networkCidr: ""
+
+networkPolicy:
+  enabled: true
+  portalIngressIsolation: true

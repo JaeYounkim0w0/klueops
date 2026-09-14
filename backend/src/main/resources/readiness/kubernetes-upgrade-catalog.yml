@@ -1,0 +1,30 @@
+version: kubernetes-compatibility-2026.09
+removedApis:
+  - { apiVersion: extensions/v1beta1, removedInMinor: 16, replacement: networking.k8s.io/v1 }
+  - { apiVersion: apps/v1beta1, removedInMinor: 16, replacement: apps/v1 }
+  - { apiVersion: apps/v1beta2, removedInMinor: 16, replacement: apps/v1 }
+  - { apiVersion: networking.k8s.io/v1beta1, removedInMinor: 22, replacement: networking.k8s.io/v1 }
+  - { apiVersion: apiextensions.k8s.io/v1beta1, removedInMinor: 22, replacement: apiextensions.k8s.io/v1 }
+  - { apiVersion: admissionregistration.k8s.io/v1beta1, removedInMinor: 22, replacement: admissionregistration.k8s.io/v1 }
+  - { apiVersion: policy/v1beta1, removedInMinor: 25, replacement: policy/v1 }
+  - { apiVersion: batch/v1beta1, removedInMinor: 25, replacement: batch/v1 }
+  - { apiVersion: autoscaling/v2beta1, removedInMinor: 25, replacement: autoscaling/v2 }
+  - { apiVersion: autoscaling/v2beta2, removedInMinor: 26, replacement: autoscaling/v2 }
+  - { apiVersion: flowcontrol.apiserver.k8s.io/v1beta1, removedInMinor: 26, replacement: flowcontrol.apiserver.k8s.io/v1beta3 }
+  - { apiVersion: flowcontrol.apiserver.k8s.io/v1beta2, removedInMinor: 29, replacement: flowcontrol.apiserver.k8s.io/v1 }
+addons:
+  - kind: IngressClass
+    category: INGRESS
+    guidance: Verify the controller image supports the target Kubernetes minor and networking.k8s.io/v1.
+  - kind: CSIDriver
+    category: STORAGE
+    guidance: Verify CSI sidecar versions, volume attachment and snapshot APIs against the target minor.
+  - kind: MutatingWebhookConfiguration
+    category: ADMISSION
+    guidance: Verify webhook service reachability, CA bundle, failurePolicy and admissionReviewVersions.
+  - kind: ValidatingWebhookConfiguration
+    category: ADMISSION
+    guidance: Verify webhook service reachability, CA bundle, failurePolicy and admissionReviewVersions.
+  - kind: DaemonSet
+    category: CNI
+    guidance: Identify CNI and node agents and verify their vendor compatibility matrix before node upgrades.
