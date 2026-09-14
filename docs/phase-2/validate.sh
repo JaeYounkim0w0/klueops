@@ -67,5 +67,7 @@ grep -q "Deployment 기능 배치" "$delivery_root/ui-ux-screen-design.md"
 grep -q "DEPLOYING" "$delivery_root/product-requirements.md"
 grep -q "asyncJobId" "$delivery_root/architecture-design.md"
 grep -q "GLOBAL JOB CENTER" "$delivery_root/ui-mockups/app.js"
+grep -q 'class="deployment-map"' "$delivery_root/ui-mockups/index.html"
+grep -q 'phase2-additions.css?v=20260915' "$delivery_root/ui-mockups/index.html"
 
 echo "Phase 2 documents and UI artifacts are complete."

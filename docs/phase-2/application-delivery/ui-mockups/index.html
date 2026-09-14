@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KlueOps Phase 2 · Application Delivery UI Concept</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="modals.css" />
-    <link rel="stylesheet" href="phase2-additions.css" />
+    <link rel="stylesheet" href="styles.css?v=20260915" />
+    <link rel="stylesheet" href="modals.css?v=20260915" />
+    <link rel="stylesheet" href="phase2-additions.css?v=20260915" />
   </head>
   <body>
     <aside class="sidebar">
@@ -143,9 +143,10 @@ resources:
       </section>
 
       <section class="screen" data-screen-panel="applications">
-        <div class="page-head"><div><p class="eyebrow">APPLICATION DELIVERY</p><h1>Deployed Applications</h1><p>KlueOps로 배포한 Application의 Workload, Endpoint와 Helm 이력을 관리합니다.</p></div><button class="primary" data-screen="discover">＋ 새 배포</button></div>
-        <div class="stat-row"><div class="stat"><small>HEALTHY</small><b class="green">16</b><span>of 17 releases</span></div><div class="stat"><small>PROGRESSING</small><b class="blue-text">1</b><span>upgrade running</span></div><div class="stat"><small>FAILED</small><b>0</b><span>last 24 hours</span></div><div class="stat"><small>DRIFT</small><b class="orange-text">2</b><span>informational</span></div></div>
-        <div class="split-layout release-layout"><div class="table-card release-table"><div class="table-tools"><div class="small-search">⌕ <span>Release 검색</span></div><button class="chip active">All clusters</button><button class="chip">All status</button></div><table><thead><tr><th>RELEASE</th><th>CLUSTER / NAMESPACE</th><th>CHART</th><th>STATUS</th><th>REVISION</th></tr></thead><tbody><tr class="row-selected"><td><strong>payments-web</strong><small>Updated 12m ago</small></td><td>prod-seoul / payments</td><td>nginx 18.2.4</td><td><span class="status healthy">● Healthy</span></td><td>7</td></tr><tr><td><strong>checkout-cache</strong><small>Updated 3h ago</small></td><td>prod-seoul / checkout</td><td>redis 20.1.1</td><td><span class="status healthy">● Healthy</span></td><td>4</td></tr><tr><td><strong>events</strong><small>Updated 8m ago</small></td><td>dev-busan / platform</td><td>kafka 31.0.0</td><td><span class="status progressing">● Progressing</span></td><td>2</td></tr></tbody></table></div>
+        <div class="page-head"><div><p class="eyebrow">APPLICATION DELIVERY</p><h1>Deployed Applications</h1><p>신규 설치가 시작되는 순간부터 완료·실패 이후까지 Application 상태를 한곳에서 관리합니다.</p></div><button class="primary" data-screen="discover">＋ 새 배포</button></div>
+        <div class="deployment-map"><div><small>1 · 실행 전</small><b>배포 Wizard</b><span>Values → Target → Preview</span></div><i>→</i><div><small>2 · 실행 중</small><b>전역 Job Center</b><span>Queue · Progress · Cancel</span></div><i>→</i><div class="active"><small>3 · 대상 상태</small><b>Deployed Applications</b><span>Deploying · Active · Failed</span></div><i>→</i><div><small>4 · 대상별 운영</small><b>Application Detail</b><span>Workloads · History</span></div></div>
+        <div class="stat-row"><div class="stat"><small>HEALTHY</small><b class="green">16</b><span>of 18 applications</span></div><div class="stat"><small>PROGRESSING</small><b class="blue-text">2</b><span>1 install · 1 upgrade</span></div><div class="stat"><small>FAILED</small><b>0</b><span>cleanup required</span></div><div class="stat"><small>DRIFT</small><b class="orange-text">2</b><span>informational</span></div></div>
+        <div class="split-layout release-layout"><div class="table-card release-table"><div class="table-tools"><div class="small-search">⌕ <span>Application 검색</span></div><button class="chip active">All clusters</button><button class="chip">All status</button></div><table><thead><tr><th>APPLICATION / RELEASE</th><th>CLUSTER / NAMESPACE</th><th>CHART</th><th>STATUS</th><th>REVISION</th></tr></thead><tbody><tr class="deployment-row"><td><strong>catalog-api</strong><small>Install accepted · Job #4821</small></td><td>prod-seoul / catalog</td><td>nginx 18.2.4</td><td><span class="status progressing">● Deploying 42%</span></td><td>—</td></tr><tr class="row-selected"><td><strong>payments-web</strong><small>Updated 12m ago</small></td><td>prod-seoul / payments</td><td>nginx 18.2.4</td><td><span class="status healthy">● Healthy</span></td><td>7</td></tr><tr><td><strong>checkout-cache</strong><small>Updated 3h ago</small></td><td>prod-seoul / checkout</td><td>redis 20.1.1</td><td><span class="status healthy">● Healthy</span></td><td>4</td></tr><tr><td><strong>events</strong><small>Updated 8m ago</small></td><td>dev-busan / platform</td><td>kafka 31.0.0</td><td><span class="status progressing">● Upgrading</span></td><td>2</td></tr></tbody></table></div>
           <aside class="detail-panel release-detail"><div class="release-head"><div><small>APPLICATION</small><h2>payments-web</h2><span class="status healthy">● Healthy</span></div><button class="more">···</button></div><div class="kv"><span>Target</span><strong>prod-seoul / payments</strong><span>Chart</span><strong>nginx 18.2.4</strong><span>Pods</span><strong>3 / 3 Ready</strong><span>Endpoint</span><strong class="blue-text">nginx.cluster.co.kr</strong></div><h3>Revision history</h3><div class="timeline"><div class="current"><b>7</b><p><strong>Upgrade · prod-ha-v3</strong><small>aiops-admin · 12m ago</small></p><span>Current</span></div><div><b>6</b><p><strong>Upgrade · prod-ha-v2</strong><small>platform-user · 6d ago</small></p></div><div><b>5</b><p><strong>Rollback to revision 4</strong><small>aiops-admin · 12d ago</small></p></div></div><div class="release-actions"><button class="secondary">Rollback</button><button class="primary" data-screen="application-detail">상세 보기</button></div></aside></div>
       </section>
 
@@ -181,6 +182,6 @@ resources:
       </div>
       <div class="toast" role="status" aria-live="polite"></div>
     </main>
-    <script src="app.js"></script>
+    <script src="app.js?v=20260915"></script>
   </body>
 </html>

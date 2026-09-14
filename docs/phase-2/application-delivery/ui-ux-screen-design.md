@@ -207,6 +207,7 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 
 ### 구성
 
+- 상단 lifecycle map으로 `배포 Wizard → Job Center → Deployed Applications → Application Detail`의 책임을 항상 표시
 - Tenant/Workspace/Cluster/Namespace filter
 - Application status, Pod/Endpoint health, Chart/Values revision, 마지막 작업과 운영자
 - install 요청이 수락된 즉시 `DEPLOYING` row를 만들고 진행률/Job Center link를 표시
