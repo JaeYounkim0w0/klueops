@@ -18,6 +18,35 @@ Application은 이 기능에서 하나의 Helm Release를 의미한다. 기존 K
 
 ## 2. 목표
 
+### 2.1 P2-0 최우선 선행 요구사항: 기존 제품 UI 현대화
+
+Application Delivery 기능 구현보다 먼저 현재 KlueOps의 기존 화면을 제품 수준의 UI/UX로 현대화한다. 현재 화면의 기능, API 계약, Tenant/Workspace scope와 권한 동작은 유지하되, 프로토타입처럼 보이는 불균일한 layout, 과도한 정보 밀도, 단순 raw form/table, 약한 상태 위계와 화면별 표현 차이를 제거한다.
+
+목표 품질선은 이 Phase 2 HTML 시안의 visual language다. 짙은 navigation shell, 명확한 page hierarchy, 충분한 여백, 정돈된 card/table/form, 일관된 status/risk 표현, 단계형 workflow, 세련된 modal·confirmation과 beginner-friendly 설명을 실제 제품 전체에 공통 적용한다. HTML을 화면별로 그대로 복사하지 않고 재사용 가능한 Vue component와 design token으로 제품화한다.
+
+P2-0 적용 범위:
+
+1. Login과 global shell/sidebar/header/Tenant·Workspace context
+2. Overview, Clusters, Cluster Detail과 Kubernetes Console
+3. Analysis, AI Chat, Triage, Incidents, Runbooks와 Fleet/Operations 화면
+4. Policies, Audit, Access, AI/Runtime와 사용자 설정
+5. 이후 추가되는 모든 Application Delivery 화면
+
+P2-0 완료 조건:
+
+- color, typography, spacing, radius, elevation과 responsive breakpoint를 semantic design token으로 정의한다.
+- button, input/select, tabs, card, table, status/risk badge, empty/loading/error state, toast, drawer와 modal을 공통 component/style로 통합한다.
+- Kubernetes 용어에는 짧은 의미와 다음 안전 행동을 함께 제공하고, 위험 mutation은 preview와 confirmation을 시각적으로 분리한다.
+- desktop 1280/1440/1680과 tablet/mobile 기준에서 navigation, table, drawer와 sticky action이 깨지지 않는다.
+- keyboard focus, contrast, modal focus trap, status의 비색상 표현과 screen-reader label을 검증한다.
+- 기존 route, 기능, 권한, API 호출과 E2E 핵심 흐름의 동작 회귀가 없어야 한다.
+- 기준 screenshot과 주요 상태별 visual regression을 만들고 HTML 시안과 동등한 완성도를 사용자 검토로 승인받는다.
+- 정적 inline style과 화면별 중복 helper를 늘리지 않고 `frontend/src/styles`, 공통 component, composable과 store를 재사용한다.
+
+P2-0은 단순 색상 변경이 아니라 기존 제품 전체의 정보 구조와 상호작용 품질을 정돈하는 작업이다. 다만 기능 의미나 업무 흐름을 임의로 변경하지 않으며, 필요한 구조 변경은 화면별 before/after와 regression 결과를 검토한 뒤 반영한다. P2-0 품질 게이트를 통과하기 전에는 새로운 Application Delivery 화면 구현을 main에 완료 기능으로 병합하지 않는다.
+
+### 2.2 Application Delivery 기능 목표
+
 - Artifact Hub에서 Helm package를 검색하고 버전, publisher, 문서와 보안 metadata를 비교한다.
 - Artifact Hub가 가리키는 원본 Helm repository 또는 OCI registry에서 정확한 Chart version을 가져온다.
 - `.tgz`, Helm repository와 OCI reference를 Tenant별 Chart Library에 등록한다.
@@ -227,24 +256,26 @@ Artifact Hub의 official/verified publisher 표시는 검색 판단 근거이지
 
 Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한다.
 
-1. Artifact Hub 검색과 version 상세 조회
-2. 선택 version 다운로드, SHA-256 및 provenance 상태 표시
-3. Tenant A/B Chart와 Values Profile 상호 비노출
-4. schema form/YAML/AI patch의 동일 결과와 invalid key 차단
-5. 기존 Namespace 선택과 권한 있는 Namespace 생성 plan 검증
-6. Internal/Chart-managed/KlueOps-managed Exposure preview와 HTTPRoute condition 검증
-7. manifest preview, 위험 resource와 RBAC/Gateway preflight 표시
-8. install 성공, Application/Pod/Endpoint health와 audit 확인
-9. Values upgrade, history, rollback 성공
-10. uninstall preview, PVC/companion 보존 선택, exact confirmation과 bounded cleanup
-11. Runner timeout/cancel/restart recovery와 Secret/output 마스킹
-12. 9B 이하 Ollama model install/검증/목적별 routing과 사용 중 삭제 차단
-13. Ollama/OpenAI/Google GenAI profile별 fake adapter 회귀 및 외부 전송 동의 검증
+1. 기존 제품 주요 route가 공통 design system으로 현대화되고 기능·권한·API/E2E 회귀 없이 P2-0 visual review를 통과
+2. Artifact Hub 검색과 version 상세 조회
+3. 선택 version 다운로드, SHA-256 및 provenance 상태 표시
+4. Tenant A/B Chart와 Values Profile 상호 비노출
+5. schema form/YAML/AI patch의 동일 결과와 invalid key 차단
+6. 기존 Namespace 선택과 권한 있는 Namespace 생성 plan 검증
+7. Internal/Chart-managed/KlueOps-managed Exposure preview와 HTTPRoute condition 검증
+8. manifest preview, 위험 resource와 RBAC/Gateway preflight 표시
+9. install 성공, Application/Pod/Endpoint health와 audit 확인
+10. Values upgrade, history, rollback 성공
+11. uninstall preview, PVC/companion 보존 선택, exact confirmation과 bounded cleanup
+12. Runner timeout/cancel/restart recovery와 Secret/output 마스킹
+13. 9B 이하 Ollama model install/검증/목적별 routing과 사용 중 삭제 차단
+14. Ollama/OpenAI/Google GenAI profile별 fake adapter 회귀 및 외부 전송 동의 검증
 
 ## 11. 단계별 구현
 
 | 단계 | 범위 |
 | --- | --- |
+| P2-0 | 기존 KlueOps 전체 UI audit와 제품형 visual refresh, design token/공통 component, responsive·접근성·visual/functional regression gate |
 | P2-A | domain/API 재정의, Tenant scope, capability와 migration |
 | P2-B | Artifact Hub/repository/OCI/upload, Tenant Chart Library |
 | P2-C | Schema Form, YAML, Values Profile/version/diff |
@@ -253,3 +284,5 @@ Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한�
 | P2-F | Helm Runner install/upgrade/status/history/rollback/uninstall |
 | P2-G | Deployed Application 상세, Endpoint, companion cleanup |
 | P2-H | AI Analysis/Incident 연결, 전체 수용시험과 문서화 |
+
+구현 순서는 `P2-0 → P2-A → ... → P2-H`다. P2-0은 이후 화면이 같은 visual system 위에서 개발되도록 하는 선행 기반이며, 임시로 Phase 2 시안과 기존 제품이 서로 다른 디자인 체계로 공존하게 두지 않는다.

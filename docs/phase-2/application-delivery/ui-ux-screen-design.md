@@ -4,6 +4,31 @@
 
 상태: HTML 시안 완료, 구현 미착수
 
+## Phase 2 최우선 선행 작업: P2-0 기존 제품 UI 현대화
+
+Application Delivery 화면을 구현하기 전에 현재 KlueOps 전체 화면을 이 HTML 시안의 완성도와 visual language로 현대화한다. 현재 UI의 프로토타입 인상을 만드는 화면별 spacing·typography 불일치, 단순 raw control, 약한 정보 위계, 밀집된 운영 정보와 일관되지 않은 feedback을 먼저 해소한다.
+
+이 시안은 신규 Applications 화면에만 적용하는 별도 theme가 아니라 전체 제품의 target design이다. 기존 Login, Overview, Cluster/Console, Analysis/Chat, Operations/Incident/Runbook, Policy/Audit와 Settings도 같은 shell, token, component와 interaction 원칙을 사용해야 한다.
+
+### P2-0 화면 적용 순서
+
+1. design token, typography, icon과 global shell/sidebar/header
+2. button/form/table/card/status/modal/drawer/toast와 loading/empty/error 공통 상태
+3. Login, Overview, Clusters/Detail/Console 핵심 진입 흐름
+4. Analysis/Chat과 운영·Incident·Runbook 화면
+5. Policy/Audit/Access/AI/Runtime Settings
+6. visual/functional regression 승인 후 Application Delivery 화면 구현
+
+### P2-0 UX 승인 기준
+
+- 아래 HTML 시안과 동등한 시각적 완성도, 정보 위계와 여백을 제공한다.
+- 화면 크기와 데이터 양이 달라도 잘림, 겹침, 과도한 horizontal scroll이 없어야 한다.
+- 초보 운영자는 상태 의미와 다음 행동을 이해할 수 있고 전문가는 세부 evidence로 이동할 수 있어야 한다.
+- mutation, read-only 점검과 위험 confirmation이 시각적으로 명확히 구분돼야 한다.
+- 공통 component로 일관성을 확보하며 화면마다 시안 CSS를 복제하지 않는다.
+- 기존 사용자 흐름, route, 권한과 API 결과는 UI 변경 전후 동일하게 동작해야 한다.
+- 대표 route와 loading/empty/error/permission-denied/modal 상태의 기준 screenshot을 승인하고 visual regression에 보관한다.
+
 ## 1. 시안 실행
 
 [HTML 시안 열기](ui-mockups/index.html)

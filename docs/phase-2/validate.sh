@@ -69,5 +69,8 @@ grep -q "asyncJobId" "$delivery_root/architecture-design.md"
 grep -q "GLOBAL JOB CENTER" "$delivery_root/ui-mockups/app.js"
 grep -q 'class="deployment-map"' "$delivery_root/ui-mockups/index.html"
 grep -q 'phase2-additions.css?v=20260915' "$delivery_root/ui-mockups/index.html"
+grep -q "P2-0 최우선 선행 요구사항" "$delivery_root/product-requirements.md"
+grep -q "P2-0 기존 제품 UI 현대화" "$delivery_root/ui-ux-screen-design.md"
+grep -q "P2-0 Frontend 기반 경계" "$delivery_root/architecture-design.md"
 
 echo "Phase 2 documents and UI artifacts are complete."

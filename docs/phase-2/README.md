@@ -4,6 +4,8 @@
 
 이 디렉터리는 1차 KlueOps 제품 명세와 구현 완료 문서에서 분리한 2차 개발 전용 설계 공간이다. 2차 기능이 구현·검증되기 전까지 `docs/product/current-product-specification.md`의 현재 동작을 변경하거나 완료된 기능처럼 표현하지 않는다.
 
+Phase 2의 첫 작업은 `P2-0 기존 제품 UI 현대화`다. Application Delivery 구현에 앞서 현재 KlueOps 전체 화면을 이 디렉터리의 HTML 시안 수준으로 정돈하고, 기존 기능·권한·API 동작을 유지한 상태에서 공통 design system, responsive/accessibility와 visual regression 기준을 확립한다.
+
 ## Application Delivery
 
 Tenant별 Helm Chart 검색·보관, Custom Values, Cluster/Namespace 선택, HTTPRoute/Ingress Exposure와 Kubernetes 배포·Application 운영을 제공한다. GitOps, Chart template 편집과 외부 registry publish는 현재 범위가 아니다.
@@ -26,7 +28,7 @@ Local LLM은 특정 계열에 고정하지 않고 9B 이하 후보를 동일 fix
 | --- | --- |
 | 제품 범위 | 설계 완료 |
 | 아키텍처 | 설계 완료 |
-| UI/UX | 시안 완료, 사용자 검토 대기 |
+| UI/UX | Phase 2 시안 완료, P2-0 기존 제품 UI 현대화 요구사항 확정 |
 | Backend/Frontend 구현 | 미착수 |
 | 로컬 Kubernetes 수용시험 | 미착수 |
 
