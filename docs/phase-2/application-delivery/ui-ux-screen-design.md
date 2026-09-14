@@ -174,7 +174,126 @@ Uninstall은 PVC와 external resource 보존 여부를 설명하고 exact phrase
 
 Credential은 저장 후 재표시하지 않고 교체와 삭제만 제공한다.
 
-## 11. Responsive
+## 11. 클릭·Popup·Confirmation 상세 명세
+
+HTML 시안의 모든 `button`에는 동작이 연결되어 있다. 화면 이동은 URL query를 변경하고, 현재 화면 안의 선택은 active state, 짧은 완료 알림은 Toast, 추가 입력/검토가 필요한 작업은 Modal로 처리한다. Cluster나 외부 시스템을 변경하는 작업은 일반 Modal과 구분된 위험 확인 Modal을 사용한다.
+
+### 11.1 공통 control
+
+| Control | 클릭 결과 | 종료/후속 동작 |
+| --- | --- | --- |
+| 좌측 Phase 2 메뉴 | 해당 화면으로 이동하고 URL `screen` query 갱신 | Browser back/forward 복원 |
+| Overview/Clusters/Cook Book | 1차 기능으로 이동한다는 안내 Modal | 시안에서는 현재 Phase 2 화면 유지 |
+| 상단 검색 | 전체 검색 Modal과 검색어 입력 | 검색 실행 또는 취소 |
+| Job Center | 실행/완료 작업 Modal | 전체 작업 보기로 Job Center 진입 |
+| 도움말 `?` | 전체 배포 흐름 도움말 Modal | 닫기 |
+| Modal `×`, 취소, backdrop, `Esc` | 변경 없이 닫기 | 원래 trigger로 focus 복원 |
+| 성공한 단순 동작 | 우측 하단 Toast, 2.6초 후 자동 닫힘 | `aria-live=polite`로 결과 전달 |
+
+### 11.2 Discover
+
+| Control | Overlay/상태 | Confirm 이후 |
+| --- | --- | --- |
+| `소스 추가` | Helm Repository/OCI 선택, URL, credential 입력 Modal | 비민감 연결 검사 후 저장 단계 |
+| `Artifact Hub 검색` | loading 후 결과 목록과 건수 갱신 | Toast로 검색 완료 |
+| Helm/Verified/Official/Security filter | 같은 그룹의 active filter 변경 | URL filter query에 보존 예정 |
+| 검색 결과 Card | 선택 border와 우측 detail 교체 | 별도 Confirm 없음 |
+| `Tenant Library로 가져오기` | Chart/version/source/Tenant/digest 검토 Modal | `가져오기` 후 Job Center progress Modal |
+
+![Chart 가져오기 확인 Modal](ui-mockups/screenshots/07-import-confirmation.png)
+
+Import는 Cluster 상태를 변경하지 않으므로 exact phrase까지 요구하지 않는다. 단, 취소와 가져오기 버튼을 분리하고 완료를 동기 성공처럼 표현하지 않고 Job으로 연결한다.
+
+### 11.3 Chart Library
+
+| Control | Overlay/상태 | Confirm 이후 |
+| --- | --- | --- |
+| `Repository` | Discover와 동일한 소스 추가 Modal | 연결 검사 후 저장 |
+| `.tgz 업로드` | file drop Modal, 20 MiB 제한과 검사 항목 표시 | archive 검사 후 upload Job |
+| All/Update/Needs review | table filter 변경 | 결과 건수 및 empty state 갱신 |
+| Chart row | 선택 row와 하단 Chart detail 변경 | 별도 Confirm 없음 |
+| version chip | 선택 version/digest/trust 정보 변경 | 사용 중 version 삭제 action은 비활성 |
+| `Values 설정` | 선택 Chart/version을 고정하여 Values Studio 이동 | draft 복원 여부 확인 |
+
+### 11.4 Values Studio
+
+| Control | Overlay/상태 | Confirm 이후 |
+| --- | --- | --- |
+| Form/YAML/Diff | editor mode 변경 | 미저장 draft 유지 |
+| 좌측 Values category | category active state와 field group 변경 | validation 상태 유지 |
+| AI 전송 `↑` | 생성 중 상태, 중복 요청 방지 | Patch card 또는 masking된 오류 표시 |
+| `검증 후 적용` | schema/type/unknown key 검증 결과 Toast | 유효한 patch만 Form draft에 반영 |
+| `초기화` | 사라질 변경 수와 복귀 revision 경고 Modal | 위험 색상의 `변경 초기화` 후 Toast |
+| `Values 저장` | profile 이름/revision note 입력 Modal | 새 immutable revision 저장 후 Toast |
+| `배포 미리보기` | draft validation 후 Preview 이동 | validation 오류가 있으면 이동 차단 |
+
+초기화는 Cluster 변경 작업은 아니므로 exact phrase를 요구하지 않지만 destructive color와 손실되는 변경 수를 표시한다.
+
+### 11.5 Deployment Preview
+
+| Control | Overlay/상태 | Confirm 이후 |
+| --- | --- | --- |
+| Target `변경` | Cluster/Namespace/Release 선택 Modal | Preview plan 재생성, 이전 plan 만료 |
+| Deployment/Service/ConfigMap | 해당 resource diff active tab 변경 | URL resource query 보존 |
+| `전체 렌더링 YAML 보기` | Secret을 masking한 read-only YAML Modal | 복사 또는 닫기 |
+| `이전` | Values Studio 이동 | 기존 Preview plan 유지 |
+| `확정 단계로` | 대상, resource 영향, rollback 정책과 만료시간을 표시하는 위험 Modal | exact phrase 일치 시에만 실행 가능 |
+
+![배포 exact confirmation](ui-mockups/screenshots/08-deploy-exact-confirmation.png)
+
+배포 Confirm 규칙:
+
+1. 대상 Cluster/Namespace/Release를 다시 표시한다.
+2. Create/Update/Delete 수와 경고를 요약한다.
+3. 사용자가 Release 이름 `payments-web`을 정확히 입력해야 버튼이 활성화된다.
+4. Confirm 시점에 plan expiry와 권한을 서버에서 재검사한다.
+5. 요청은 idempotency key로 한 번만 수락하고 Job Center에 등록한다.
+6. 완료 Modal은 성공/실패/부분 실패와 다음 안전 행동을 제공한다.
+
+### 11.6 Releases
+
+| Control | Overlay/상태 | Confirm 이후 |
+| --- | --- | --- |
+| `새 배포` | Discover로 이동 | 새 workflow 시작 |
+| Cluster/Status filter | release table filter | URL query 보존 |
+| Release row | 우측 detail/history 교체 | 별도 Confirm 없음 |
+| `…` | 상세/Audit/Uninstall 계획 action menu | Uninstall은 별도 exact confirmation 필요 |
+| `Values Diff` | revision 간 Values diff Modal | read-only, 복사 가능 |
+| `Rollback` | target revision과 영향이 표시된 위험 Modal | Release 이름 exact match 후 rollback Job |
+| `Upgrade` | 현재 Chart/Values를 고정해 Values Studio 이동 | Preview를 다시 통과해야 실행 가능 |
+
+![Rollback exact confirmation](ui-mockups/screenshots/09-rollback-confirmation.png)
+
+Uninstall은 Pod뿐 아니라 PVC, hook과 external resource 보존 여부를 계획 화면에서 먼저 보여주고 `release/namespace` exact phrase를 요구한다. 목록의 action menu에서 즉시 삭제하지 않는다.
+
+### 11.7 AI Provider Settings
+
+| Control | Overlay/상태 | Confirm 이후 |
+| --- | --- | --- |
+| `Provider Profile` | Provider→Credential→Model→Tenant 4단계 Modal | synthetic prompt 연결 검사 후 저장 |
+| `정책 보기` | 외부 전송 포함/제외 데이터와 Audit 정책 Modal | 읽음 확인 |
+| Provider `설정` | 선택 Provider가 채워진 설정 Modal | credential 교체 또는 연결 검사 |
+| Provider `…` | 연결 검사/편집/비활성/삭제 action menu | 사용 중 profile 삭제는 차단 |
+| Routing profile/model selector | 허용된 profile과 9B 이하 local model selector | 미저장 상태 표시 |
+| External Transfer switch | 데이터 반출 경고 및 정책 동의 Modal | Tenant/purpose별 명시 동의 후만 ON |
+| `변경 저장` | 세 purpose의 before/after와 External 상태 검토 Modal | 새 요청부터 적용, 실행 중 Job 불변 |
+
+![AI Provider Profile 설정 Modal](ui-mockups/screenshots/10-provider-profile-modal.png)
+
+### 11.8 Modal 상태와 오류
+
+| 상태 | 표시 원칙 |
+| --- | --- |
+| Opening | 첫 입력 field로 focus 이동, background scroll 차단 |
+| Validation | field 바로 아래 원인과 해결 방법 표시, Confirm 비활성 |
+| Submitting | Confirm spinner와 중복 클릭 차단, 취소는 request 접수 전만 허용 |
+| Accepted | Modal을 Job progress로 전환하고 job ID 표시 |
+| Failed before accept | 입력 유지, masking된 오류와 재시도 제공 |
+| Failed after accept | Job Center에서 실패 단계, rollback/cleanup과 Audit link 제공 |
+| Expired plan | 실행 차단, Preview 재생성만 제공 |
+| Permission changed | 실행 차단, 필요한 권한과 Cluster 관리자 문의 안내 |
+
+## 12. Responsive
 
 - 1280px 이상: sidebar + main + detail/assistant 3-column
 - 900~1279px: sidebar + main, detail drawer overlay
@@ -182,15 +301,17 @@ Credential은 저장 후 재표시하지 않고 교체와 삭제만 제공한다
 - Values Editor와 Preview table은 horizontal scroll보다 field/card 재배치를 우선한다.
 - 위험 confirmation은 mobile에서도 viewport 아래로 숨지 않게 sticky action bar를 사용한다.
 
-## 12. 접근성
+## 13. 접근성
 
 - status를 색만으로 구분하지 않고 icon/text를 함께 제공한다.
 - tab, drawer, modal과 stepper에 keyboard focus 순서와 ARIA 상태를 제공한다.
 - AI streaming과 Job progress는 과도한 live announcement를 피하고 완료/실패만 polite region으로 알린다.
 - YAML validation은 line/column과 해결 방법을 text로 제공한다.
 - 위험 action은 icon-only button으로 제공하지 않는다.
+- Modal은 `role=dialog`, `aria-modal`, label을 제공하며 focus trap과 trigger focus 복원을 구현한다.
+- exact confirmation은 paste를 막지 않으며 대소문자/공백 불일치를 field 오류 text로 설명한다.
 
-## 13. Frontend 구현 경계
+## 14. Frontend 구현 경계
 
 - route: `/applications/discover`, `/applications/library`, `/applications/releases`
 - Values Studio: `/applications/charts/:chartId/versions/:versionId/values/:profileId`

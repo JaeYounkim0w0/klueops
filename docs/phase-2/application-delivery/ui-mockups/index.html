@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KlueOps Phase 2 · Application Delivery UI Concept</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="modals.css" />
   </head>
   <body>
     <aside class="sidebar">
@@ -141,6 +142,13 @@ resources:
         <div class="routing-card"><div class="card-head"><div><h2>Tenant AI Routing</h2><p>Platform Engineering · 변경은 새 요청부터 적용됩니다.</p></div><span class="local-badge">EXTERNAL OFF</span></div><table><thead><tr><th>PURPOSE</th><th>PRIMARY PROFILE</th><th>MODEL</th><th>EXTERNAL TRANSFER</th><th>FALLBACK</th></tr></thead><tbody><tr><td><strong>AI Analysis</strong><small>Kubernetes RCA</small></td><td><span class="select-like">Default Ollama⌄</span></td><td><span class="select-like">granite3.3:8b · 후보⌄</span></td><td><span class="switch off"></span> Off</td><td>Deterministic section</td></tr><tr><td><strong>AI Chat</strong><small>운영 질의</small></td><td><span class="select-like">Default Ollama⌄</span></td><td><span class="select-like">qwen2.5-coder:7b⌄</span></td><td><span class="switch off"></span> Off</td><td>없음</td></tr><tr><td><strong>Helm Values</strong><small>Patch 제안</small></td><td><span class="select-like">Default Ollama⌄</span></td><td><span class="select-like">granite3.3:8b · 후보⌄</span></td><td><span class="switch off"></span> Off</td><td>Form 편집 유지</td></tr></tbody></table><div class="routing-foot"><span>ⓘ 후보 모델은 regression gate 통과 후 활성 기본값으로 승격됩니다.</span><button class="primary" data-toast="Routing 정책 저장 시안입니다.">변경 저장</button></div></div>
       </section>
 
+      <div class="modal-backdrop" data-overlay hidden>
+        <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
+          <header class="modal-head"><div><p class="modal-kicker"></p><h2 id="modal-title"></h2></div><button class="modal-close" aria-label="대화상자 닫기">×</button></header>
+          <div class="modal-body"></div>
+          <footer class="modal-actions"></footer>
+        </section>
+      </div>
       <div class="toast" role="status" aria-live="polite"></div>
     </main>
     <script src="app.js"></script>
