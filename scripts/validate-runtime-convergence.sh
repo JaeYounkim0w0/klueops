@@ -42,7 +42,7 @@ validate_kubernetes() {
   command -v kubectl >/dev/null 2>&1 || { echo "kubectl is required for kubernetes mode." >&2; return 2; }
 
   local component deployment ready desired
-  for component in backend frontend keycloak; do
+  for component in backend frontend keycloak command-runner; do
     deployment="$(kubectl get deployment -n "${NAMESPACE}" \
       -l "app.kubernetes.io/instance=${RELEASE},app.kubernetes.io/component=${component}" \
       -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"

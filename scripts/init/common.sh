@@ -98,6 +98,19 @@ secret_has_key() {
     -o "jsonpath={.data['${key}']}" 2>/dev/null | grep -q '.\+'
 }
 
+deployment_for_component() {
+  local component="$1"
+  local deployment
+  deployment="$(kubectl -n "${NAMESPACE}" get deployment \
+    -l "app.kubernetes.io/instance=${RELEASE},app.kubernetes.io/component=${component}" \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+  if [[ -z "${deployment}" ]]; then
+    echo "Missing ${component} Deployment for release ${RELEASE} in namespace ${NAMESPACE}." >&2
+    return 1
+  fi
+  printf '%s\n' "${deployment}"
+}
+
 require_secret_key() {
   local secret_name="$1"
   local key="$2"

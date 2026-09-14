@@ -17,6 +17,8 @@ required_files=(
   "deploy/helm/aiops/values-production.yaml"
   "deploy/helm/aiops/templates/_helpers.tpl"
   "deploy/helm/aiops/templates/portal-contract.yaml"
+  "deploy/helm/aiops/templates/portal-db-bootstrap-job.yaml"
+  "deploy/helm/aiops/files/bootstrap-portal-db.sh"
   "deploy/helm/aiops/templates/backend-config.yaml"
   "deploy/helm/aiops/templates/backend-deployment.yaml"
   "deploy/helm/aiops/templates/backend-service.yaml"
@@ -37,6 +39,7 @@ required_files=(
   "scripts/deploy/command-runner.sh"
   "scripts/init/command-runner.sh"
   "scripts/validate-command-runner.sh"
+  "scripts/test-portal-db-bootstrap.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -73,6 +76,7 @@ if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; 
 fi
 
 "${ROOT_DIR}/scripts/validate-managed-keycloak.sh"
+"${ROOT_DIR}/scripts/test-portal-db-bootstrap.sh"
 
 if ! command -v helm >/dev/null 2>&1; then
   echo "helm is required to validate the all-in-one Kubernetes package." >&2

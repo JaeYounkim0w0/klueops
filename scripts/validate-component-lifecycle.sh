@@ -77,4 +77,19 @@ rg -q -- '--pod-running-timeout=60s' "${ROOT_DIR}/scripts/init/postgresql.sh" ||
   exit 7
 }
 
+init_common="${ROOT_DIR}/scripts/init/common.sh"
+init_all="${ROOT_DIR}/scripts/init/all-in-one.sh"
+rg -q '^deployment_for_component\(\)' "${init_common}" || {
+  echo "Initial installation must discover chart resources by release/component labels." >&2
+  exit 8
+}
+rg -q 'deployment_for_component' "${init_all}" || {
+  echo "All-in-one rollout verification must support release names that do not contain the chart name." >&2
+  exit 8
+}
+if rg -q 'deployment/\$\{RELEASE\}-(backend|frontend|keycloak|command-runner)' "${init_all}"; then
+  echo "All-in-one installation must not assume a fixed Helm fullname." >&2
+  exit 8
+fi
+
 echo "Component lifecycle contract passed."

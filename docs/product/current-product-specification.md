@@ -40,7 +40,7 @@ All-in-one Helm 패키지는 다음 네 Kubernetes Deployment를 제공한다.
 3. **Managed Keycloak**: 설치 편의를 위한 단일 replica 인증 프로필
 4. **Command Runner**: Java 17과 kubectl을 포함한 격리 명령 실행기
 
-PostgreSQL과 Ollama는 외부 서비스로 연결한다. 따라서 네 Deployment가 네 물리 서버를 의미하지 않으며, 개발 환경에서는 동일 Kubernetes 노드에서 실행할 수 있다. 공개 Docker Desktop 로컬 프로필은 Portal NodePort `30081`, Keycloak NodePort `30080`, PostgreSQL/Ollama host endpoint에 `host.docker.internal`을 사용한다.
+PostgreSQL과 Ollama는 외부 서비스로 연결한다. 따라서 네 Deployment가 네 물리 서버를 의미하지 않으며, 개발 환경에서는 동일 Kubernetes 노드에서 실행할 수 있다. `postgresql.bootstrapMode=automatic`은 외부 PostgreSQL에 Portal/Keycloak database와 서로 분리된 최소 권한 runtime role을 멱등 생성하며 기존 database 소유자가 다르면 중단한다. 공개 Docker Desktop 로컬 프로필은 Portal NodePort `30081`, Keycloak NodePort `30080`, PostgreSQL/Ollama host endpoint에 `host.docker.internal`을 사용한다.
 
 ### 3.2 기술 스택
 

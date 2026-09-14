@@ -4,7 +4,7 @@
 
 ## 설치 범위
 
-All-in-one 설치에는 Spring Boot Backend, Vue/nginx Frontend, Managed Keycloak, 격리 Command Runner와 Keycloak DB/Realm bootstrap Job이 포함된다. PostgreSQL server와 Ollama server는 포함되지 않으며 접근 가능한 외부 endpoint가 필요하다.
+All-in-one 설치에는 Spring Boot Backend, Vue/nginx Frontend, Managed Keycloak, 격리 Command Runner와 Portal DB, Keycloak DB/Realm bootstrap Job이 포함된다. PostgreSQL server와 Ollama server는 포함되지 않으며 접근 가능한 외부 endpoint가 필요하다.
 
 ```text
 scripts/init/
@@ -116,6 +116,21 @@ export AIOPS_POSTGRES_BOOTSTRAP_PASSWORD='<postgres-bootstrap-password>'
 
 기존 `./scripts/install-local-all-in-one.sh`도 같은 동작을 제공하지만 새 자동화에서는 `scripts/init/all-in-one.sh`를 사용한다.
 
+기존 로컬 설치와 충돌하지 않는 병렬 검증은 values 복사본에서 namespace별 Portal/Keycloak database 이름, runtime Secret 이름과 NodePort를 고유하게 지정한다. 공개 URL은 파생 내부 변수 대신 설치 계약 변수로 전달한다.
+
+```bash
+export AIOPS_PORTAL_PUBLIC_URL='http://127.0.0.1:<portal-node-port>'
+export AIOPS_OIDC_PUBLIC_ISSUER='http://auth.aiops.local:<keycloak-node-port>'
+
+./scripts/init/all-in-one.sh \
+  --values /path/to/isolated-values.yaml \
+  --namespace <namespace> \
+  --release <release> \
+  --tag <image-tag>
+```
+
+`--release`가 chart 이름 `aiops`를 포함하지 않아도 설치 후 검증은 Helm instance/component label로 실제 Deployment를 찾는다.
+
 ## 이미지 구조
 
 ### Backend
@@ -136,7 +151,7 @@ export AIOPS_POSTGRES_BOOTSTRAP_PASSWORD='<postgres-bootstrap-password>'
 
 ### PostgreSQL
 
-제품 전용 PostgreSQL Dockerfile은 없다. bootstrap hook은 공식 `postgres:17` 이미지를 일시적으로 사용하지만 데이터베이스 서버는 외부 PostgreSQL이다. 애플리케이션 DB와 Keycloak DB는 같은 server를 사용할 수 있어도 database와 runtime role을 분리한다.
+제품 전용 PostgreSQL Dockerfile은 없다. `postgresql.bootstrapMode=automatic`이면 bootstrap hook이 공식 `postgres:17` 이미지를 일시적으로 사용해 Portal/Keycloak database와 최소 권한 runtime role을 멱등 생성하지만, 데이터베이스 서버 자체는 외부 PostgreSQL이다. 애플리케이션 DB와 Keycloak DB는 같은 server를 사용할 수 있어도 database와 runtime role을 분리한다. 기존 database의 소유자가 지정 runtime role과 다르면 소유권을 임의 변경하지 않고 설치를 중단한다.
 
 ## 설치 완료 검증
 

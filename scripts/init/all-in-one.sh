@@ -56,12 +56,14 @@ helm "${helm_args[@]}"
 
 if [[ "${SKIP_BUILD}" != true ]]; then
   # Local image registries are optional, so same-tag rebuilds need an explicit rollout.
-  kubectl -n "${NAMESPACE}" rollout restart \
-    "deployment/${RELEASE}-backend" "deployment/${RELEASE}-frontend" "deployment/${RELEASE}-keycloak" >/dev/null
-  kubectl -n "${NAMESPACE}" rollout restart "deployment/${RELEASE}-command-runner" >/dev/null
+  for component in backend frontend keycloak command-runner; do
+    kubectl -n "${NAMESPACE}" rollout restart \
+      "deployment/$(deployment_for_component "${component}")" >/dev/null
+  done
 fi
 for component in backend frontend keycloak command-runner; do
-  kubectl -n "${NAMESPACE}" rollout status "deployment/${RELEASE}-${component}" --timeout=5m
+  kubectl -n "${NAMESPACE}" rollout status \
+    "deployment/$(deployment_for_component "${component}")" --timeout=5m
 done
 
 AIOPS_RUNTIME_MODE=kubernetes AIOPS_RUNTIME_NAMESPACE="${NAMESPACE}" AIOPS_RUNTIME_RELEASE="${RELEASE}" \
