@@ -5,7 +5,7 @@ RUN mvn -q -DskipTests dependency:go-offline
 COPY src ./src
 RUN mvn -q -DskipTests package
 
-FROM eclipse-temurin:17-jre-noble
+FROM eclipse-temurin:25-jre-noble
 ARG KUBECTL_VERSION=v1.34.11
 ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
