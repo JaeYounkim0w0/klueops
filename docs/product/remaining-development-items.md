@@ -22,7 +22,7 @@
 | OSS-04 | 공개 문서 정리 (진행) | README에 기능, 구조, 빠른 시작, 지원 범위, 보안 주의사항과 실제 화면 예시 제공 | 신규 사용자가 프로젝트 목적과 실행 방법을 첫 화면에서 이해하고 모든 링크가 유효함 |
 | OSS-05 | 기여자 운영 기반 (완료) | 기여 규칙, 보안 제보, 행동강령, issue/PR template와 유지관리 범위 정리 | `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue/PR 흐름이 서로 일치함 |
 | OSS-06 | 의존성 공개 적합성 (진행) | Backend/Frontend/Runner/컨테이너의 SBOM, dependency license와 알려진 취약점 검토 | 사용 제한 의존성 없음, 알려진 위험과 업데이트 정책이 문서화됨 |
-| OSS-07 | CI 공개 재현성 (진행) | 공개 CI에서 Backend, Frontend, OpenAPI/Orval, 문서, 보안·패키징 계약 실행 | 저장소 전용 Secret 없이 기본 pull request 검증이 통과하고 실패 artifact를 확인 가능 |
+| OSS-07 | CI 공개 재현성 (완료) | 공개 CI에서 Backend, Frontend, OpenAPI/Orval, 문서, 보안·패키징 계약 실행 | 저장소 전용 Secret 없이 기본 pull request 검증이 통과하고 실패 artifact를 확인 가능 |
 
 루트 `LICENSE`에는 Apache License 2.0 전문을 두고 copyright owner를 `Jae Youn Kim`으로 명시했다. 현재 별도 고지가 필요한 제3자 자료가 없어 `NOTICE`는 만들지 않았다. `CODE_OF_CONDUCT.md`, 구조화된 bug/feature issue form, pull request template와 기여·보안 문서를 서로 맞춰 OSS-05를 완료했다.
 
@@ -39,8 +39,8 @@
 - 2026-09-14 GitHub 새 clone에서 Backend 248 tests, Frontend 91 tests·production build, 문서·저장소 위생과 all-in-one Helm dry-run이 통과했다. 기존 로컬 Kubernetes의 네 Deployment도 `1/1 Ready`다. 별도 namespace에서 신규 설치부터 로그인·cluster 등록·Cook Book 실행까지 재현해야 OSS-03을 완료한다.
 - README에 기능, 구조, Mermaid 실행 구조, clean-clone 빠른 시작, 설치·보안·지원 범위를 추가했다. 공개용으로 마스킹한 실제 제품 화면을 추가하면 OSS-04를 완료한다.
 - Backend 186개, Command Runner 46개, Frontend production 19개 dependency의 license 누락 0건과 allowlist 통과를 확인했다. production npm audit는 High 0/Critical 0이고 개발 도구의 Moderate 3/High 7/Critical 2는 major upgrade 검증이 필요해 공개 정책에 기록했다.
-- `supply-chain` workflow가 PR, `main`, 주간 일정에서 runtime SBOM/license gate와 네 container Trivy scan을 실행하도록 추가했다. 최초 공개 CI 실행과 artifact를 확인한 뒤 OSS-06/07을 완료한다.
-- 최초 container scan에서 Frontend/Java runtime의 수정 가능한 OS CVE를 확인해 NGINX unprivileged 1.31.5 Alpine 3.24와 Temurin 17 Noble로 기반 이미지를 갱신했다. 최신 Keycloak 26.7.3의 Netty Critical `CVE-2026-75595`는 upstream 수정 patch가 없어 공개 blocker로 유지한다.
+- `supply-chain` workflow가 PR, `main`, 주간 일정에서 runtime SBOM/license gate와 네 container Trivy scan을 실행하도록 추가했다. 공개 GitHub runner에서 quality gate가 통과했고, 성공·실패 여부와 무관하게 container별 SBOM artifact가 생성됨을 확인해 OSS-07을 완료했다.
+- 최초 container scan에서 Frontend/Java runtime의 수정 가능한 OS CVE를 확인해 NGINX unprivileged 1.31.5 Alpine 3.24와 Temurin 17 Noble로 기반 이미지를 갱신했다. 후속 scan에서 확인한 Tomcat과 kubectl 취약점은 각각 10.1.59와 1.34.11로 보강했다. 최신 Keycloak 26.7.3의 Netty Critical `CVE-2026-75595`는 upstream 수정 patch가 없어 공개 blocker로 유지한다.
 
 ## 3. 공개를 차단하지 않는 운영 검증
 
@@ -90,10 +90,9 @@
 ## 6. 다음 권장 실행 순서
 
 1. `OSS-06`: Netty 수정본을 포함한 Keycloak 안정 patch가 나오면 갱신하고 네 container scan을 통과시킨다.
-2. `OSS-07`: 수정된 `main`의 quality workflow와 실패 시에도 생성되는 supply-chain SBOM artifact를 확인한다.
-3. `OSS-03`: 충돌 없는 별도 namespace에서 신규 설치, 로그인, cluster 등록과 Cook Book 실행을 재현한다.
-4. `OSS-04`: 공개용으로 마스킹한 실제 제품 화면을 README에 추가한다.
-5. 개발 도구 dependency major upgrade를 generated-client, unit/E2E 계약과 함께 별도 검증한다.
-6. 공개 준비가 끝난 뒤 P1-03을 작은 characterization-test 단위로 계속 분리한다.
+2. `OSS-03`: 충돌 없는 별도 namespace에서 신규 설치, 로그인, cluster 등록과 Cook Book 실행을 재현한다.
+3. `OSS-04`: 공개용으로 마스킹한 실제 제품 화면을 README에 추가한다.
+4. 개발 도구 dependency major upgrade를 generated-client, unit/E2E 계약과 함께 별도 검증한다.
+5. 공개 준비가 끝난 뒤 P1-03을 작은 characterization-test 단위로 계속 분리한다.
 
 새 기능을 제안할 때는 이 문서에 단순 후보를 계속 덧붙이지 않는다. 사용자 가치, 운영 책임, 데이터/보안 경계, API/UI와 완료 기준이 확정된 큰 기능만 별도 feature 문서로 설계하고, 구현 완료 즉시 현재 제품 명세에 병합한다.
