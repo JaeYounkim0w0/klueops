@@ -37,13 +37,13 @@ CREATE ROLE :"db_user"
   WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN
   PASSWORD :'db_password';
 SQL
-elif [[ "${role_state}" != "f|f|f|f|t" ]]; then
+elif [[ "${role_state}" != "f|f|f|f|t" && "${role_state}" != "f|f|f|t|t" ]]; then
   echo "Existing Portal database role has unexpected privileges; refusing to modify it." >&2
   exit 4
 else
   "${psql_admin[@]}" --set=db_user="${PORTAL_DB_USER}" \
     --set=db_password="${PORTAL_DB_PASSWORD}" <<'SQL' >/dev/null
-ALTER ROLE :"db_user" PASSWORD :'db_password';
+ALTER ROLE :"db_user" NOINHERIT PASSWORD :'db_password';
 SQL
 fi
 

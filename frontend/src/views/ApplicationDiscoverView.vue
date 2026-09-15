@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import ApplicationDeliveryNav from '@/components/application/ApplicationDeliveryNav.vue';
 import { api, type CatalogPackageResponse } from '@/api/client';
+import { ApiError } from '@/api/http';
 import { useTenancyStore } from '@/stores/tenancy';
 
 const tenancy = useTenancyStore();
@@ -23,7 +24,9 @@ async function search(): Promise<void> {
   try {
     results.value = await api.searchChartCatalog(tenancy.currentTenantId, query.value.trim(), 24);
   } catch (error) {
-    message.value = error instanceof Error ? error.message : 'Chart를 검색하지 못했습니다.';
+    message.value = error instanceof ApiError && error.status >= 500
+      ? 'Chart 검색 서비스에 일시적으로 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'
+      : error instanceof Error ? error.message : 'Chart를 검색하지 못했습니다.';
   } finally {
     loading.value = false;
   }
@@ -54,7 +57,7 @@ async function importPackage(item: CatalogPackageResponse): Promise<void> {
       <i class="pi pi-search"></i><input v-model="query" aria-label="Chart 검색어" placeholder="nginx, postgresql, prometheus…" />
       <button class="primary-button" type="submit" :disabled="loading">{{ loading ? '검색 중…' : '검색' }}</button>
     </form>
-    <div v-if="message" class="delivery-notice">{{ message }}</div>
+    <div v-if="message" class="delivery-notice error" role="alert"><i class="pi pi-exclamation-triangle"></i> {{ message }}</div>
     <div v-if="loading" class="delivery-skeleton-grid" aria-label="검색 중"><span v-for="item in 6" :key="item"></span></div>
     <div v-else-if="results.length" class="chart-card-grid">
       <article v-for="item in results" :key="item.packageId" class="chart-card">

@@ -22,12 +22,24 @@
 | Dashboard | 여러 클러스터의 운영 우선순위와 진행 중인 Job 확인 |
 | Clusters | 클러스터 등록, 연결 확인, 동기화, Namespace/리소스 조회 |
 | Kubernetes Console | 선택 Cluster에서 kubectl 조회·변경·Pod TTY 실행과 이력 확인 |
+| Applications | Tenant Chart 검색·보관, Custom Values, Helm 배포와 Application 수명주기 관리 |
 | AI Analysis | Namespace 또는 Cluster 범위의 원인·로그·성능·위험·Runbook 분석 |
 | AI Chat | 일반 상담 또는 선택한 Kubernetes 리소스 기반 상담 |
 | Incidents | 반복 장애, 담당자, 상태, 영향 범위와 타임라인 관리 |
 | Runbooks | 검증 명령, 안전한 조치, 예상 결과와 복구 절차 관리 |
 | Operations | Watch, 품질 인증, 정리 정책, 운영 신뢰성 확인 |
-| Settings | 계정·권한, Tenant/Workspace, 시스템 설정 및 감사 이력 관리 |
+| Settings | 사용자·OIDC Group, Tenant/Workspace, AI Provider·모델, 시스템 설정 및 감사 이력 관리 |
+
+## Helm Application 배포 시작
+
+1. `Applications > Chart Library`에서 보유 Chart를 선택한다. 필요한 Chart가 없으면 `Discover`에서 검색해 현재 Tenant로 가져오거나 Source/.tgz를 등록한다.
+2. Values Profile을 생성하고 YAML을 저장한다. AI 제안은 diff를 검토한 뒤 적용하며 Secret은 입력·출력에서 노출하지 않는다.
+3. `배포`에서 권한이 있는 Cluster와 기존 Namespace를 선택한다. 새 Namespace는 capability가 있을 때만 생성한다.
+4. 기본은 내부 Service이며, 필요하면 대상 Service/Port와 hostname을 지정해 HTTPRoute를 함께 계획한다.
+5. Preview에서 렌더링 결과와 경고를 확인하고 정확한 확인 문구를 입력해 실행한다.
+6. Applications에서 Job, workload/Pod, Service·접근 경로와 History를 확인한다. 종료된 Application에는 upgrade, rollback, uninstall을 다시 실행할 수 없다.
+
+Application Delivery는 Argo CD/Flux를 설치하거나 Git 저장소를 지속 동기화하는 GitOps Controller가 아니다. KlueOps가 관리하는 Helm Release의 명시적 install, upgrade, rollback과 uninstall을 제공한다.
 
 ## 화면의 공통 상태
 

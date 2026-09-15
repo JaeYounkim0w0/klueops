@@ -2,7 +2,7 @@
 
 기준일: 2026-09-15
 
-이 디렉터리는 1차 KlueOps 제품 명세와 구현 완료 문서에서 분리한 2차 개발 전용 설계 공간이다. 2차 기능이 구현·검증되기 전까지 `docs/product/current-product-specification.md`의 현재 동작을 변경하거나 완료된 기능처럼 표현하지 않는다.
+이 디렉터리는 1차 KlueOps 제품 명세와 분리해 Phase 2의 설계, 구현 범위와 검증 기준을 관리한다. 2026-09-15에 핵심 vertical slice를 `feature/phase-2`에서 구현하고 로컬 Kubernetes 수용 검증을 수행했으며, 실제 구현 범위는 `docs/product/current-product-specification.md`와 함께 확인한다.
 
 Phase 2의 첫 작업은 `P2-0 기존 제품 UI 현대화`다. Application Delivery 구현에 앞서 현재 KlueOps 전체 화면을 이 디렉터리의 HTML 시안 수준으로 정돈하고, 기존 기능·권한·API 동작을 유지한 상태에서 공통 design system, responsive/accessibility와 visual regression 기준을 확립한다.
 
@@ -26,13 +26,13 @@ Local LLM은 특정 계열에 고정하지 않고 9B 이하 후보를 동일 fix
 
 | 구분 | 상태 |
 | --- | --- |
-| 제품 범위 | 설계 완료 |
-| 아키텍처 | 설계 완료 |
-| UI/UX | Phase 2 상호작용·반응형·접근성·운영 상태 시안 완료, P2-0 기존 제품 UI 현대화 요구사항 확정 |
-| Tenant/RBAC | Platform Manager, Tenant 역할, 메뉴 정책, User 생명주기와 직접/Cluster 파생 Resource 소유권 설계 확정 |
-| Backend/Frontend 구현 | 미착수 |
-| 로컬 Kubernetes 수용시험 | 미착수 |
+| 제품 범위 | 핵심 범위 구현 완료, 고급 연동은 후속 항목으로 분리 |
+| 아키텍처 | 단일 Frontend/Backend 내 bounded context와 선택형 Helm 실행 경계 구현 |
+| UI/UX | 공통 design token 기반 Application Delivery, Users & Access, AI Provider 화면 구현 및 반응형 보완 |
+| Tenant/RBAC | Platform Manager, Tenant 역할, 메뉴 정책, membership/offboarding과 직접·Cluster 파생 Resource scope 구현 |
+| Backend/Frontend 구현 | 핵심 vertical slice 구현 완료 |
+| 로컬 Kubernetes 수용시험 | OIDC 로그인, 검색·가져오기·Values·preview·Helm install/uninstall·상태 조회 검증 완료 |
 
-2차 구현이 시작되면 이 문서의 완료 기준을 기준으로 작은 vertical slice 단위로 진행한다. 실제 구현을 시작하지 않은 설계 항목을 1차 제품의 현재 기능으로 합치지 않는다.
+Schema 기반 Form/YAML 양방향 편집, OCI/Object Storage adapter, 고급 Ingress·DNS·TLS 연동, PVC 보존 선택과 로컬 모델 삭제 보호처럼 아직 구현되지 않은 항목은 완료 기능으로 표시하지 않고 잔여 개발 문서에서 관리한다.
 
 문서와 시안 구성 검사는 저장소 루트에서 `bash docs/phase-2/validate.sh`로 실행한다.

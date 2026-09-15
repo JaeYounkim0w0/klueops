@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ApplicationDeliveryNav from '@/components/application/ApplicationDeliveryNav.vue';
 import { api, type ValuesProfileResponse } from '@/api/client';
@@ -20,8 +20,28 @@ const assistantOpen = ref(false);
 const aiInstruction = ref('');
 const aiSuggestion = ref('');
 const suggesting = ref(false);
+let profileLoadSequence = 0;
 
 onMounted(async () => { await tenancy.load(); profiles.value = await api.listValuesProfiles(tenancy.currentTenantId, chartVersionId.value); selectedProfileId.value = profiles.value[0]?.id || ''; });
+
+watch(selectedProfileId, async (profileId) => {
+  const sequence = ++profileLoadSequence;
+  message.value = '';
+  if (!profileId) {
+    valuesYaml.value = '# Tenant별 Custom Values만 저장합니다.\nreplicaCount: 1\n';
+    return;
+  }
+  try {
+    const revisions = await api.listValuesRevisions(tenancy.currentTenantId, profileId);
+    if (sequence !== profileLoadSequence || revisions.length === 0) return;
+    const payload = await api.getValuesRevisionValues(tenancy.currentTenantId, revisions[0].id);
+    // 비동기 선택 변경이 뒤늦게 도착해 현재 편집 내용을 덮어쓰지 않도록 요청 순서를 확인한다.
+    if (sequence === profileLoadSequence) valuesYaml.value = payload.valuesYaml;
+  } catch (error) {
+    if (sequence === profileLoadSequence)
+      message.value = error instanceof Error ? error.message : 'Values revision을 불러오지 못했습니다.';
+  }
+});
 
 async function saveAndContinue(): Promise<void> {
   saving.value = true;

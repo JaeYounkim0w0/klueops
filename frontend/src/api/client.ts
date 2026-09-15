@@ -1964,6 +1964,12 @@ export const api = {
     `/api/v2/application-delivery/values-profiles/${encodeURIComponent(profileId)}/revisions`,
     { method: 'POST', body: JSON.stringify({ tenantId, valuesYaml }) }
   ),
+  listValuesRevisions: (tenantId: string, profileId: string) => request<ValuesRevisionResponse[]>(
+    `/api/v2/application-delivery/values-profiles/${encodeURIComponent(profileId)}/revisions?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  getValuesRevisionValues: (tenantId: string, revisionId: string) => request<{ valuesYaml: string }>(
+    `/api/v2/application-delivery/values-revisions/${encodeURIComponent(revisionId)}/values?tenantId=${encodeURIComponent(tenantId)}`
+  ),
   suggestValues: (body: { tenantId: string; chartVersionId: string; currentValuesYaml: string; instruction: string }) =>
     request<{ valuesYaml: string }>('/api/v2/application-delivery/values-suggestions', {
       method: 'POST', body: JSON.stringify(body),

@@ -21,4 +21,13 @@ public interface ApplicationLifecycleRepositoryPort {
     ApplicationEndpoint saveEndpoint(ApplicationEndpoint endpoint);
     List<ApplicationEndpoint> findEndpoints(UUID tenantId, UUID applicationId);
     void deleteEndpoints(UUID applicationId);
+
+    default void recoverTimedOutOperation(UUID jobId, Instant completedAt, String errorMessage) {
+        // Phase 1 저장소 구현과 테스트 대역은 Application Delivery 이력이 없을 수 있다.
+    }
+
+    default int recoverOrphanedOperations(Instant completedAt) {
+        // Application Delivery를 사용하지 않는 저장소 구현은 복구할 작업이 없다.
+        return 0;
+    }
 }

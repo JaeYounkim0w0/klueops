@@ -2,7 +2,21 @@
 
 기준일: 2026-09-15
 
-상태: 설계 완료, 구현 미착수
+상태: 핵심 범위 구현 및 로컬 수용 검증 완료, 고급 확장 항목은 후속
+
+## 구현 기준선
+
+2026-09-15 `feature/phase-2` 기준으로 Tenant별 Artifact Hub 검색·가져오기, Chart Library와 Source, 암호화된 Values revision, 대상 Cluster/Namespace 선택과 Namespace 생성, Helm preview/install/upgrade/rollback/uninstall, Application runtime·Service·HTTPRoute 조회, Tenant 역할·메뉴 기능 정책·사용자 membership/offboarding, Ollama 및 외부 Provider profile·목적별 routing을 구현했다. 실제 OIDC 로그인 후 검색부터 배포·상태 확인·삭제까지 로컬 Kubernetes에서 검증했다.
+
+다음 항목은 설계를 유지하지만 이번 핵심 구현 완료 범위에는 포함하지 않는다.
+
+- `values.schema.json` 기반 Form과 YAML의 양방향 편집
+- OCI 및 S3-compatible artifact adapter, provenance 서명 검증
+- Chart-managed Ingress, 자동 DNS/TLS Provider와 Gateway condition 전체 preflight
+- PVC/DNS/TLS 보존 선택을 포함한 고급 uninstall plan
+- Local model 삭제·사용 중 보호와 모델별 정식 품질 승격 corpus
+
+따라서 아래 요구사항에서 위 항목은 다음 확장 단계의 승인 기준이며, 현재 제품 동작은 `docs/product/current-product-specification.md`를 단일 기준으로 삼는다.
 
 ## 1. 제품 정의
 

@@ -130,6 +130,41 @@ public class JdbcApplicationLifecycleRepositoryAdapter implements ApplicationLif
         jdbc.update("delete from application_endpoints where application_id=?", applicationId);
     }
 
+    @Override
+    public void recoverTimedOutOperation(UUID jobId, Instant completedAt, String errorMessage) {
+        // Backend 재시작 등으로 worker가 사라진 Helm 작업과 Application 상태를 함께 종결한다.
+        jdbc.update("""
+                update managed_applications set status='FAILED',last_sync_status='HELM_JOB_TIMEOUT',
+                  last_sync_error=?,updated_at=? where status in ('DEPLOYING','UPGRADING','ROLLING_BACK','UNINSTALLING')
+                  and id in (select application_id from release_operations where async_job_id=?)
+                """, errorMessage, timestamp(completedAt), jobId);
+        jdbc.update("""
+                update release_operations set status='FAILED',error_message=?,completed_at=?
+                where async_job_id=? and status in ('PENDING','RUNNING')
+                """, errorMessage, timestamp(completedAt), jobId);
+    }
+
+    @Override
+    public int recoverOrphanedOperations(Instant completedAt) {
+        // 이전 프로세스에서 Job만 종료되고 작업 이력이 남은 경우에도 최종 상태로 수렴시킨다.
+        int recovered = jdbc.update("""
+                update release_operations ro set status='FAILED',
+                  error_message=coalesce(ro.error_message,'Linked async job ended before the Helm operation completed'),
+                  completed_at=coalesce(ro.completed_at,?)
+                from async_jobs j where ro.async_job_id=j.id and ro.status in ('PENDING','RUNNING')
+                  and j.status in ('FAILED','CANCELED','TIMEOUT')
+                """, timestamp(completedAt));
+        jdbc.update("""
+                update managed_applications a set status='FAILED',last_sync_status='HELM_JOB_TERMINATED',
+                  last_sync_error='Linked async job ended before the Helm operation completed',updated_at=?
+                where a.status in ('DEPLOYING','UPGRADING','ROLLING_BACK','UNINSTALLING')
+                  and exists (select 1 from release_operations ro join async_jobs j on j.id=ro.async_job_id
+                    where ro.application_id=a.id and ro.status='FAILED'
+                      and j.status in ('FAILED','CANCELED','TIMEOUT'))
+                """, timestamp(completedAt));
+        return recovered;
+    }
+
     private DeploymentPlan plan(ResultSet rs, int row) throws SQLException {
         return new DeploymentPlan(rs.getObject("id", UUID.class), rs.getObject("application_id", UUID.class), rs.getObject("cluster_id", UUID.class),
                 rs.getObject("chart_version_id", UUID.class), rs.getObject("values_revision_id", UUID.class),

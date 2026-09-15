@@ -107,7 +107,8 @@ export function readCookie(name: string): string | null {
 
 export async function parseError(response: Response): Promise<ApiErrorBody | string | null> {
   const contentType = response.headers.get('content-type') ?? '';
-  if (contentType.includes('application/json')) {
+  // RFC 9457 Problem Details(application/problem+json)도 구조화된 오류로 해석한다.
+  if (contentType.toLowerCase().includes('json')) {
     return response.json() as Promise<ApiErrorBody>;
   }
   const text = await response.text();

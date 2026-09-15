@@ -1,6 +1,6 @@
 # KlueOps Open-Source Readiness and Remaining Development
 
-기준일: 2026-09-14
+기준일: 2026-09-15
 
 ## 1. 목적과 운영 원칙
 
@@ -83,17 +83,25 @@ Command Runner의 kubectl 1.34.11과 Keycloak 26.7.3 image에는 프로젝트가
 
 완료 기준: 인증된 gateway, 전송 크기/시간 제한, malware 검사 정책, path traversal 차단, cancel/감사와 UX 설계가 승인될 때만 구현한다.
 
-## 5. P2 선택 연동 및 유보 기능
+## 5. Phase 2 이후 선택 연동 및 유보 기능
 
 | 항목 | 현재 결정 | 착수 조건 |
 | --- | --- | --- |
 | Prometheus/metrics-server | 마지막 단계로 유보 | 실제 metric 기반 성능·capacity 요구와 대상 설치 정책 확정 |
-| Argo CD/GitOps/앱 배포 | 운영 분석 역할에 집중하기 위해 유보 | 배포 승인·drift·rollback 책임 경계와 연동 대상 확정 |
+| Argo CD/GitOps 연동 | Helm Application Delivery와 분리해 유보 | 외부 Controller의 drift·sync 책임과 read-only 연동 대상 확정 |
 | 외부 알림 | 유보 | Email/Slack/Webhook 등 사용 채널과 retry/secret 정책 확정 |
 | Jump server/agent connector | 유보 | Backend에서 API server 직접 접근 불가한 사용 사례 발생 |
-| 외부 AI provider | Ollama만 지원 | 데이터 반출, provider credential, 비용·fallback 정책 승인 |
+| 외부 AI provider 운영 승격 | Profile/routing 기반 구현, 운영 기본값은 Ollama | 실제 key를 이용한 데이터 반출 동의, 비용·fallback 수용 검증 |
 | Managed Keycloak HA | 패키지 범위 제외 | 프로젝트가 IdP 운영 책임까지 다루기로 결정하는 경우 |
 | Multi-cluster/DR | 배포자 설계 | 명시적 RTO/RPO와 control-plane HA 요구가 확정된 경우 |
+
+Application Delivery 핵심 흐름은 구현됐으며 다음은 고급 확장 후보로 남긴다.
+
+- `values.schema.json` Form/YAML 양방향 편집과 schema-aware AI diff
+- OCI/S3-compatible Chart artifact 저장 adapter와 provenance 서명 검증
+- Chart-managed Ingress, DNS/TLS Provider, Gateway condition 전체 사전 검사
+- PVC/DNS/TLS 보존을 선택하는 uninstall plan과 companion 정리 재시도
+- 9B 이하 Local model 비교 corpus, 승격 점수표와 사용 중 모델 삭제 보호
 
 ## 6. 다음 권장 실행 순서
 

@@ -11,6 +11,10 @@ public interface AsyncJobRepositoryPort {
 
     AsyncJob save(AsyncJob job);
 
+    default AsyncJob saveAndFlush(AsyncJob job) {
+        return save(job);
+    }
+
     Optional<AsyncJob> findById(UUID jobId);
 
     List<AsyncJob> findRecent(int limit);

@@ -28,6 +28,11 @@ public class JpaAsyncJobRepositoryAdapter implements AsyncJobRepositoryPort {
     }
 
     @Override
+    public AsyncJob saveAndFlush(AsyncJob job) {
+        return asyncJobJpaRepository.saveAndFlush(AsyncJobEntity.fromDomain(job)).toDomain();
+    }
+
+    @Override
     public Optional<AsyncJob> findById(UUID jobId) {
         return asyncJobJpaRepository.findById(jobId).map(AsyncJobEntity::toDomain);
     }

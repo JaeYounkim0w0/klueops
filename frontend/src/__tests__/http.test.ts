@@ -66,4 +66,18 @@ describe('requestJson', () => {
     expect(listener).toHaveBeenCalledOnce();
     unsubscribe();
   });
+
+  it('parses RFC Problem Details instead of exposing raw JSON text', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      title: 'Internal server error', detail: 'Unexpected server error', status: 500,
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/problem+json' },
+    })));
+
+    await expect(requestJson('/api/failure')).rejects.toMatchObject({
+      status: 500,
+      message: 'Unexpected server error',
+    });
+  });
 });

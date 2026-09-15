@@ -2,7 +2,7 @@
 
 기준일: 2026-09-15
 
-상태: HTML 시안 완료, 구현 미착수
+상태: HTML 시안과 핵심 제품 화면 구현 완료, 전 제품 visual regression 확대는 후속
 
 시안 회귀 확인은 mockup 디렉터리를 정적 서버로 연 뒤 `node smoke-test.mjs`와 `node capture-screenshots.mjs`로 재현한다. `CHROME_PATH`는 system Chrome을 사용할 때만 지정하며, 생략하면 Playwright bundled Chromium을 사용한다.
 
@@ -37,7 +37,7 @@ Tenant별 메뉴는 선택한 Tenant/Workspace의 effective capability와 Tenant
 
 [HTML 시안 열기](ui-mockups/index.html)
 
-브라우저에서 직접 열면 좌측 `Applications`, `Users & Access`, `AI Providers` 메뉴와 workflow 버튼을 통해 전체 시안을 확인할 수 있다. Query parameter deep-link도 지원한다.
+브라우저에서 직접 열면 좌측 `Applications`, `Users & Access`, `AI Providers` 메뉴와 workflow 버튼을 통해 설계 기준을 확인할 수 있다. 실제 제품도 동일한 핵심 정보 구조와 query parameter deep-link를 지원하며, HTML은 구현 화면의 시각·상호작용 회귀 기준으로 유지한다.
 
 ```text
 ui-mockups/index.html?screen=discover

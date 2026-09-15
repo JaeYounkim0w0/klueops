@@ -25,6 +25,11 @@ public class JpaManagedApplicationRepositoryAdapter implements ManagedApplicatio
     }
 
     @Override
+    public ManagedApplication saveAndFlush(ManagedApplication application) {
+        return repository.saveAndFlush(ManagedApplicationEntity.fromDomain(application)).toDomain();
+    }
+
+    @Override
     public Optional<ManagedApplication> findById(UUID applicationId) {
         return repository.findById(applicationId).map(ManagedApplicationEntity::toDomain);
     }

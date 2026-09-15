@@ -2,7 +2,9 @@
 
 기준일: 2026-09-15
 
-상태: 설계 완료, 구현 미착수
+상태: 핵심 bounded context 구현 완료, 선택형 저장소·고급 Exposure adapter는 후속
+
+구현 기준선은 PostgreSQL metadata/artifact 저장, Backend 내부 Application Delivery port/service/adapter, 임시 kubeconfig를 사용하는 제한된 Helm CLI 실행, HTTPRoute companion, Async Job과 ReleaseOperation 복구다. 별도 Runner 서비스 추출, OCI/Object Storage와 DNS/TLS Provider는 실제 확장 조건이 생길 때 적용한다.
 
 ## 1. 결정
 

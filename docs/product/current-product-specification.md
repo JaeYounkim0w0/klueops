@@ -1,6 +1,6 @@
 # KlueOps Current Product Specification
 
-기준일: 2026-09-14
+기준일: 2026-09-15
 
 ## 1. 문서 목적
 
@@ -27,7 +27,7 @@
 - 변경 작업은 RBAC, 범위 고정, dry-run 또는 preview, 실행 이력, 사후 검증과 보수적 rollback 후보를 거친다.
 - UI는 초보자와 숙련자 모두가 같은 사실을 서로 다른 정보 밀도로 이해할 수 있게 구성한다.
 
-현재 범위에는 애플리케이션 GitOps 배포 자동화, Prometheus 기반 장기 시계열 분석과 사용자 인프라 자체의 HA 구축이 포함되지 않는다. 특정 고객 환경의 상용 인증이나 릴리스 승인은 프로젝트 목표가 아니다.
+현재 범위에는 자체 GitOps reconciliation, Prometheus 기반 장기 시계열 분석과 사용자 인프라 자체의 HA 구축이 포함되지 않는다. 대신 Tenant가 보유하거나 Artifact Hub에서 가져온 Helm Chart를 Custom Values로 대상 Cluster에 배포하고 수명주기를 운영하는 Application Delivery를 제공한다. 특정 고객 환경의 상용 인증이나 릴리스 승인은 프로젝트 목표가 아니다.
 
 ## 3. 실행 구조
 
@@ -49,7 +49,7 @@ PostgreSQL과 Ollama는 외부 서비스로 연결한다. 따라서 네 Deployme
 | Backend | Java 17, Spring Boot, Spring AI, Spring Security, Spring Session JDBC |
 | Kubernetes | Fabric8 Kubernetes Client, kubectl Command Runner |
 | AI | Ollama ChatModel, 관심사별 분할 요청, 결정론적 fallback |
-| Data | PostgreSQL 17, Spring Data JPA, Flyway V1~V28 |
+| Data | PostgreSQL 17, Spring Data JPA/JDBC, Flyway V1~V32 |
 | API | OpenAPI/Swagger, RFC 9457 Problem Detail, Orval 생성 client |
 | Frontend | Vue 3, TypeScript, Vite, PrimeVue, Vue I18n |
 | 인증 | OIDC BFF, Managed Keycloak 또는 외부 OIDC |
@@ -148,6 +148,18 @@ AI Trust Center는 평가 corpus, category별 정확도, 근거 coverage, halluc
 - Tenant/Workspace 생성, 전역 scope 선택, Cluster placement와 접근 가능한 목록 필터링을 제공한다.
 - 사용자 관리, 운영 설정, reliability, 언어 설정과 접근 범위 화면을 제공한다.
 
+### 4.8 Application Delivery와 AI Provider
+
+- Artifact Hub에서 Helm Chart를 검색해 정확한 버전을 Tenant Library로 가져오거나 `.tgz`, Helm Repository source를 등록한다.
+- Chart artifact는 digest와 함께 Tenant 범위로 보관하며 Custom은 암호화된 versioned Values Profile만 지원한다.
+- 보유 Chart를 기본 진입점으로 선택하고 Values, Cluster/Namespace, 선택형 HTTPRoute Exposure와 preview를 거쳐 Helm install을 실행한다.
+- install/upgrade/rollback/uninstall은 비동기 Job과 ReleaseOperation으로 추적하며 중단된 작업은 timeout 후 실패 상태로 복구한다.
+- Application 상세에서 Helm 상태, workload/Pod health, Service와 접근 endpoint, operation history를 확인한다.
+- Tenant 기능 정책과 `TENANT_ADMIN`, `CLUSTER_ADMIN`, `OPERATOR`, `VIEWER` capability를 메뉴와 API에서 함께 평가한다. Platform Manager는 모든 Tenant 제품 권한을 가지되 대상 Kubernetes RBAC는 우회하지 않는다.
+- Users & Access에서 Tenant membership, pending invite, 역할/scope, OIDC Group Mapping과 안전한 offboarding을 관리한다.
+- AI Provider profile은 Ollama, OpenAI, Google GenAI, OpenAI-compatible 유형을 저장·검증하고 Tenant 목적별 routing을 제공한다. Credential은 암호화·마스킹하며 외부 전송은 명시적으로 허용한다.
+- Ollama 설치 모델을 동기화하고 승인 목록의 9B 이하 모델만 추가 대상으로 허용한다. 기본 모델은 품질 gate가 끝날 때까지 `qwen2.5-coder:7b`를 유지한다.
+
 ## 5. 보안 구조
 
 - 브라우저는 OAuth token을 보관하지 않는 OIDC BFF를 사용한다.
@@ -168,8 +180,11 @@ AI Trust Center는 평가 corpus, category별 정확도, 근거 coverage, halluc
 | Pod log | 요청 시 조회/stream, DB 영구 저장 안 함 |
 | 분석/Incident/Runbook/명령/Audit | PostgreSQL 영속 저장 |
 | 사용자 session/tenant/scope | PostgreSQL 영속 저장 |
+| Chart artifact/metadata와 Values revision | Tenant 범위 PostgreSQL 저장, Values 암호화 |
+| Application/Release operation | Cluster 소유권에서 Tenant를 유도해 PostgreSQL 영속 저장 |
+| AI Provider credential/routing | 암호화된 profile과 Tenant 목적별 정책으로 저장 |
 
-Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway V1~V28이 schema 변경을 관리한다.
+Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway V1~V32가 schema 변경을 관리한다.
 
 ## 7. API와 개발 규칙
 
@@ -193,11 +208,11 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 
 ## 9. 현재 검증 기준
 
-2026-09-14 기준 최신 통합 증빙은 다음과 같다.
+2026-09-15 기준 최신 통합 증빙은 다음과 같다.
 
-- Backend: PostgreSQL 17 Testcontainers, Flyway V1~V28 포함 248 tests 통과
+- Backend: PostgreSQL 17 Testcontainers, Flyway V1~V32 포함 267 tests 통과
 - Command Runner: 5 tests 통과
-- Frontend: 26 files, 91 tests, typecheck와 production build 통과
+- Frontend: 26 files, 92 tests, typecheck와 production build 통과
 - OpenAPI runtime snapshot과 Orval generated client drift 통과
 - architecture, security, packaging, docs와 maintainability gate 통과
 - Docker Desktop Kubernetes Helm revision 55에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
@@ -213,6 +228,7 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - 공개 supply-chain workflow는 네 runtime container를 build·Trivy scan하고 runtime SBOM과 license gate를 실행한다. signed container workflow도 Command Runner를 포함한다. registry별 Cosign identity/issuer 검증은 자체 운영 배포자가 수행한다.
 - 월간 Dependabot 정책은 Backend/Command Runner Maven, Frontend npm과 GitHub Actions의 minor/patch version update를 ecosystem별 최대 1개 PR로 제한하며 Docker 일반 update와 모든 major update는 자동 생성하지 않는다. Security update와 주간 supply-chain scan은 계속 유지하고 자동 merge하지 않는다.
 - README의 Dashboard와 Kubernetes Console/Cook Book 화면은 별도 namespace의 실제 설치에서 캡처했으며 계정, cluster 식별자와 내부 주소를 공개용 값으로 마스킹했다. 문서 검증은 두 화면 asset의 존재를 확인한다.
+- Docker Desktop의 `aiops-system`에서 OIDC 로그인 후 Artifact Hub 검색, nginx Chart import, 암호화 Values 저장·재조회, preview의 Secret redaction, Namespace 생성, Helm install의 `1/1` workload health와 Service endpoint, uninstall, Users & Access, AI Provider 연결 검증과 Ollama model 동기화를 브라우저로 확인했다.
 
 검증 명령과 최신 로컬 품질 증적은 `docs/operations/release-candidate-checklist.md`를 따른다. 문서와 스크립트의 `release-candidate` 명칭은 기존 자동화 호환을 위해 유지하며 상용 릴리스 판정을 의미하지 않는다.
 
@@ -220,12 +236,12 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 
 | 관점 | 판정 |
 | --- | --- |
-| 기능 개발 | 핵심 Kubernetes 운영, AI 분석/상담, Incident, 안전 명령과 관리 UI 구현 완료 |
+| 기능 개발 | 핵심 Kubernetes 운영, AI 분석/상담, Incident, 안전 명령, Tenant 접근 관리와 Helm Application Delivery 구현 완료 |
 | 개발·데모 | 사용 가능 |
 | 내부 Pilot | 사용 가능, 실제 대상 cluster별 권한과 credential 확인 필요 |
 | 오픈소스 공개 | LICENSE, 저장소 위생, 기여 흐름, clean-clone 검증, 별도 namespace 신규 설치, 공개 CI, SBOM/license/risk 정책과 마스킹한 제품 화면 문서화 완료. 수정본이 없는 upstream runtime 취약점은 SEC-01로 공개 추적 중 |
 | 자체 운영 배포 | 사용자가 환경별 TLS, IdP, Secret, 백업과 HA 책임을 검증해야 함 |
 | 대형 cluster 보장 | 현재 제품 범위 아님. 사용자가 bounded 기준을 넘는 규모를 요구하면 별도 SLO와 검증 범위를 정해야 함 |
-| Prometheus/GitOps | 현재 프로젝트 범위 제외 |
+| Prometheus/자체 GitOps | 현재 프로젝트 범위 제외. Helm 기반 Application Delivery는 제공 |
 
 프로젝트 완성도는 고객 상용 `READY`나 특정 환경의 릴리스 승인으로 판정하지 않는다. 공개 저장소의 법적·보안적 기본 요건, 재현 가능한 설치, 문서와 기여 흐름을 우선한다. 각 사용자의 운영 환경에 필요한 TLS/DNS/IdP, Secret 관리, 백업·복구, 공급망 정책은 선택적 운영 지침으로 제공하며 프로젝트 공개를 차단하지 않는다. 남은 공개 준비와 개발 후보는 `remaining-development-items.md`에서 관리한다.

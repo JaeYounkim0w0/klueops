@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import ApplicationDeliveryNav from '@/components/application/ApplicationDeliveryNav.vue';
 import DeploymentStartDialog from '@/components/application/DeploymentStartDialog.vue';
 import { api, type ApplicationResponse, type ApplicationReleaseResponse, type ApplicationRuntimeResponse, type ClusterResponse, type ReleaseOperationResponse } from '@/api/client';
@@ -8,6 +8,7 @@ import { useJobCenterStore } from '@/stores/jobCenter';
 import { useTenancyStore } from '@/stores/tenancy';
 
 const router = useRouter();
+const route = useRoute();
 const tenancy = useTenancyStore();
 const jobs = useJobCenterStore();
 const applications = ref<ApplicationResponse[]>([]);
@@ -28,6 +29,8 @@ const message = ref('');
 
 const selected = computed(() => applications.value.find((item) => item.id === selectedId.value) ?? null);
 const clusterNames = computed(() => Object.fromEntries(clusters.value.map((cluster) => [cluster.id, cluster.name])));
+const canUpgrade = computed(() => ['RUNNING', 'RUNNING_ENDPOINT_DEGRADED', 'FAILED'].includes(selected.value?.status || ''));
+const canUninstall = computed(() => !['UNINSTALLED', 'UNINSTALLING'].includes(selected.value?.status || ''));
 
 onMounted(load);
 
@@ -40,7 +43,10 @@ async function load(): Promise<void> {
     // 구형 목록 API의 응답도 선택 Tenant의 Cluster로 한 번 더 제한해 잘못된 화면 노출을 막는다.
     applications.value = (await api.listTenantApplications(tenancy.currentTenantId))
       .filter((application) => application.clusterId && allowed.has(application.clusterId));
-    selectedId.value = applications.value[0]?.id || '';
+    const requestedId = typeof route.query.applicationId === 'string' ? route.query.applicationId : '';
+    // 새 배포 직후 deep-link가 가리키는 Application을 우선 선택한다.
+    selectedId.value = applications.value.some((item) => item.id === requestedId)
+      ? requestedId : applications.value[0]?.id || '';
     await loadOperations();
   } catch (error) { message.value = error instanceof Error ? error.message : 'Applications를 불러오지 못했습니다.'; }
   finally { loading.value = false; }
@@ -135,7 +141,7 @@ function startUpgrade(): void {
           <dl><div><dt>배포 방식</dt><dd>{{ application.deploymentType }}</dd></div><div><dt>생성</dt><dd>{{ application.createdAt ? new Date(application.createdAt).toLocaleDateString() : '-' }}</dd></div></dl>
         </button>
       </div>
-      <aside v-if="selected" class="application-inspector"><header><div><span class="delivery-eyebrow">SELECTED APPLICATION</span><h2>{{ selected.name }}</h2><p>{{ selected.namespace }} · {{ clusterNames[selected.clusterId || ''] }}</p></div><span class="status-dot" :class="statusTone(selected.status)">{{ selected.status }}</span></header><div class="inspector-actions"><button class="secondary-button" type="button" @click="router.push({ path: '/analysis', query: { mode: 'application', applicationId: selected.id, clusterId: selected.clusterId } })"><i class="pi pi-sparkles"></i> AI Analysis</button><button class="secondary-button" type="button" @click="startUpgrade"><i class="pi pi-arrow-up-right"></i> Upgrade</button><button class="secondary-button" type="button" :disabled="releases.filter(item => item.revision !== selected?.currentReleaseRevision).length === 0" @click="openRollback"><i class="pi pi-history"></i> Rollback</button><button class="danger-ghost-button" type="button" @click="openUninstall"><i class="pi pi-trash"></i> Uninstall</button></div><section v-if="runtime"><h3>Runtime</h3><div class="runtime-summary"><span><b>{{ runtime.readyPods }} / {{ runtime.totalPods }}</b> Ready Pods</span><span><b>{{ runtime.restarts }}</b> Restarts</span></div><div class="runtime-list"><article v-for="workload in runtime.workloads" :key="`${workload.kind}/${workload.name}`"><strong>{{ workload.kind }}/{{ workload.name }}</strong><span class="status-dot" :class="statusTone(workload.status)">{{ workload.ready }}/{{ workload.desired }} · {{ workload.status }}</span></article><article v-for="endpoint in runtime.endpoints" :key="endpoint.url"><strong>{{ endpoint.type }} · {{ endpoint.name }}</strong><a :href="endpoint.url" target="_blank" rel="noreferrer">{{ endpoint.url }} <i class="pi pi-external-link"></i></a></article></div></section><section><h3>최근 작업</h3><div v-if="operations.length" class="operation-timeline"><article v-for="operation in operations" :key="operation.id"><span class="timeline-dot" :class="statusTone(operation.status)"></span><div><strong>{{ operation.type }} · {{ operation.status }}</strong><p>{{ operation.outputSummary || operation.errorMessage || 'Job Center에서 실행 중' }}</p><small>{{ new Date(operation.requestedAt).toLocaleString() }} · {{ operation.requestedBy }}</small></div></article></div><div v-else class="mini-empty">기록된 Helm 작업이 없습니다.</div></section></aside>
+      <aside v-if="selected" class="application-inspector"><header><div><span class="delivery-eyebrow">SELECTED APPLICATION</span><h2>{{ selected.name }}</h2><p>{{ selected.namespace }} · {{ clusterNames[selected.clusterId || ''] }}</p></div><span class="status-dot" :class="statusTone(selected.status)">{{ selected.status }}</span></header><div class="inspector-actions"><button class="secondary-button" type="button" @click="router.push({ path: '/analysis', query: { mode: 'application', applicationId: selected.id, clusterId: selected.clusterId } })"><i class="pi pi-sparkles"></i> AI Analysis</button><button class="secondary-button" type="button" :disabled="!canUpgrade" @click="startUpgrade"><i class="pi pi-arrow-up-right"></i> Upgrade</button><button class="secondary-button" type="button" :disabled="!canUpgrade || releases.filter(item => item.revision !== selected?.currentReleaseRevision).length === 0" @click="openRollback"><i class="pi pi-history"></i> Rollback</button><button class="danger-ghost-button" type="button" :disabled="!canUninstall" @click="openUninstall"><i class="pi pi-trash"></i> Uninstall</button></div><section v-if="runtime"><h3>Runtime</h3><div class="runtime-summary"><span><b>{{ runtime.readyPods }} / {{ runtime.totalPods }}</b> Ready Pods</span><span><b>{{ runtime.restarts }}</b> Restarts</span></div><div class="runtime-list"><article v-for="workload in runtime.workloads" :key="`${workload.kind}/${workload.name}`"><strong>{{ workload.kind }}/{{ workload.name }}</strong><span class="status-dot" :class="statusTone(workload.status)">{{ workload.ready }}/{{ workload.desired }} · {{ workload.status }}</span></article><article v-for="endpoint in runtime.endpoints" :key="endpoint.url"><strong>{{ endpoint.type }} · {{ endpoint.name }}</strong><a :href="endpoint.url" target="_blank" rel="noreferrer">{{ endpoint.url }} <i class="pi pi-external-link"></i></a></article></div></section><section><h3>최근 작업</h3><div v-if="operations.length" class="operation-timeline"><article v-for="operation in operations" :key="operation.id"><span class="timeline-dot" :class="statusTone(operation.status)"></span><div><strong>{{ operation.type }} · {{ operation.status }}</strong><p>{{ operation.outputSummary || operation.errorMessage || 'Job Center에서 실행 중' }}</p><small>{{ new Date(operation.requestedAt).toLocaleString() }} · {{ operation.requestedBy }}</small></div></article></div><div v-else class="mini-empty">기록된 Helm 작업이 없습니다.</div></section></aside>
     </div>
     <div v-else class="delivery-empty"><i class="pi pi-box"></i><h2>배포된 Application이 없습니다</h2><p>보유한 Chart Library에서 시작하거나 Artifact Hub에서 Chart를 찾아보세요.</p><button class="primary-button" type="button" @click="startOpen = true">첫 Application 배포</button></div>
     <DeploymentStartDialog :open="startOpen" @close="startOpen = false" />

@@ -132,9 +132,12 @@ public class ApplicationDeliveryDeploymentService {
         ManagedApplication application = upgrade ? requireApplication(tenantId, plan.applicationId())
                 : ManagedApplication.helmChart(plan.clusterId(), plan.namespace(), plan.releaseName(), plan.releaseName(),
                 plan.chartVersionId().toString(), actor).withReleaseMetadata(null, plan.chartVersionId(), plan.valuesRevisionId());
-        application = applications.save(application.withStatus(upgrade ? ApplicationStatus.UPGRADING
-                : ApplicationStatus.DEPLOYING, upgrade ? "HELM_UPGRADE_QUEUED" : "HELM_INSTALL_QUEUED", null));
-        AsyncJob job = jobs.save(AsyncJob.pending(upgrade ? AsyncJobType.HELM_UPGRADE : AsyncJobType.HELM_INSTALL));
+        ManagedApplication pendingApplication = application.withStatus(upgrade ? ApplicationStatus.UPGRADING
+                : ApplicationStatus.DEPLOYING, upgrade ? "HELM_UPGRADE_QUEUED" : "HELM_INSTALL_QUEUED", null);
+        // 신규 Application의 작업 이력이 JDBC 외래키를 참조하기 전에 INSERT를 확정한다.
+        application = upgrade ? applications.save(pendingApplication) : applications.saveAndFlush(pendingApplication);
+        // JDBC 작업 이력의 async_job_id 외래키가 참조할 수 있도록 Job INSERT도 즉시 확정한다.
+        AsyncJob job = jobs.saveAndFlush(AsyncJob.pending(upgrade ? AsyncJobType.HELM_UPGRADE : AsyncJobType.HELM_INSTALL));
         String operationType = upgrade ? "UPGRADE" : "INSTALL";
         ReleaseOperation operation = lifecycle.saveOperation(new ReleaseOperation(UUID.randomUUID(), application.id(),
                 job.id(), operationType, "PENDING", null, null, null, actor, clock.instant(), null));
@@ -280,7 +283,8 @@ public class ApplicationDeliveryDeploymentService {
         ApplicationStatus queuedStatus = "ROLLBACK".equals(operationType)
                 ? ApplicationStatus.ROLLING_BACK : ApplicationStatus.UNINSTALLING;
         applications.save(application.withStatus(queuedStatus, "HELM_" + operationType + "_QUEUED", null));
-        AsyncJob job = jobs.save(AsyncJob.pending(jobType));
+        // Lifecycle 작업 이력도 같은 외래키 순서를 사용하므로 Job INSERT를 먼저 확정한다.
+        AsyncJob job = jobs.saveAndFlush(AsyncJob.pending(jobType));
         ReleaseOperation operation = lifecycle.saveOperation(new ReleaseOperation(UUID.randomUUID(), application.id(),
                 job.id(), operationType, "PENDING", revision, null, null, actor, clock.instant(), null));
         if ("ROLLBACK".equals(operationType)) {

@@ -11,6 +11,10 @@ public interface ManagedApplicationRepositoryPort {
 
     ManagedApplication save(ManagedApplication application);
 
+    default ManagedApplication saveAndFlush(ManagedApplication application) {
+        return save(application);
+    }
+
     Optional<ManagedApplication> findById(UUID applicationId);
 
     List<ManagedApplication> findRecent(int limit);

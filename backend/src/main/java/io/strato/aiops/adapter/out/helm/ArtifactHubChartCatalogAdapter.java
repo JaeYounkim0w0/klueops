@@ -70,7 +70,7 @@ public class ArtifactHubChartCatalogAdapter implements ChartCatalogPort {
 
     private JsonNode get(String path) {
         try {
-            HttpRequest request = HttpRequest.newBuilder(baseUri.resolve(path)).timeout(requestTimeout)
+            HttpRequest request = HttpRequest.newBuilder(resolveApiPath(path)).timeout(requestTimeout)
                     .header("Accept", "application/json").GET().build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
@@ -83,6 +83,13 @@ public class ArtifactHubChartCatalogAdapter implements ChartCatalogPort {
         } catch (IOException exception) {
             throw new IllegalStateException("Artifact Hub is unavailable", exception);
         }
+    }
+
+    private URI resolveApiPath(String path) {
+        // 선행 슬래시가 /api/v1 경로를 제거하지 않도록 기준 URI를 디렉터리 URI로 정규화한다.
+        String normalizedBase = baseUri.toString().endsWith("/") ? baseUri.toString() : baseUri + "/";
+        String relativePath = path.startsWith("/") ? path.substring(1) : path;
+        return URI.create(normalizedBase).resolve(relativePath);
     }
 
     private String segment(String value) {

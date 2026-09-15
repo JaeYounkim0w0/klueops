@@ -42,6 +42,74 @@ INCIDENT_EVIDENCE_GUIDANCE = (
     "Incident 보고서를 내보내면 원본 분석과 연결된 명령의 실행자, 시각, 종료 코드, 검증 판정과 "
     "전후 Snapshot 해시가 포함됩니다. credential, 실시간 로그와 Snapshot 원문은 포함되지 않습니다."
 )
+AI_PROVIDER_HEADING = "AI Provider와 Local Models"
+IMAGE_ALT_TEXTS = (
+    "KlueOps 메뉴를 운영 관리, AI, 설정 영역으로 구분한 구조도",
+    "감지부터 검증과 해결까지 이어지는 권장 운영 흐름도",
+    "Platform, Tenant, Workspace, Cluster, Namespace, Resource의 관리 범위와 데이터 흐름도",
+)
+
+
+def update_phase_two_sections(document: Document) -> None:
+    """Phase 2에서 실제 제공하는 Application Delivery와 AI 설정 안내를 반영한다."""
+    replacements = {
+        "목적  관련 Kubernetes 리소스를 애플리케이션 관점으로 묶어 상태와 제한된 운영 조치를 제공합니다.":
+            "목적  Tenant Chart를 Custom Values로 Cluster에 Helm 배포하고 Application 상태와 수명주기를 운영합니다.",
+        "사용 시점  개별 Pod보다 서비스 단위로 상태, 분석, Restart와 Rollback을 확인할 때 사용합니다.":
+            "사용 시점  Artifact Hub Chart를 가져오거나 보유 Chart를 Cluster와 Namespace에 배포하고 상태를 확인할 때 사용합니다.",
+        "AI Analysis에서 식별한 Application의 상태를 확인합니다.":
+            "Chart Library를 기본 시작점으로 사용하고 Chart가 없을 때 Discover 또는 Source/.tgz 가져오기를 선택합니다.",
+        "상태 동기화, 보호된 Restart, Rollback preview와 실행을 제공합니다.":
+            "Values Profile, 대상 Cluster/Namespace, 선택형 HTTPRoute를 설정한 뒤 Preview와 정확한 확인 문구를 거쳐 배포합니다.",
+        "Application 범위 AI Analysis와 최근 운영 작업으로 연결합니다.":
+            "Application 상세에서 workload/Pod, Service·접근 경로, Helm History와 upgrade/rollback/uninstall을 확인합니다.",
+        "처음 사용할 때  현재는 애플리케이션 운영 화면이며 완성된 Docker 또는 Helm 배포 플랫폼이 아닙니다.":
+            "처음 사용할 때  Chart Library에서 검증된 버전을 선택하고 내부 Service 방식으로 작은 테스트 배포부터 시작합니다.",
+        "주의  미구현 배포 API를 상용 배포 기능으로 해석하면 안 됩니다. GitOps 연동은 후속 범위입니다.":
+            "주의  이 기능은 GitOps Controller가 아닙니다. 대상, Values와 Preview를 확인한 명시적 Helm 작업만 실행합니다.",
+        "12 Applications와 Argo CD의 향후 방향": "12 Application Delivery 운영 경계",
+        "Argo CD는 후속 선택 연동으로 둡니다. 현재 AIOps는 Argo CD가 없어도 Kubernetes API, Event, Log와 Snapshot을 이용해 진단할 수 있어야 합니다. 연동된 환경에서는 배포 변경과 장애의 관계를 더 정확히 설명하고 안전한 수동 Sync를 제공할 수 있습니다.":
+            "Application Delivery는 KlueOps가 관리하는 Helm Release를 명시적으로 배포·변경·삭제합니다. Argo CD나 Flux를 설치하거나 Git 상태를 지속 동기화하지 않으며, Tenant가 별도로 운영하는 GitOps Controller와 책임을 섞지 않습니다.",
+        "단계별 연동 순서": "안전한 운영 순서",
+        "1.  읽기 전용으로 Application, Health, Sync, Drift, Git revision과 배포 이력을 수집합니다.":
+            "1.  Tenant Library의 Chart 버전과 Values revision을 고정하고 대상 Cluster와 Namespace를 확인합니다.",
+        "2.  배포 시각과 Incident, Event, Log, Rollout 상태를 시간축으로 연결합니다.":
+            "2.  Preview에서 렌더링 결과, Secret 마스킹, Namespace와 Exposure 계획을 확인합니다.",
+        "3.  Diff와 실행 전 검증을 제공하고 RBAC와 Audit가 적용된 수동 Refresh 및 Sync를 허용합니다.":
+            "3.  정확한 확인 문구로 Helm 작업을 시작하고 Job과 Application History에서 진행·실패 단계를 추적합니다.",
+        "4.  자동 Prune, 강제 Sync, Application 삭제와 Git 또는 Helm values 직접 수정은 별도 승인 전까지 제외합니다.":
+            "4.  작업 후 workload/Pod, Service와 endpoint를 검증하고 필요할 때 preview 후 rollback 또는 uninstall합니다.",
+    }
+    for paragraph in document.paragraphs:
+        if paragraph.text in replacements:
+            paragraph.text = replacements[paragraph.text]
+
+    # 더 이상 제품 방향과 맞지 않는 Argo CD 중심 도식과 참고 링크를 제거한다.
+    obsolete_caption = next(
+        (paragraph for paragraph in document.paragraphs if paragraph.text == "그림 4 AIOps와 Argo CD의 권장 책임 경계"),
+        None,
+    )
+    if obsolete_caption is not None:
+        previous_element = obsolete_caption._element.getprevious()
+        if previous_element is not None and previous_element.xpath(".//w:drawing"):
+            previous_element.getparent().remove(previous_element)
+        obsolete_caption._element.getparent().remove(obsolete_caption._element)
+    for paragraph in list(document.paragraphs):
+        if paragraph.text.startswith("Argo CD 참고"):
+            paragraph._element.getparent().remove(paragraph._element)
+
+    if any(paragraph.text == AI_PROVIDER_HEADING for paragraph in document.paragraphs):
+        return
+    anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text == "계정 및 권한")
+    previous = Paragraph(anchor._element.getprevious(), anchor._parent)
+    current = insert_after(previous, AI_PROVIDER_HEADING, "Heading 2")
+    current = insert_after(current, "목적  Local Ollama와 선택형 외부 LLM 연결, 모델과 Tenant 목적별 사용 경로를 관리합니다.", "Normal")
+    current = insert_after(current, "사용 시점  AI Analysis, AI Chat과 Helm Values 제안에 사용할 Provider나 모델을 변경할 때 사용합니다.", "Normal")
+    current = insert_after(current, "Platform Manager는 Provider profile과 credential을 등록하고 연결을 검증합니다.", "List Bullet")
+    current = insert_after(current, "Tenant 관리자는 허용된 profile/model을 목적별로 선택하고 외부 전송 여부를 명시적으로 설정합니다.", "List Bullet")
+    current = insert_after(current, "Local Models에서는 Ollama 설치 모델을 동기화하고 승인 목록의 9B 이하 모델만 추가합니다.", "List Bullet")
+    current = insert_after(current, "API key와 credential은 저장 후 다시 표시하지 않으며 화면과 로그에서 마스킹합니다.", "List Bullet")
+    insert_after(current, "주의  외부 Provider 사용은 Tenant 데이터 반출 결정입니다. 전송 범위와 fallback을 확인한 뒤 활성화합니다.", "Normal")
 
 
 def insert_after(paragraph: Paragraph, text: str, style: str) -> Paragraph:
@@ -77,6 +145,14 @@ def apply_supported_font(document: Document) -> None:
                     for run in paragraph.runs:
                         run.font.name = GUIDE_FONT
                         set_run_fonts(run._element.get_or_add_rPr())
+
+
+def apply_image_alt_text(document: Document) -> None:
+    """시각 도식을 보지 못하는 사용자도 의미를 알 수 있도록 대체 텍스트를 지정한다."""
+    image_properties = document._element.xpath(".//wp:docPr")
+    for properties, description in zip(image_properties, IMAGE_ALT_TEXTS, strict=False):
+        properties.set("descr", description)
+        properties.set("title", description)
 
 
 def normalize_section_page_breaks(document: Document) -> None:
@@ -209,7 +285,10 @@ def main() -> None:
         )
         insert_after(anchor, INCIDENT_EVIDENCE_GUIDANCE, "List Bullet")
 
+    update_phase_two_sections(document)
+
     apply_supported_font(document)
+    apply_image_alt_text(document)
     normalize_section_page_breaks(document)
     compact_short_tables(document)
     compact_console_section(document)

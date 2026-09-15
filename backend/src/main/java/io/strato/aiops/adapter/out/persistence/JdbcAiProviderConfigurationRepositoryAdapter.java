@@ -102,9 +102,15 @@ public class JdbcAiProviderConfigurationRepositoryAdapter implements AiProviderC
     public List<LocalAiModel> findLocalModels(UUID profileId) {
         return jdbc.query("select * from local_ai_models where provider_profile_id=? order by model_tag", (rs, row) ->
                 new LocalAiModel(rs.getObject("id", UUID.class), rs.getObject("provider_profile_id", UUID.class),
-                        rs.getString("model_tag"), rs.getObject("parameter_billions", Double.class),
+                        rs.getString("model_tag"), nullableDouble(rs, "parameter_billions"),
                         rs.getString("status"), rs.getObject("size_bytes", Long.class), rs.getString("digest"),
                         instant(rs, "updated_at")), profileId);
+    }
+
+    private Double nullableDouble(ResultSet rs, String column) throws SQLException {
+        // PostgreSQL numeric은 드라이버에서 BigDecimal로 반환되므로 Number를 통해 안전하게 변환한다.
+        Number value = (Number) rs.getObject(column);
+        return value == null ? null : value.doubleValue();
     }
 
     private AiProviderProfile profile(ResultSet rs, int row) throws SQLException {
