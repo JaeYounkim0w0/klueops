@@ -53,11 +53,11 @@ npm audit --prefix frontend --omit=dev --audit-level=high
 
 ## 자동 업데이트 정책
 
-`.github/dependabot.yml`은 매주 월요일 06:00(Asia/Seoul)에 다음 공개 dependency source를 확인한다.
+`.github/dependabot.yml`은 매월 06:00(Asia/Seoul)에 다음 공개 dependency source를 확인한다.
 
 - Backend와 Command Runner의 Maven dependency
 - Frontend의 npm dependency
-- Backend, Command Runner, Frontend와 Keycloak의 Docker base image
+- Backend, Command Runner, Frontend와 Keycloak의 Docker base image 보안 업데이트
 - GitHub Actions
 
-Maven과 npm의 minor/patch update는 component별로 묶어 pull request 수를 제한하고 major update는 독립적으로 검토한다. Dependabot pull request는 자동 merge하지 않으며 quality gate, generated client 계약, runtime SBOM/license gate와 관련 container scan을 통과한 뒤 병합한다. Dockerfile `ARG`를 이용해 URL에서 직접 받는 `kubectl` 같은 binary와 Helm values의 application image tag는 Dependabot이 관리하지 않으므로 upstream security 공지와 정기 supply-chain 실행으로 별도 추적한다.
+Maven과 npm의 minor/patch update는 component별 단일 pull request로 묶고 ecosystem별 동시 version update PR을 1개로 제한한다. GitHub Actions도 major를 제외하고 동시 1개만 허용한다. 호환성 검토가 필요한 major update와 Docker 일반 version update는 자동 PR을 생성하지 않고 별도 계획으로 수행한다. 이 제한은 Dependabot security update를 끄지 않으며, 자동 merge 없이 quality gate, generated client 계약, runtime SBOM/license gate와 관련 container scan을 통과한 뒤 병합한다. Dockerfile `ARG`를 이용해 URL에서 직접 받는 `kubectl` 같은 binary와 Helm values의 application image tag는 Dependabot이 관리하지 않으므로 upstream security 공지와 정기 supply-chain 실행으로 별도 추적한다.

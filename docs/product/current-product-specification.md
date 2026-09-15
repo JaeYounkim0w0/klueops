@@ -211,7 +211,7 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - GitHub 공개 저장소를 새로 clone해 Backend 248 tests, Frontend 91 tests·production build, 문서·저장소 위생과 all-in-one Helm dry-run을 별도 cache 없이 재현했다.
 - Backend 186개, Command Runner 46개, Frontend production 19개 component의 CycloneDX SBOM에서 license 누락 0건과 allowlist 정책 통과를 확인했다. Frontend production dependency는 High 0/Critical 0이며 개발 도구의 알려진 취약점은 runtime과 분리해 `docs/security/dependency-policy.md`에 공개한다.
 - 공개 supply-chain workflow는 네 runtime container를 build·Trivy scan하고 runtime SBOM과 license gate를 실행한다. signed container workflow도 Command Runner를 포함한다. registry별 Cosign identity/issuer 검증은 자체 운영 배포자가 수행한다.
-- 주간 Dependabot 정책은 Backend/Command Runner Maven, Frontend npm, 네 Docker base image와 GitHub Actions의 갱신 pull request를 생성하며 자동 merge하지 않는다.
+- 월간 Dependabot 정책은 Backend/Command Runner Maven, Frontend npm과 GitHub Actions의 minor/patch version update를 ecosystem별 최대 1개 PR로 제한하며 Docker 일반 update와 모든 major update는 자동 생성하지 않는다. Security update와 주간 supply-chain scan은 계속 유지하고 자동 merge하지 않는다.
 - README의 Dashboard와 Kubernetes Console/Cook Book 화면은 별도 namespace의 실제 설치에서 캡처했으며 계정, cluster 식별자와 내부 주소를 공개용 값으로 마스킹했다. 문서 검증은 두 화면 asset의 존재를 확인한다.
 
 검증 명령과 최신 로컬 품질 증적은 `docs/operations/release-candidate-checklist.md`를 따른다. 문서와 스크립트의 `release-candidate` 명칭은 기존 자동화 호환을 위해 유지하며 상용 릴리스 판정을 의미하지 않는다.
