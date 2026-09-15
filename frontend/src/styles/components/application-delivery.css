@@ -12,7 +12,8 @@
 .delivery-tab.router-link-exact-active { background: #eaf2ff; color: #1859ad; box-shadow: inset 0 0 0 1px #cadefb; }
 .delivery-search { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; border: 1px solid #ced9e6; border-radius: 13px; background: #fff; padding: 7px 8px 7px 14px; box-shadow: 0 8px 26px rgba(35, 65, 100, .06); }
 .delivery-search > i { color: #66788f; }
-.delivery-search input { border: 0; outline: 0; padding: 8px 0; color: #17212f; }
+.delivery-search input { min-width: 0; border: 0; outline: 0; background: #fff; padding: 8px 0; color: #17212f; caret-color: #1768e5; }
+.delivery-search input::placeholder { color: #667085; opacity: 1; }
 .delivery-notice { border: 1px solid #bad3f3; border-left: 4px solid #2870ca; border-radius: 9px; background: #f1f7ff; padding: 12px 14px; color: #24558e; font-size: 13px; }
 .delivery-notice.error { border-color: #f0c4bf; border-left-color: #b42318; background: #fff6f5; color: #8b2e25; }
 .chart-card-grid, .delivery-skeleton-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; }
