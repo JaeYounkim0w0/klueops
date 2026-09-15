@@ -2,9 +2,9 @@
 
 기준일: 2026-09-15
 
-상태: 핵심 bounded context 구현 완료, 선택형 저장소·고급 Exposure adapter는 후속
+상태: 핵심 bounded context와 기본 Exposure 구현 완료, 선택형 저장소·고급 네트워크 연동은 후속
 
-구현 기준선은 PostgreSQL metadata/artifact 저장, Backend 내부 Application Delivery port/service/adapter, 임시 kubeconfig를 사용하는 제한된 Helm CLI 실행, HTTPRoute companion, Async Job과 ReleaseOperation 복구다. 별도 Runner 서비스 추출, OCI/Object Storage와 DNS/TLS Provider는 실제 확장 조건이 생길 때 적용한다.
+구현 기준선은 PostgreSQL metadata/artifact 저장, Backend 내부 Application Delivery port/service/adapter, 임시 kubeconfig를 사용하는 제한된 Helm CLI 실행, Chart-managed Ingress/HTTPRoute 검증·발견, Service 기반 HTTPRoute companion, Async Job과 ReleaseOperation 복구다. 별도 Runner 서비스 추출, OCI/Object Storage와 DNS/TLS Provider는 실제 확장 조건이 생길 때 적용한다.
 
 ## 1. 결정
 
@@ -92,7 +92,7 @@ ArchUnit gate:
 - AI Values suggestion orchestration
 - preview 요청과 정책 결과 조립
 - Cluster/Namespace target, Release name과 Namespace 생성 계획
-- Chart-managed/KlueOps-managed Exposure 계획과 Gateway/DNS/TLS capability 조립
+- Chart-managed/KlueOps HTTPRoute Exposure 계획과 Gateway/DNS/TLS capability 조립
 - exact confirmation과 async job lifecycle
 - Application, Release metadata, workload/endpoint health, history, audit와 사후 검증
 
@@ -100,7 +100,7 @@ ArchUnit gate:
 
 - Chart archive 안전 검사와 bounded unpack
 - `helm lint`, `helm template`, install/upgrade/status/history/rollback/uninstall
-- Backend가 승인한 companion HTTPRoute/Ingress의 server-side apply/delete와 condition 조회
+- Backend가 승인한 companion HTTPRoute의 server-side apply/delete와 condition 조회
 - argv allowlist, namespace/release 고정과 timeout/cancel
 - 임시 kubeconfig, registry config, Chart와 Values의 job 종료 cleanup
 - NDJSON progress와 bounded stdout/stderr
@@ -214,7 +214,7 @@ NamespacePlan
 - quotaJson, limitRangeJson, networkPolicyProfile, policyResult
 
 ExposurePlan
-- id, deploymentPlanId, mode: INTERNAL_ONLY | CHART_MANAGED | KLUEOPS_MANAGED
+- id, deploymentPlanId, mode: NONE | CHART_MANAGED | HTTP_ROUTE
 - routeKind: NONE | HTTP_ROUTE | INGRESS
 - gatewayRef, listenerName, hostname, path
 - backendService, backendPort, tlsMode, tlsSecretRef, dnsMode
@@ -382,12 +382,13 @@ flowchart TD
 ### 8.1 Exposure 실행 순서
 
 1. `helm template` 결과에서 Service와 chart-managed Ingress/HTTPRoute를 식별한다.
-2. Chart-managed route가 있으면 중복 companion 생성을 차단한다.
-3. KlueOps-managed mode는 Gateway API CRD, Gateway/Listener allowedRoutes, backend Service/Port와 RBAC를 검사한다.
-4. Helm install/upgrade 성공 후 승인된 companion resource를 적용한다.
-5. HTTPRoute `Accepted`와 `ResolvedRefs`, Gateway address, DNS와 TLS를 각각 독립 상태로 수집한다.
-6. Route 적용 실패 시 `REQUIRED` 정책은 Helm rollback, `BEST_EFFORT` 정책은 Application을 `RUNNING_ENDPOINT_DEGRADED`로 표시하고 cleanup/재시도를 제공한다.
-7. Rollback/Uninstall은 operation journal의 companion resource를 같은 plan에서 변경·정리한다.
+2. `CHART_MANAGED`는 렌더 결과에 top-level Ingress 또는 HTTPRoute가 없으면 preview를 거부한다.
+3. `HTTP_ROUTE`는 Gateway API CRD와 parent Gateway, HTTP/HTTPS listener, backend Service/Port를 검사한다.
+4. Helm install/upgrade 성공 후 승인된 companion HTTPRoute를 server-side apply한다.
+5. Helm 소유 label 또는 release annotation으로 chart-managed Ingress를 찾고 TLS 유무에 맞춰 URL을 만든다.
+6. HTTPRoute `Accepted`와 `ResolvedRefs`를 수집하고 두 조건이 모두 참이면 `READY`, 거부 조건이면 `DEGRADED`, 아직 판정 전이면 `APPLIED`로 표시한다.
+7. companion 적용 실패는 생성 시도한 Route를 best-effort 정리하고 추정 URL을 저장하지 않는다.
+8. 자동 DNS/TLS, `allowedRoutes`, cross-namespace `ReferenceGrant`, Gateway address 기반 도달성 판단과 companion Ingress는 후속 adapter 범위다.
 
 Wildcard DNS가 Gateway를 가리키는 경우 hostname만 등록한다. 그렇지 않으면 선택형 DNS Provider/ExternalDNS adapter가 있을 때만 자동화를 제공하고, 없는 경우 필요한 record와 `MANUAL_ACTION_REQUIRED`를 표시한다.
 
@@ -465,8 +466,9 @@ portal:
 - fake AI provider의 schema/timeout/masking test
 - ephemeral namespace에서 install → upgrade → rollback → uninstall E2E
 - 기존/신규 Namespace 권한, quota와 uninstall 시 Namespace 보존 test
-- Internal/Chart-managed/KlueOps-managed Exposure와 중복 Route 차단 test
-- HTTPRoute Accepted/ResolvedRefs, Gateway allowedRoutes, DNS/TLS partial 상태 test
+- Cluster 내부/Chart-managed/KlueOps HTTPRoute Exposure와 중복 Route 차단 test
+- HTTPRoute Accepted/ResolvedRefs와 Chart-managed Ingress 수집 test
+- Gateway allowedRoutes, cross-namespace ReferenceGrant, DNS/TLS partial 상태 test
 - Application Workload/Pod/Endpoint 조회와 Tenant scope test
 - companion apply 실패, Helm rollback, uninstall cleanup과 retained resource test
 - Embedded DB/Object Storage/External OCI artifact store contract test

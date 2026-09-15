@@ -6,13 +6,13 @@
 
 ## 구현 기준선
 
-2026-09-15 `feature/phase-2` 기준으로 Tenant별 Artifact Hub 검색·가져오기, Chart Library와 Source, 암호화된 Values revision, 대상 Cluster/Namespace 선택과 Namespace 생성, Helm preview/install/upgrade/rollback/uninstall, Application runtime·Service·HTTPRoute 조회, Tenant 역할·메뉴 기능 정책·사용자 membership/offboarding, Ollama 및 외부 Provider profile·목적별 routing을 구현했다. 실제 OIDC 로그인 후 검색부터 배포·상태 확인·삭제까지 로컬 Kubernetes에서 검증했다.
+2026-09-15 `feature/phase-2` 기준으로 Tenant별 Artifact Hub 검색·가져오기, Chart Library와 Source, 암호화된 Values revision, 대상 Cluster/Namespace 선택과 Namespace 생성, Helm preview/install/upgrade/rollback/uninstall, Application runtime·Service·Ingress·HTTPRoute 조회, Tenant 역할·메뉴 기능 정책·사용자 membership/offboarding, Ollama 및 외부 Provider profile·목적별 routing을 구현했다. 실제 OIDC 로그인 후 검색부터 배포·상태 확인·삭제까지 로컬 Kubernetes에서 검증했으며, Chart Values가 생성한 Ingress와 KlueOps가 Service에 연결한 companion HTTPRoute는 각각 실제 HTTP 응답까지 확인했다.
 
 다음 항목은 설계를 유지하지만 이번 핵심 구현 완료 범위에는 포함하지 않는다.
 
 - `values.schema.json` 기반 Form과 YAML의 양방향 편집
 - OCI 및 S3-compatible artifact adapter, provenance 서명 검증
-- Chart-managed Ingress, 자동 DNS/TLS Provider와 Gateway condition 전체 preflight
+- 자동 DNS/TLS Provider, cross-namespace `ReferenceGrant`·`allowedRoutes`를 포함한 Gateway 전체 preflight와 companion Ingress
 - PVC/DNS/TLS 보존 선택을 포함한 고급 uninstall plan
 - Local model 삭제·사용 중 보호와 모델별 정식 품질 승격 corpus
 
@@ -70,7 +70,7 @@ P2-0은 단순 색상 변경이 아니라 기존 제품 전체의 정보 구조�
 - Chart, Values, 생성 manifest, Cluster scope와 RBAC를 결정론적으로 검증한다.
 - preview, exact confirmation, async job, audit와 사후 health 검증을 거쳐 Helm install/upgrade/rollback/uninstall을 수행한다.
 - 기존 Namespace를 기본 대상으로 사용하고 권한·정책이 허용하는 경우에만 Namespace 생성을 지원한다.
-- Chart가 만든 Service를 Internal only, Chart-managed route 또는 KlueOps-managed HTTPRoute/Ingress로 노출한다.
+- Chart가 만든 Service를 Cluster 내부, Chart-managed route 또는 KlueOps companion HTTPRoute로 노출한다.
 - 배포 후 Application 상세에서 Workload, Pod, Service, 접근 URL, Route/DNS/TLS와 Release history를 함께 운영한다.
 - Ollama endpoint의 설치 모델을 조회하고 9B 이하 모델을 관리자 승인으로 추가해 AI 목적별로 라우팅한다.
 - Application Delivery를 사용하지 않는 설치에서는 Helm Runner와 background work를 비활성화한다.
@@ -172,13 +172,13 @@ Release 이름은 `Cluster + Namespace` 안에서 유일해야 한다.
 
 | 모드 | 동작 | 기본값 |
 | --- | --- | --- |
-| `INTERNAL_ONLY` | Chart가 생성한 ClusterIP Service만 사용 | 기본 |
+| `NONE` | Chart가 생성한 Service만 사용하고 KlueOps가 외부 경로를 추가하지 않음 | 기본 |
 | `CHART_MANAGED` | Chart Values로 Ingress/HTTPRoute/LoadBalancer를 생성 | Chart가 명시적으로 지원할 때 |
-| `KLUEOPS_MANAGED` | 렌더링된 Service/Port에 companion HTTPRoute 또는 Ingress 연결 | 사용자가 선택할 때 |
+| `HTTP_ROUTE` | 렌더링된 Service/Port에 KlueOps companion HTTPRoute 연결 | 사용자가 선택할 때 |
 
-KlueOps-managed Exposure 입력은 Gateway/Listener, hostname, path, backend Service/Port, TLS와 DNS mode다. 예를 들어 `nginx.cluster.co.kr`은 wildcard DNS가 Gateway를 가리키면 별도 DNS 변경 없이 hostname으로 사용한다. 그렇지 않으면 ExternalDNS/DNS Provider 연동을 사용하거나 `DNS 설정 필요` 상태와 필요한 record를 사용자에게 안내한다.
+KlueOps HTTPRoute Exposure 입력은 Gateway/Listener, hostname, path, backend Service/Port, TLS와 DNS mode다. 예를 들어 `nginx.cluster.co.kr`은 wildcard DNS가 Gateway를 가리키면 별도 DNS 변경 없이 hostname으로 사용한다. 그렇지 않으면 ExternalDNS/DNS Provider 연동을 사용하거나 `DNS 설정 필요` 상태와 필요한 record를 사용자에게 안내한다.
 
-HTTPRoute는 Gateway API capability, parent Gateway의 allowedRoutes, Service/Port와 `Accepted`/`ResolvedRefs` 조건을 사전·사후 검사한다. Gateway API가 없으면 정책에 따라 Ingress 또는 Internal only를 제안한다. Chart가 이미 Route를 생성하면 중복 companion resource를 만들지 않는다.
+현재 구현은 `CHART_MANAGED` preview에서 렌더 결과에 실제 Ingress 또는 HTTPRoute가 없으면 배포를 차단한다. `HTTP_ROUTE`는 대상 Service/Port와 parent Gateway의 존재, HTTP/HTTPS listener를 적용 전에 검사하고, 적용 뒤 `Accepted`와 `ResolvedRefs`를 수집해 `READY`, `APPLIED`, `DEGRADED`로 표시한다. Gateway API가 없거나 사전 조건이 맞지 않으면 HTTPRoute 생성 없이 실패한다. `allowedRoutes`, cross-namespace `ReferenceGrant`, DNS와 TLS 자동화까지 포함한 전체 preflight는 후속 확장이다.
 
 TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-manager 연동만 사용한다. Certificate와 DNS를 자동 생성하는 것처럼 표시하지 않고 실제 연동 상태를 구분한다.
 
@@ -358,7 +358,7 @@ Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한�
 4. Tenant A/B Chart와 Values Profile 상호 비노출
 5. schema form/YAML/AI patch의 동일 결과와 invalid key 차단
 6. 기존 Namespace 선택과 권한 있는 Namespace 생성 plan 검증
-7. Internal/Chart-managed/KlueOps-managed Exposure preview와 HTTPRoute condition 검증
+7. Cluster 내부/Chart-managed/KlueOps HTTPRoute Exposure preview와 HTTPRoute condition 검증
 8. manifest preview, 위험 resource와 RBAC/Gateway preflight 표시
 9. install 성공, Application/Pod/Endpoint health와 audit 확인
 10. Values upgrade, history, rollback 성공
@@ -372,6 +372,8 @@ Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한�
 18. User suspend/offboard의 session·RoleBinding·credential 회수와 Audit actor 보존
 19. 마지막 Platform Manager 제거 차단과 Platform Manager의 모든 Tenant 접근 검증
 20. Feature OFF 상태에서 메뉴, 직접 route와 API가 일관된 차단 결과를 반환
+
+2026-09-15 로컬 수용시험에서는 Kubernetes v1.34.1에서 Chart-managed Ingress와 Service 기반 companion HTTPRoute를 각각 배포했다. 두 Application 모두 Pod `1/1 Ready`와 `RUNNING`으로 수렴했고, Ingress Controller와 Envoy Gateway를 경유한 hostname 요청에서 HTTP 200 nginx 응답을 확인했다. HTTPRoute는 `Accepted=True`, `ResolvedRefs=True`였다. 재현 범위와 테스트 전용 Controller는 [로컬 Exposure 수용시험](local-exposure-acceptance.md)에 기록한다.
 
 ## 11. 단계별 구현
 

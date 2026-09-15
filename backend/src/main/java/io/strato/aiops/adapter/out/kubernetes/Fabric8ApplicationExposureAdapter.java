@@ -32,11 +32,14 @@ public class Fabric8ApplicationExposureAdapter implements ApplicationExposurePor
 
     @Override
     public ExposureResult applyHttpRoute(KubernetesConnectionCredential credential, HttpRouteRequest request) {
-        GenericKubernetesResource route = route(request);
         try (KubernetesClient client = client(credential)) {
+            validateBackendService(client, request);
+            GenericKubernetesResource gateway = requireGateway(client, request);
+            String scheme = gatewayScheme(gateway);
+            GenericKubernetesResource route = route(request, scheme);
             // 임의 YAML을 받지 않고 검증된 typed 입력만으로 companion resource를 조립한다.
             client.resource(route).inNamespace(request.namespace()).fieldManager("klueops").serverSideApply();
-            return new ExposureResult("https://" + request.hostname() + normalizedPath(request.path()), "APPLIED");
+            return new ExposureResult(scheme + "://" + request.hostname() + normalizedPath(request.path()), "APPLIED");
         }
     }
 
@@ -51,21 +54,57 @@ public class Fabric8ApplicationExposureAdapter implements ApplicationExposurePor
         }
     }
 
-    private GenericKubernetesResource route(HttpRouteRequest request) {
+    private GenericKubernetesResource route(HttpRouteRequest request, String scheme) {
         GenericKubernetesResource route = new GenericKubernetesResource();
         route.setApiVersion("gateway.networking.k8s.io/v1");
         route.setKind("HTTPRoute");
         route.setMetadata(new ObjectMetaBuilder().withName(request.routeName()).withNamespace(request.namespace())
                 .addToLabels("app.kubernetes.io/managed-by", "klueops")
-                .addToLabels("app.kubernetes.io/instance", request.routeName().replaceFirst("-klueops$", "")).build());
+                .addToLabels("app.kubernetes.io/instance", request.routeName().replaceFirst("-klueops$", ""))
+                .addToAnnotations("klueops.io/url-scheme", scheme).build());
         Map<String, Object> backend = Map.of("name", request.serviceName(), "port", request.servicePort());
         Map<String, Object> match = Map.of("path", Map.of("type", "PathPrefix", "value", normalizedPath(request.path())));
         Map<String, Object> parent = request.gatewayNamespace().equals(request.namespace())
-                ? Map.of("name", request.gatewayName())
-                : Map.of("name", request.gatewayName(), "namespace", request.gatewayNamespace());
+                ? Map.of("group", "gateway.networking.k8s.io", "kind", "Gateway", "name", request.gatewayName())
+                : Map.of("group", "gateway.networking.k8s.io", "kind", "Gateway", "name", request.gatewayName(),
+                "namespace", request.gatewayNamespace());
         route.setAdditionalProperty("spec", Map.of("parentRefs", List.of(parent), "hostnames", List.of(request.hostname()),
                 "rules", List.of(Map.of("matches", List.of(match), "backendRefs", List.of(backend)))));
         return route;
+    }
+
+    private void validateBackendService(KubernetesClient client, HttpRouteRequest request) {
+        var service = client.services().inNamespace(request.namespace()).withName(request.serviceName()).get();
+        boolean hasPort = service != null && service.getSpec() != null && service.getSpec().getPorts() != null
+                && service.getSpec().getPorts().stream().anyMatch(port -> port.getPort() != null
+                && port.getPort() == request.servicePort());
+        if (!hasPort) {
+            throw new IllegalArgumentException("HTTPRoute backend Service or port does not exist");
+        }
+    }
+
+    private GenericKubernetesResource requireGateway(KubernetesClient client, HttpRouteRequest request) {
+        GenericKubernetesResource gateway = client.genericKubernetesResources(
+                        "gateway.networking.k8s.io/v1", "Gateway")
+                .inNamespace(request.gatewayNamespace()).withName(request.gatewayName()).get();
+        if (gateway == null) throw new IllegalArgumentException("HTTPRoute parent Gateway does not exist");
+        return gateway;
+    }
+
+    private String gatewayScheme(GenericKubernetesResource gateway) {
+        Object listenersValue = gateway.get("spec", "listeners");
+        if (!(listenersValue instanceof List<?> listeners) || listeners.isEmpty()) {
+            throw new IllegalArgumentException("Gateway has no listener");
+        }
+        boolean http = false;
+        for (Object listenerValue : listeners) {
+            if (!(listenerValue instanceof Map<?, ?> listener)) continue;
+            String protocol = String.valueOf(listener.get("protocol"));
+            if ("HTTPS".equalsIgnoreCase(protocol)) return "https";
+            http |= "HTTP".equalsIgnoreCase(protocol);
+        }
+        if (http) return "http";
+        throw new IllegalArgumentException("Gateway has no HTTP or HTTPS listener");
     }
 
     private String normalizedPath(String path) { return path == null || path.isBlank() ? "/" : path; }

@@ -7,6 +7,7 @@ import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.strato.aiops.application.port.out.ApplicationRuntimeInspectionPort;
 import io.strato.aiops.application.port.out.KubernetesConnectionCredential;
 import io.strato.aiops.domain.cluster.ClusterCredentialType;
@@ -53,7 +54,23 @@ public class Fabric8ApplicationRuntimeInspectionAdapter implements ApplicationRu
             List<Endpoint> endpoints = new ArrayList<>();
             client.services().inNamespace(namespace).withLabel("app.kubernetes.io/instance", releaseName)
                     .list().getItems().forEach(service -> appendEndpoints(namespace, service, endpoints));
+            // Chart마다 label 관례가 다르므로 namespace 범위에서 Helm annotation도 함께 확인한다.
+            endpoints.addAll(ApplicationEndpointCollector.ingressEndpoints(
+                    client.network().v1().ingresses().inNamespace(namespace).list().getItems(), releaseName));
+            endpoints.addAll(ApplicationEndpointCollector.httpRouteEndpoints(httpRoutes(client, namespace), releaseName));
             return new RuntimeOverview(ready, pods.size(), restarts, List.copyOf(workloads), List.copyOf(endpoints));
+        }
+    }
+
+    private List<io.fabric8.kubernetes.api.model.GenericKubernetesResource> httpRoutes(KubernetesClient client,
+                                                                                       String namespace) {
+        try {
+            return client.genericKubernetesResources("gateway.networking.k8s.io/v1", "HTTPRoute")
+                    .inNamespace(namespace).list().getItems();
+        } catch (KubernetesClientException exception) {
+            // Gateway API 미설치 Cluster에서는 Service/Ingress 상태 조회를 계속 제공한다.
+            if (exception.getCode() == 403 || exception.getCode() == 404) return List.of();
+            throw exception;
         }
     }
 

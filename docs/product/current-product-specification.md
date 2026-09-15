@@ -152,9 +152,9 @@ AI Trust Center는 평가 corpus, category별 정확도, 근거 coverage, halluc
 
 - Artifact Hub에서 Helm Chart를 검색해 정확한 버전을 Tenant Library로 가져오거나 `.tgz`, Helm Repository source를 등록한다.
 - Chart artifact는 digest와 함께 Tenant 범위로 보관하며 Custom은 암호화된 versioned Values Profile만 지원한다.
-- 보유 Chart를 기본 진입점으로 선택하고 Values, Cluster/Namespace, 선택형 HTTPRoute Exposure와 preview를 거쳐 Helm install을 실행한다.
+- 보유 Chart를 기본 진입점으로 선택하고 Values, Cluster/Namespace, `Cluster 내부`·`Chart에서 관리`·`KlueOps HTTPRoute` Exposure와 preview를 거쳐 Helm install을 실행한다. Chart-managed 모드는 렌더된 Ingress/HTTPRoute 존재를 검증하고, KlueOps HTTPRoute는 Service/Port와 Gateway listener를 사전 확인한다.
 - install/upgrade/rollback/uninstall은 비동기 Job과 ReleaseOperation으로 추적하며 중단된 작업은 timeout 후 실패 상태로 복구한다.
-- Application 상세에서 Helm 상태, workload/Pod health, Service와 접근 endpoint, operation history를 확인한다.
+- Application 상세에서 Helm 상태, workload/Pod health, Service·Ingress·HTTPRoute 접근 endpoint와 `READY/APPLIED/DEGRADED` 상태, operation history를 확인한다.
 - Tenant 기능 정책과 `TENANT_ADMIN`, `CLUSTER_ADMIN`, `OPERATOR`, `VIEWER` capability를 메뉴와 API에서 함께 평가한다. Platform Manager는 모든 Tenant 제품 권한을 가지되 대상 Kubernetes RBAC는 우회하지 않는다.
 - Users & Access에서 Tenant membership, pending invite, 역할/scope, OIDC Group Mapping과 안전한 offboarding을 관리한다.
 - AI Provider profile은 Ollama, OpenAI, Google GenAI, OpenAI-compatible 유형을 저장·검증하고 Tenant 목적별 routing을 제공한다. Credential은 암호화·마스킹하며 외부 전송은 명시적으로 허용한다.

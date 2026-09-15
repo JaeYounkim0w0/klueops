@@ -1640,7 +1640,7 @@ export interface DeploymentPlanResponse {
   valuesRevisionId?: string;
   namespace: string;
   releaseName: string;
-  exposureType: 'NONE' | 'HTTP_ROUTE';
+  exposureType: 'NONE' | 'CHART_MANAGED' | 'HTTP_ROUTE';
   hostname?: string;
   exposurePath?: string;
   backendServiceName?: string;

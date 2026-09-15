@@ -99,7 +99,7 @@ Application Delivery 핵심 흐름은 구현됐으며 다음은 고급 확장 �
 
 - `values.schema.json` Form/YAML 양방향 편집과 schema-aware AI diff
 - OCI/S3-compatible Chart artifact 저장 adapter와 provenance 서명 검증
-- Chart-managed Ingress, DNS/TLS Provider, Gateway condition 전체 사전 검사
+- DNS/TLS Provider, Gateway `allowedRoutes`·cross-namespace `ReferenceGrant` 전체 사전 검사와 companion Ingress
 - PVC/DNS/TLS 보존을 선택하는 uninstall plan과 companion 정리 재시도
 - 9B 이하 Local model 비교 corpus, 승격 점수표와 사용 중 모델 삭제 보호
 

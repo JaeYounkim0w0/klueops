@@ -21,6 +21,7 @@ Local LLM은 특정 계열에 고정하지 않고 9B 이하 후보를 동일 fix
 - [AI Provider 및 모델 전략](application-delivery/ai-provider-and-model-strategy.md)
 - [UI/UX 화면 설계](application-delivery/ui-ux-screen-design.md)
 - [실행 가능한 HTML 시안](application-delivery/ui-mockups/index.html)
+- [로컬 Exposure 수용시험](application-delivery/local-exposure-acceptance.md)
 
 ## 문서 상태
 
@@ -31,8 +32,8 @@ Local LLM은 특정 계열에 고정하지 않고 9B 이하 후보를 동일 fix
 | UI/UX | 공통 design token 기반 Application Delivery, Users & Access, AI Provider 화면 구현 및 반응형 보완 |
 | Tenant/RBAC | Platform Manager, Tenant 역할, 메뉴 정책, membership/offboarding과 직접·Cluster 파생 Resource scope 구현 |
 | Backend/Frontend 구현 | 핵심 vertical slice 구현 완료 |
-| 로컬 Kubernetes 수용시험 | OIDC 로그인, 검색·가져오기·Values·preview·Helm install/uninstall·상태 조회 검증 완료 |
+| 로컬 Kubernetes 수용시험 | OIDC 로그인, 검색·가져오기·Values·preview·Helm install/uninstall·상태 조회와 Chart-managed Ingress·companion HTTPRoute 실제 HTTP 접근 검증 완료 |
 
-Schema 기반 Form/YAML 양방향 편집, OCI/Object Storage adapter, 고급 Ingress·DNS·TLS 연동, PVC 보존 선택과 로컬 모델 삭제 보호처럼 아직 구현되지 않은 항목은 완료 기능으로 표시하지 않고 잔여 개발 문서에서 관리한다.
+Schema 기반 Form/YAML 양방향 편집, OCI/Object Storage adapter, 자동 DNS·TLS와 고급 Gateway 정책 연동, PVC 보존 선택과 로컬 모델 삭제 보호처럼 아직 구현되지 않은 항목은 완료 기능으로 표시하지 않고 잔여 개발 문서에서 관리한다.
 
 문서와 시안 구성 검사는 저장소 루트에서 `bash docs/phase-2/validate.sh`로 실행한다.

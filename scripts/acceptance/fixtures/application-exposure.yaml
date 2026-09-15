@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: klueops-application-delivery
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: klueops-application-delivery-acceptance-discovery
+  labels:
+    aiops.strato.io/fixture: application-exposure
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "nodes"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: klueops-application-delivery-acceptance-discovery
+  labels:
+    aiops.strato.io/fixture: application-exposure
+subjects:
+  - kind: ServiceAccount
+    name: klueops-application-delivery
+    namespace: klueops-exposure-acceptance
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: klueops-application-delivery-acceptance-discovery
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: klueops-application-delivery-acceptance-admin
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+subjects:
+  - kind: ServiceAccount
+    name: klueops-application-delivery
+    namespace: klueops-exposure-acceptance
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: klueops-application-delivery-acceptance-gateway
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+rules:
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: klueops-application-delivery-acceptance-gateway
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+subjects:
+  - kind: ServiceAccount
+    name: klueops-application-delivery
+    namespace: klueops-exposure-acceptance
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: klueops-application-delivery-acceptance-gateway
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: klueops-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: klueops-acceptance
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+spec:
+  gatewayClassName: klueops-acceptance
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same

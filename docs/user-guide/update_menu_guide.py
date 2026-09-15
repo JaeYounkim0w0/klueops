@@ -60,9 +60,13 @@ def update_phase_two_sections(document: Document) -> None:
         "AI Analysis에서 식별한 Application의 상태를 확인합니다.":
             "Chart Library를 기본 시작점으로 사용하고 Chart가 없을 때 Discover 또는 Source/.tgz 가져오기를 선택합니다.",
         "상태 동기화, 보호된 Restart, Rollback preview와 실행을 제공합니다.":
-            "Values Profile, 대상 Cluster/Namespace, 선택형 HTTPRoute를 설정한 뒤 Preview와 정확한 확인 문구를 거쳐 배포합니다.",
+            "Values Profile과 대상 Cluster/Namespace를 정한 뒤 Cluster 내부, Chart에서 관리, KlueOps HTTPRoute 중 노출 방식을 선택하고 Preview와 정확한 확인 문구를 거쳐 배포합니다.",
+        "Values Profile, 대상 Cluster/Namespace, 선택형 HTTPRoute를 설정한 뒤 Preview와 정확한 확인 문구를 거쳐 배포합니다.":
+            "Values Profile과 대상 Cluster/Namespace를 정한 뒤 Cluster 내부, Chart에서 관리, KlueOps HTTPRoute 중 노출 방식을 선택하고 Preview와 정확한 확인 문구를 거쳐 배포합니다.",
         "Application 범위 AI Analysis와 최근 운영 작업으로 연결합니다.":
-            "Application 상세에서 workload/Pod, Service·접근 경로, Helm History와 upgrade/rollback/uninstall을 확인합니다.",
+            "Application 상세에서 workload/Pod, Service·Ingress·HTTPRoute URL과 endpoint 상태, Helm History와 upgrade/rollback/uninstall을 확인합니다.",
+        "Application 상세에서 workload/Pod, Service·접근 경로, Helm History와 upgrade/rollback/uninstall을 확인합니다.":
+            "Application 상세에서 workload/Pod, Service·Ingress·HTTPRoute URL과 endpoint 상태, Helm History와 upgrade/rollback/uninstall을 확인합니다.",
         "처음 사용할 때  현재는 애플리케이션 운영 화면이며 완성된 Docker 또는 Helm 배포 플랫폼이 아닙니다.":
             "처음 사용할 때  Chart Library에서 검증된 버전을 선택하고 내부 Service 방식으로 작은 테스트 배포부터 시작합니다.",
         "주의  미구현 배포 API를 상용 배포 기능으로 해석하면 안 됩니다. GitOps 연동은 후속 범위입니다.":
@@ -78,7 +82,9 @@ def update_phase_two_sections(document: Document) -> None:
         "3.  Diff와 실행 전 검증을 제공하고 RBAC와 Audit가 적용된 수동 Refresh 및 Sync를 허용합니다.":
             "3.  정확한 확인 문구로 Helm 작업을 시작하고 Job과 Application History에서 진행·실패 단계를 추적합니다.",
         "4.  자동 Prune, 강제 Sync, Application 삭제와 Git 또는 Helm values 직접 수정은 별도 승인 전까지 제외합니다.":
-            "4.  작업 후 workload/Pod, Service와 endpoint를 검증하고 필요할 때 preview 후 rollback 또는 uninstall합니다.",
+            "4.  작업 후 workload/Pod, Service와 Ingress/HTTPRoute endpoint 상태를 검증하고 필요할 때 preview 후 rollback 또는 uninstall합니다.",
+        "4.  작업 후 workload/Pod, Service와 endpoint를 검증하고 필요할 때 preview 후 rollback 또는 uninstall합니다.":
+            "4.  작업 후 workload/Pod, Service와 Ingress/HTTPRoute endpoint 상태를 검증하고 필요할 때 preview 후 rollback 또는 uninstall합니다.",
     }
     for paragraph in document.paragraphs:
         if paragraph.text in replacements:

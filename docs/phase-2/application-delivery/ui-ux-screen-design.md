@@ -199,9 +199,9 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 
 ### Exposure
 
-- `Internal only`: ClusterIP Service만 사용
-- `Chart-managed`: Chart Values가 만드는 Ingress/HTTPRoute 사용
-- `KlueOps-managed`: 렌더링된 Service/Port에 companion HTTPRoute/Ingress 연결
+- `Cluster 내부`: Chart가 만든 Service만 사용하고 KlueOps가 외부 경로를 추가하지 않음
+- `Chart에서 관리`: Chart Values가 만드는 Ingress/HTTPRoute 사용. Preview에서 실제 Route 리소스가 없으면 다음 단계로 진행하지 않는다.
+- `KlueOps HTTPRoute`: 렌더링된 Service/Port에 companion HTTPRoute 연결. hostname, path, Service/Port와 parent Gateway를 입력한다.
 - Gateway/Listener, hostname, path, backend Service/Port, TLS와 DNS mode 입력
 - wildcard DNS/Gateway certificate 재사용 여부와 예상 URL 표시
 - Gateway API가 없거나 Chart Route와 중복되면 안전한 대안과 차단 사유 표시
@@ -253,7 +253,7 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 
 - Overview: Cluster/Namespace, Chart/Values, current Helm revision
 - Workloads: Deployment/StatefulSet, Pod Ready/restart/Event와 Console 이동
-- Network & Endpoints: Service → HTTPRoute/Ingress → Gateway → URL 연결 관계
+- Network & Endpoints: Service → HTTPRoute/Ingress → Gateway → URL 연결 관계와 endpoint `READY/APPLIED/DEGRADED` 상태 배지
 - Endpoint 상태: Accepted, ResolvedRefs, DNS와 TLS를 독립 표시
 - Configuration: 적용 Values, redacted diff와 Secret reference
 - History: install/upgrade/rollback/uninstall operation과 Audit
@@ -396,7 +396,7 @@ Import는 Cluster 상태를 변경하지 않으므로 exact phrase까지 요구�
 | Control | Overlay/상태 | Confirm 이후 |
 | --- | --- | --- |
 | Cluster/Namespace | 권한 있는 대상 선택, 새 Namespace는 별도 plan | capability/Quota/NetworkPolicy 재검사 |
-| Exposure mode | Internal/Chart-managed/KlueOps-managed 단일 선택 | 입력 field와 capability 결과 갱신 |
+| Exposure mode | Cluster 내부/Chart에서 관리/KlueOps HTTPRoute 단일 선택 | 입력 field와 capability 결과 갱신 |
 | Gateway/Listener | allowedRoutes를 통과한 Gateway만 선택 | HTTPRoute preflight 갱신 |
 | Hostname/Path | DNS/TLS coverage와 충돌 검사 | 예상 URL 표시 |
 | Backend Service/Port | render 결과의 Service만 선택 | ResolvedRefs 사전 검사 |

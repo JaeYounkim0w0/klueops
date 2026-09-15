@@ -17,6 +17,7 @@ import io.strato.aiops.application.port.out.SecretCryptoPort;
 import io.strato.aiops.domain.application.ApplicationStatus;
 import io.strato.aiops.domain.application.ManagedApplication;
 import io.strato.aiops.domain.applicationdelivery.ApplicationRelease;
+import io.strato.aiops.domain.applicationdelivery.ApplicationExposureMode;
 import io.strato.aiops.domain.applicationdelivery.DeploymentPlan;
 import io.strato.aiops.domain.applicationdelivery.ReleaseOperation;
 import io.strato.aiops.domain.applicationdelivery.ApplicationEndpoint;
@@ -35,7 +36,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -102,16 +105,20 @@ public class ApplicationDeliveryDeploymentService {
         if (upgraded != null && (!upgraded.clusterId().equals(clusterId) || !upgraded.namespace().equals(namespace)
                 || !upgraded.helmReleaseName().equals(releaseName)))
             throw new IllegalArgumentException("Upgrade target, namespace and release name cannot be changed");
-        validateTarget(namespace, releaseName, exposureType, hostname, exposurePath, backendServiceName,
+        ApplicationExposureMode exposureMode = ApplicationExposureMode.fromNullable(exposureType);
+        validateTarget(namespace, releaseName, exposureMode, hostname, exposurePath, backendServiceName,
                 backendServicePort, gatewayName, gatewayNamespace);
         var version = catalog.findVersion(tenantId, chartVersionId).orElseThrow();
         String values = valuesRevisionId == null ? null : decryptedValues(tenantId, valuesRevisionId);
         String manifest = helmRunner.render(releaseName, namespace, catalog.loadArtifact(tenantId, chartVersionId), values);
+        if (exposureMode == ApplicationExposureMode.CHART_MANAGED) {
+            RenderedExposureInspector.requireChartManagedExposure(manifest);
+        }
         List<String> warnings = scanRisks(manifest);
         Instant now = clock.instant();
         String operation = upgraded == null ? "DEPLOY" : "UPGRADE";
         DeploymentPlan plan = new DeploymentPlan(UUID.randomUUID(), applicationId, clusterId, chartVersionId, valuesRevisionId,
-                namespace, releaseName, createNamespace, exposureType == null ? "NONE" : exposureType, hostname,
+                namespace, releaseName, createNamespace, exposureMode.name(), hostname,
                 exposurePath, backendServiceName, backendServicePort, gatewayName, gatewayNamespace,
                 manifestSanitizer.sanitize(manifest),
                 sha256(manifest.getBytes(StandardCharsets.UTF_8)), json(warnings),
@@ -217,11 +224,16 @@ public class ApplicationDeliveryDeploymentService {
                 stored.algorithm(), stored.nonce()));
         var observed = runtimeInspection.inspect(new KubernetesConnectionCredential(stored.credentialType(), payload),
                 application.namespace(), application.helmReleaseName());
-        List<ApplicationRuntimeInspectionPort.Endpoint> endpoints = new ArrayList<>(observed.endpoints());
-        lifecycle.findEndpoints(tenantId, applicationId).forEach(item -> endpoints.add(
-                new ApplicationRuntimeInspectionPort.Endpoint(item.endpointType(), item.hostname(), item.url(), item.status())));
+        // 동적 조회 결과를 우선해 생성 직후 저장된 APPLIED 상태가 최신 READY 상태를 덮지 않게 한다.
+        Map<String, ApplicationRuntimeInspectionPort.Endpoint> endpoints = new LinkedHashMap<>();
+        observed.endpoints().forEach(item -> endpoints.put(endpointKey(item), item));
+        lifecycle.findEndpoints(tenantId, applicationId).forEach(item -> {
+            var endpoint = new ApplicationRuntimeInspectionPort.Endpoint(item.endpointType(), item.hostname(),
+                    item.url(), item.status());
+            endpoints.putIfAbsent(endpointKey(endpoint), endpoint);
+        });
         return new ApplicationRuntimeInspectionPort.RuntimeOverview(observed.readyPods(), observed.totalPods(),
-                observed.restarts(), observed.workloads(), List.copyOf(endpoints));
+                observed.restarts(), observed.workloads(), List.copyOf(endpoints.values()));
     }
 
     @Transactional(readOnly = true)
@@ -358,18 +370,17 @@ public class ApplicationDeliveryDeploymentService {
             throw new IllegalArgumentException("Lifecycle confirmation text does not match");
     }
 
-    private void validateTarget(String namespace, String releaseName, String exposureType, String hostname,
+    private void validateTarget(String namespace, String releaseName, ApplicationExposureMode exposureMode, String hostname,
                                 String exposurePath, String backendServiceName, Integer backendServicePort,
                                 String gatewayName, String gatewayNamespace) {
         if (namespace == null || namespace.length() > 63 || !DNS_LABEL.matcher(namespace).matches())
             throw new IllegalArgumentException("Namespace must be a valid DNS label");
         if (releaseName == null || releaseName.length() > 53 || !DNS_LABEL.matcher(releaseName).matches())
             throw new IllegalArgumentException("Release name must be a valid Helm release name");
-        String exposure = exposureType == null ? "NONE" : exposureType;
-        if (!List.of("NONE", "HTTP_ROUTE").contains(exposure)) throw new IllegalArgumentException("Unsupported exposure type");
-        if ("HTTP_ROUTE".equals(exposure) && (hostname == null || hostname.length() > 253 || !HOSTNAME.matcher(hostname).matches()))
+        if (exposureMode == ApplicationExposureMode.HTTP_ROUTE
+                && (hostname == null || hostname.length() > 253 || !HOSTNAME.matcher(hostname).matches()))
             throw new IllegalArgumentException("A valid hostname is required for HTTPRoute exposure");
-        if ("HTTP_ROUTE".equals(exposure)) {
+        if (exposureMode == ApplicationExposureMode.HTTP_ROUTE) {
             if (exposurePath == null || !exposurePath.startsWith("/") || exposurePath.length() > 255)
                 throw new IllegalArgumentException("HTTPRoute path must start with /");
             if (!validDnsLabel(backendServiceName) || backendServicePort == null || backendServicePort < 1 || backendServicePort > 65535)
@@ -384,7 +395,7 @@ public class ApplicationDeliveryDeploymentService {
     }
 
     private String applyExposure(DeploymentPlan plan, UUID tenantId, UUID applicationId) {
-        if (!"HTTP_ROUTE".equals(plan.exposureType())) return null;
+        if (ApplicationExposureMode.fromNullable(plan.exposureType()) != ApplicationExposureMode.HTTP_ROUTE) return null;
         try {
             var result = exposure.applyHttpRoute(connectionCredential(plan.clusterId()),
                     new ApplicationExposurePort.HttpRouteRequest(plan.namespace(), routeName(plan.releaseName()),
@@ -395,9 +406,12 @@ public class ApplicationDeliveryDeploymentService {
                     plan.hostname(), result.status(), now, now));
             return null;
         } catch (RuntimeException exception) {
-            Instant now = clock.instant();
-            lifecycle.saveEndpoint(new ApplicationEndpoint(UUID.randomUUID(), applicationId, "HTTP_ROUTE",
-                    "https://" + plan.hostname() + plan.exposurePath(), plan.hostname(), "DEGRADED", now, now));
+            // apply가 중간에 실패했을 가능성까지 고려해 companion resource를 best-effort로 정리한다.
+            try {
+                exposure.deleteHttpRoute(connectionCredential(plan.clusterId()), plan.namespace(), routeName(plan.releaseName()));
+            } catch (RuntimeException ignored) {
+                // 원래 실패 원인을 작업 이력에 남기기 위해 정리 오류는 덮어쓰지 않는다.
+            }
             return "HTTPRoute apply failed: " + safeMessage(exception);
         }
     }
@@ -411,6 +425,10 @@ public class ApplicationDeliveryDeploymentService {
     }
 
     private String routeName(String releaseName) { return releaseName + "-klueops"; }
+
+    private String endpointKey(ApplicationRuntimeInspectionPort.Endpoint endpoint) {
+        return endpoint.type() + "|" + endpoint.url();
+    }
 
     private KubernetesConnectionCredential connectionCredential(UUID clusterId) {
         EncryptedClusterCredential stored = credentials.findByClusterId(clusterId)

@@ -8,6 +8,7 @@ import io.strato.aiops.application.service.IdentityAccessService;
 import io.strato.aiops.application.service.ResolvedAccess;
 import io.strato.aiops.application.service.TenantFeatureGuard;
 import io.strato.aiops.domain.applicationdelivery.ApplicationRelease;
+import io.strato.aiops.domain.applicationdelivery.ApplicationExposureMode;
 import io.strato.aiops.adapter.in.web.dto.ApplicationResponse;
 import io.strato.aiops.domain.applicationdelivery.DeploymentPlan;
 import io.strato.aiops.domain.applicationdelivery.ReleaseOperation;
@@ -61,7 +62,7 @@ public class ApplicationDeliveryDeploymentController {
     public DeploymentPlanResponse preview(@Valid @RequestBody PreviewRequest request, Authentication authentication) {
         ResolvedAccess actor = requireTarget(authentication, request.tenantId(), Capability.APPLICATION_DEPLOY,
                 request.clusterId(), request.namespace());
-        if ("HTTP_ROUTE".equals(request.exposureType())
+        if (ApplicationExposureMode.fromNullable(request.exposureType()).requiresExposureCapability()
                 && !accessService.allows(actor, Capability.APPLICATION_EXPOSURE,
                 request.clusterId(), request.namespace())) {
             throw new AccessDeniedException("application:exposure capability is not granted for this tenant");

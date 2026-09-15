@@ -35,9 +35,9 @@
 1. `Applications > Chart Library`에서 보유 Chart를 선택한다. 필요한 Chart가 없으면 `Discover`에서 검색해 현재 Tenant로 가져오거나 Source/.tgz를 등록한다.
 2. Values Profile을 생성하고 YAML을 저장한다. AI 제안은 diff를 검토한 뒤 적용하며 Secret은 입력·출력에서 노출하지 않는다.
 3. `배포`에서 권한이 있는 Cluster와 기존 Namespace를 선택한다. 새 Namespace는 capability가 있을 때만 생성한다.
-4. 기본은 내부 Service이며, 필요하면 대상 Service/Port와 hostname을 지정해 HTTPRoute를 함께 계획한다.
-5. Preview에서 렌더링 결과와 경고를 확인하고 정확한 확인 문구를 입력해 실행한다.
-6. Applications에서 Job, workload/Pod, Service·접근 경로와 History를 확인한다. 종료된 Application에는 upgrade, rollback, uninstall을 다시 실행할 수 없다.
+4. 노출 방식은 `Cluster 내부`, `Chart에서 관리`, `KlueOps HTTPRoute` 중에서 고른다. Chart의 Values가 Ingress/HTTPRoute를 지원하면 `Chart에서 관리`를 선택하고, KlueOps가 기존 Service에 경로를 추가해야 하면 Service/Port, hostname과 Gateway를 지정해 `KlueOps HTTPRoute`를 선택한다.
+5. Preview에서 렌더링 결과와 경고를 확인한다. `Chart에서 관리`는 렌더 결과에 Ingress 또는 HTTPRoute가 실제 포함되어야 한다. 정확한 확인 문구를 입력해 실행한다.
+6. Applications에서 Job, workload/Pod, Service·Ingress·HTTPRoute 접근 URL과 endpoint 상태, History를 확인한다. `READY`는 Route 조건이 수락된 상태, `APPLIED`는 적용 후 조건 판정 중, `DEGRADED`는 거부되었거나 참조가 해결되지 않은 상태다. 종료된 Application에는 upgrade, rollback, uninstall을 다시 실행할 수 없다.
 
 Application Delivery는 Argo CD/Flux를 설치하거나 Git 저장소를 지속 동기화하는 GitOps Controller가 아니다. KlueOps가 관리하는 Helm Release의 명시적 install, upgrade, rollback과 uninstall을 제공한다.
 
