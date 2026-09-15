@@ -59,13 +59,16 @@ public class ApplicationDeliveryDeploymentController {
     @Operation(summary = "Render and inspect an immutable Helm deployment plan")
     @ResponseStatus(HttpStatus.CREATED)
     public DeploymentPlanResponse preview(@Valid @RequestBody PreviewRequest request, Authentication authentication) {
-        ResolvedAccess actor = require(authentication, request.tenantId(), Capability.APPLICATION_DEPLOY);
+        ResolvedAccess actor = requireTarget(authentication, request.tenantId(), Capability.APPLICATION_DEPLOY,
+                request.clusterId(), request.namespace());
         if ("HTTP_ROUTE".equals(request.exposureType())
-                && !accessService.allowsTenant(actor, Capability.APPLICATION_EXPOSURE, request.tenantId())) {
+                && !accessService.allows(actor, Capability.APPLICATION_EXPOSURE,
+                request.clusterId(), request.namespace())) {
             throw new AccessDeniedException("application:exposure capability is not granted for this tenant");
         }
         if (request.createNamespace()
-                && !accessService.allowsTenant(actor, Capability.NAMESPACE_CREATE, request.tenantId())) {
+                && !accessService.allows(actor, Capability.NAMESPACE_CREATE,
+                request.clusterId(), request.namespace())) {
             throw new AccessDeniedException("namespace:create capability is not granted for this tenant");
         }
         return DeploymentPlanResponse.from(service.preview(request.tenantId(), request.applicationId(), request.clusterId(),
@@ -80,7 +83,9 @@ public class ApplicationDeliveryDeploymentController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public DeploymentAcceptedResponse deploy(@PathVariable UUID planId, @Valid @RequestBody ExecuteRequest request,
                                              Authentication authentication) {
-        ResolvedAccess actor = require(authentication, request.tenantId(), Capability.APPLICATION_DEPLOY);
+        DeploymentPlan plan = service.plan(request.tenantId(), planId);
+        ResolvedAccess actor = requireTarget(authentication, request.tenantId(), Capability.APPLICATION_DEPLOY,
+                plan.clusterId(), plan.namespace());
         var accepted = service.deploy(request.tenantId(), planId, request.confirmationText(),
                 actor.user().id().toString());
         return new DeploymentAcceptedResponse(accepted.applicationId(), accepted.jobId(), accepted.operationId());
@@ -89,28 +94,31 @@ public class ApplicationDeliveryDeploymentController {
     @GetMapping("/applications/{applicationId}/operations")
     public List<OperationResponse> operations(@PathVariable UUID applicationId, @RequestParam UUID tenantId,
                                                Authentication authentication) {
-        require(authentication, tenantId, Capability.APPLICATION_READ);
+        requireApplicationTarget(authentication, tenantId, applicationId, Capability.APPLICATION_READ);
         return service.operations(tenantId, applicationId).stream().map(OperationResponse::from).toList();
     }
 
     @GetMapping("/applications")
     @Operation(summary = "List applications owned by one tenant")
     public List<ApplicationResponse> applications(@RequestParam UUID tenantId, Authentication authentication) {
-        require(authentication, tenantId, Capability.APPLICATION_READ);
-        return service.applications(tenantId).stream().map(ApplicationResponse::from).toList();
+        ResolvedAccess access = require(authentication, tenantId, Capability.APPLICATION_READ);
+        return service.applications(tenantId).stream()
+                .filter(item -> accessService.allows(access, Capability.APPLICATION_READ,
+                        item.clusterId(), item.namespace()))
+                .map(ApplicationResponse::from).toList();
     }
 
     @GetMapping("/applications/{applicationId}/runtime")
     public RuntimeOverviewResponse runtime(@PathVariable UUID applicationId, @RequestParam UUID tenantId,
                                            Authentication authentication) {
-        require(authentication, tenantId, Capability.APPLICATION_READ);
+        requireApplicationTarget(authentication, tenantId, applicationId, Capability.APPLICATION_READ);
         return RuntimeOverviewResponse.from(service.runtime(tenantId, applicationId));
     }
 
     @GetMapping("/applications/{applicationId}/releases")
     public List<ReleaseResponse> releases(@PathVariable UUID applicationId, @RequestParam UUID tenantId,
                                           Authentication authentication) {
-        require(authentication, tenantId, Capability.APPLICATION_READ);
+        requireApplicationTarget(authentication, tenantId, applicationId, Capability.APPLICATION_READ);
         return service.releases(tenantId, applicationId).stream().map(ReleaseResponse::from).toList();
     }
 
@@ -119,7 +127,7 @@ public class ApplicationDeliveryDeploymentController {
                                                               @RequestParam UUID tenantId,
                                                               @RequestParam int revision,
                                                               Authentication authentication) {
-        require(authentication, tenantId, Capability.APPLICATION_ROLLBACK);
+        requireApplicationTarget(authentication, tenantId, applicationId, Capability.APPLICATION_ROLLBACK);
         var confirmation = service.rollbackConfirmation(tenantId, applicationId, revision);
         return new LifecycleConfirmationResponse(confirmation.confirmationText(), confirmation.impactSummary());
     }
@@ -129,7 +137,8 @@ public class ApplicationDeliveryDeploymentController {
     public DeploymentAcceptedResponse rollback(@PathVariable UUID applicationId,
                                                @Valid @RequestBody RollbackRequest request,
                                                Authentication authentication) {
-        ResolvedAccess actor = require(authentication, request.tenantId(), Capability.APPLICATION_ROLLBACK);
+        ResolvedAccess actor = requireApplicationTarget(authentication, request.tenantId(), applicationId,
+                Capability.APPLICATION_ROLLBACK);
         var accepted = service.rollback(request.tenantId(), applicationId, request.revision(),
                 request.confirmationText(), actor.user().id().toString());
         return new DeploymentAcceptedResponse(accepted.applicationId(), accepted.jobId(), accepted.operationId());
@@ -139,7 +148,7 @@ public class ApplicationDeliveryDeploymentController {
     public LifecycleConfirmationResponse uninstallConfirmation(@PathVariable UUID applicationId,
                                                                @RequestParam UUID tenantId,
                                                                Authentication authentication) {
-        require(authentication, tenantId, Capability.APPLICATION_DELETE);
+        requireApplicationTarget(authentication, tenantId, applicationId, Capability.APPLICATION_DELETE);
         var confirmation = service.uninstallConfirmation(tenantId, applicationId);
         return new LifecycleConfirmationResponse(confirmation.confirmationText(), confirmation.impactSummary());
     }
@@ -149,7 +158,8 @@ public class ApplicationDeliveryDeploymentController {
     public DeploymentAcceptedResponse uninstall(@PathVariable UUID applicationId,
                                                 @Valid @RequestBody ExecuteRequest request,
                                                 Authentication authentication) {
-        ResolvedAccess actor = require(authentication, request.tenantId(), Capability.APPLICATION_DELETE);
+        ResolvedAccess actor = requireApplicationTarget(authentication, request.tenantId(), applicationId,
+                Capability.APPLICATION_DELETE);
         var accepted = service.uninstall(request.tenantId(), applicationId, request.confirmationText(),
                 actor.user().id().toString());
         return new DeploymentAcceptedResponse(accepted.applicationId(), accepted.jobId(), accepted.operationId());
@@ -162,6 +172,21 @@ public class ApplicationDeliveryDeploymentController {
             throw new AccessDeniedException(capability.value() + " capability is not granted for this tenant");
         }
         return access;
+    }
+
+    private ResolvedAccess requireTarget(Authentication authentication, UUID tenantId, Capability capability,
+                                         UUID clusterId, String namespace) {
+        ResolvedAccess access = require(authentication, tenantId, capability);
+        if (!accessService.allows(access, capability, clusterId, namespace)) {
+            throw new AccessDeniedException(capability.value() + " capability is not granted for this target");
+        }
+        return access;
+    }
+
+    private ResolvedAccess requireApplicationTarget(Authentication authentication, UUID tenantId, UUID applicationId,
+                                                    Capability capability) {
+        var application = service.application(tenantId, applicationId);
+        return requireTarget(authentication, tenantId, capability, application.clusterId(), application.namespace());
     }
 
     public record PreviewRequest(@NotNull UUID tenantId, UUID applicationId, @NotNull UUID clusterId, @NotNull UUID chartVersionId,

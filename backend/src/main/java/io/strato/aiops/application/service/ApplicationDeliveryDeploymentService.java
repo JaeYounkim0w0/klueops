@@ -196,6 +196,16 @@ public class ApplicationDeliveryDeploymentService {
     }
 
     @Transactional(readOnly = true)
+    public ManagedApplication application(UUID tenantId, UUID applicationId) {
+        return requireApplication(tenantId, applicationId);
+    }
+
+    @Transactional(readOnly = true)
+    public DeploymentPlan plan(UUID tenantId, UUID planId) {
+        return lifecycle.findPlan(tenantId, planId).orElseThrow();
+    }
+
+    @Transactional(readOnly = true)
     public ApplicationRuntimeInspectionPort.RuntimeOverview runtime(UUID tenantId, UUID applicationId) {
         ManagedApplication application = requireApplication(tenantId, applicationId);
         EncryptedClusterCredential stored = credentials.findByClusterId(application.clusterId())

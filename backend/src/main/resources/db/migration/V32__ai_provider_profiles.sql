@@ -50,6 +50,6 @@ create table local_ai_models (
 
 insert into ai_provider_profiles(id,tenant_id,name,provider_type,base_url,default_model,allowed_models_json,
   enabled,external_data_transfer,validation_status,created_by,created_at,updated_at)
-values ('00000000-0000-0000-0000-000000000032',null,'Local Ollama','OLLAMA','http://ollama:11434',
+values ('00000000-0000-0000-0000-000000000032',null,'Local Ollama','OLLAMA','http://host.docker.internal:11434',
   'qwen2.5-coder:7b','["qwen2.5-coder:7b","qwen3.5:9b","granite3.3:8b","qwen3:8b","llama3.1:8b"]',
   true,false,'NOT_VALIDATED','system',current_timestamp,current_timestamp);

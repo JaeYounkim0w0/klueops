@@ -8,6 +8,8 @@
 .provider-card dl div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; padding: 5px 0; }
 .provider-card dt { color: #8491a2; font-size: 9px; }.provider-card dd { overflow: hidden; margin: 0; color: #43546a; font-size: 10px; text-overflow: ellipsis; }
 .secondary-button.full { justify-content: center; width: 100%; }
+.provider-card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.provider-card-actions .secondary-button { width: 100%; }
 .routing-list { overflow: hidden; border: 1px solid #dbe4ee; border-radius: 13px; background: #fff; }
 .routing-row { display: grid; grid-template-columns: minmax(180px, 1fr) 190px 190px 140px auto; align-items: end; gap: 12px; border-top: 1px solid #e8edf3; padding: 15px 17px; }
 .routing-row:first-child { border-top: 0; }.routing-row strong, .routing-row p { margin: 0; }.routing-row p { margin-top: 4px; color: #7b899b; font-size: 10px; }

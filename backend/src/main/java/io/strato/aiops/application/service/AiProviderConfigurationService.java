@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.strato.aiops.application.port.out.AiProviderConfigurationRepositoryPort;
 import io.strato.aiops.application.port.out.SecretCryptoPort;
+import io.strato.aiops.application.port.out.RemoteSourceValidationPort;
 import io.strato.aiops.domain.ai.AiProviderProfile;
 import io.strato.aiops.domain.ai.TenantAiRoutingPolicy;
 import io.strato.aiops.domain.ai.LocalAiModel;
@@ -41,17 +42,20 @@ public class AiProviderConfigurationService {
     private final Clock clock;
     private final AsyncJobRepositoryPort jobs;
     private final TaskExecutor modelExecutor;
+    private final RemoteSourceValidationPort sourceValidator;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     public AiProviderConfigurationService(AiProviderConfigurationRepositoryPort repository, SecretCryptoPort crypto,
                                           ObjectMapper objectMapper, Clock clock, AsyncJobRepositoryPort jobs,
-                                          @Qualifier("aiModelExecutor") TaskExecutor modelExecutor) {
+                                          @Qualifier("aiModelExecutor") TaskExecutor modelExecutor,
+                                          RemoteSourceValidationPort sourceValidator) {
         this.repository = repository;
         this.crypto = crypto;
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.jobs = jobs;
         this.modelExecutor = modelExecutor;
+        this.sourceValidator = sourceValidator;
     }
 
     @Transactional
@@ -67,6 +71,28 @@ public class AiProviderConfigurationService {
                 endpoint, apiKey == null || apiKey.isBlank() ? null : crypto.encrypt(apiKey), defaultModel.trim(),
                 json(allowedModels == null || allowedModels.isEmpty() ? List.of(defaultModel.trim()) : allowedModels),
                 true, externalDataTransfer, "NOT_VALIDATED", null, actor, now, now));
+    }
+
+    @Transactional
+    public AiProviderProfile update(UUID tenantId, UUID profileId, String name, String providerType, String baseUrl,
+                                    String apiKey, String defaultModel, List<String> allowedModels,
+                                    boolean enabled, boolean externalDataTransfer) {
+        AiProviderProfile current = visibleProfileIncludingDisabled(tenantId, profileId);
+        requireProvider(providerType);
+        String endpoint = normalizeBaseUrl(providerType, baseUrl);
+        if (name == null || name.isBlank() || defaultModel == null || defaultModel.isBlank())
+            throw new IllegalArgumentException("Provider name and default model are required");
+        var credential = apiKey == null || apiKey.isBlank() ? current.credential() : crypto.encrypt(apiKey);
+        List<String> models = allowedModels == null || allowedModels.isEmpty()
+                ? List.of(defaultModel.trim()) : allowedModels.stream().map(String::trim).filter(value -> !value.isBlank()).toList();
+        // Endpoint, Provider 종류 또는 모델 계약 변경 후에는 기존 연결 검증 결과를 재사용하지 않는다.
+        boolean connectionChanged = !current.providerType().equals(providerType)
+                || !current.baseUrl().equals(endpoint) || !current.defaultModel().equals(defaultModel.trim())
+                || !current.allowedModelsJson().equals(json(models)) || credential != current.credential();
+        return repository.saveProfile(new AiProviderProfile(current.id(), current.tenantId(), name.trim(), providerType,
+                endpoint, credential, defaultModel.trim(), json(models), enabled, externalDataTransfer,
+                connectionChanged ? "NOT_VALIDATED" : current.validationStatus(),
+                connectionChanged ? null : current.lastValidatedAt(), current.createdBy(), current.createdAt(), clock.instant()));
     }
 
     @Transactional(readOnly = true)
@@ -236,10 +262,15 @@ public class AiProviderConfigurationService {
     }
 
     private AiProviderProfile visibleProfile(UUID tenantId, UUID profileId) {
+        AiProviderProfile profile = visibleProfileIncludingDisabled(tenantId, profileId);
+        if (!profile.enabled()) throw new IllegalStateException("AI provider profile is disabled");
+        return profile;
+    }
+
+    private AiProviderProfile visibleProfileIncludingDisabled(UUID tenantId, UUID profileId) {
         AiProviderProfile profile = repository.findProfile(profileId).orElseThrow();
         if (profile.tenantId() != null && !profile.tenantId().equals(tenantId))
             throw new NoSuchElementException("AI provider profile not found");
-        if (!profile.enabled()) throw new IllegalStateException("AI provider profile is disabled");
         return profile;
     }
 
@@ -271,6 +302,7 @@ public class AiProviderConfigurationService {
         if (uri.getHost() == null || !("https".equals(uri.getScheme())
                 || ("OLLAMA".equals(providerType) && "http".equals(uri.getScheme()))))
             throw new IllegalArgumentException("Provider base URL is invalid");
+        if (!"OLLAMA".equals(providerType)) sourceValidator.requirePublicHttps(value);
         return value.replaceAll("/+$", "");
     }
 

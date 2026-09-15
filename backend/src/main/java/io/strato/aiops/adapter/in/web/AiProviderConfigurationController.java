@@ -65,6 +65,15 @@ public class AiProviderConfigurationController {
                 actor.user().id().toString()), objectMapper);
     }
 
+    @PutMapping("/providers/{profileId}")
+    public ProviderResponse update(@PathVariable UUID profileId, @Valid @RequestBody UpdateProviderRequest request,
+                                   Authentication authentication) {
+        require(authentication, request.tenantId(), Capability.AI_PROVIDER_MANAGE);
+        return ProviderResponse.from(service.update(request.tenantId(), profileId, request.name(), request.providerType(),
+                request.baseUrl(), request.apiKey(), request.defaultModel(), request.allowedModels(), request.enabled(),
+                request.externalDataTransfer()), objectMapper);
+    }
+
     @PostMapping("/providers/{profileId}/validate")
     public ValidationResponse validate(@PathVariable UUID profileId, @RequestParam UUID tenantId,
                                        Authentication authentication) {
@@ -121,6 +130,9 @@ public class AiProviderConfigurationController {
     public record ProviderRequest(@NotNull UUID tenantId, @NotBlank String name, @NotBlank String providerType,
                                   String baseUrl, String apiKey, @NotBlank String defaultModel,
                                   List<String> allowedModels, boolean externalDataTransfer) { }
+    public record UpdateProviderRequest(@NotNull UUID tenantId, @NotBlank String name, @NotBlank String providerType,
+                                        String baseUrl, String apiKey, @NotBlank String defaultModel,
+                                        List<String> allowedModels, boolean enabled, boolean externalDataTransfer) { }
     public record RoutingRequest(@NotNull UUID tenantId, @NotNull UUID primaryProfileId, @NotBlank String model,
                                  UUID fallbackProfileId, String fallbackModel, boolean externalTransferAllowed,
                                  int maximumContextChars, int maximumOutputTokens) { }

@@ -2017,6 +2017,12 @@ export const api = {
   }) => request<AiProviderProfileResponse>('/api/v2/ai-configuration/providers', {
     method: 'POST', body: JSON.stringify(body),
   }),
+  updateAiProviderProfile: (profileId: string, body: {
+    tenantId: string; name: string; providerType: string; baseUrl?: string; apiKey?: string;
+    defaultModel: string; allowedModels: string[]; enabled: boolean; externalDataTransfer: boolean;
+  }) => request<AiProviderProfileResponse>(`/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}`, {
+    method: 'PUT', body: JSON.stringify(body),
+  }),
   validateAiProviderProfile: (tenantId: string, profileId: string) => request<{ valid: boolean; message: string; checkedAt: string }>(
     `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/validate?tenantId=${encodeURIComponent(tenantId)}`,
     { method: 'POST' }, { timeoutMs: 20_000 }
