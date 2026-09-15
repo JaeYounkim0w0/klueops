@@ -44,6 +44,7 @@ required_screenshots=(
   "21-users-access.png"
   "22-user-invite.png"
   "23-user-offboard-plan.png"
+  "24-oidc-group-mapping.png"
 )
 
 for file in "${required_files[@]}"; do
@@ -89,5 +90,6 @@ grep -q "function uninstallConfirmation" "$delivery_root/ui-mockups/app.js"
 grep -q "function deploymentStartModal" "$delivery_root/ui-mockups/app.js"
 grep -q "Platform Manager" "$phase2_root/tenant-access-and-resource-ownership.md"
 grep -q "function offboardUserModal" "$delivery_root/ui-mockups/app.js"
+grep -q "function groupMappingModal" "$delivery_root/ui-mockups/app.js"
 
 echo "Phase 2 documents and UI artifacts are complete."

@@ -116,12 +116,22 @@ table caption { position: absolute; width: 1px; height: 1px; padding: 0; margin:
 .menu-preview .denied { background: #f2f4f7; color: #8490a1; }
 .mini-avatar { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #2b5185; color: #fff; font-size: 9px; font-weight: 800; }
 .modal-grid { padding: 0 0 14px; }
+.mapping-section { margin-top: 16px; padding: 17px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.mapping-section > .card-head { padding: 0 0 14px; }
+.mapping-section .card-head p { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
+.mapping-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.mapping-grid article { display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; }
+.mapping-grid small { color: #8290a2; font-size: 8px; font-weight: 800; }
+.mapping-grid strong { font-size: 11px; }
+.mapping-grid span { color: var(--muted); font-size: 9px; }
+.mapping-grid em { align-self: flex-start; padding: 3px 7px; border-radius: 10px; background: var(--blue-50); color: var(--blue); font-size: 8px; font-style: normal; }
+.mapping-section > .notice { margin-top: 12px; }
 
 @media (max-width: 1100px) {
   main { min-width: 0; }
   .split-layout, .studio-layout, .preview-grid, .access-layout { grid-template-columns: 1fr; }
   .detail-panel, .ai-panel, .checks-panel { position: static; }
-  .state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .state-grid, .mapping-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .app-tabs { overflow-x: auto; white-space: nowrap; }
 }
 
@@ -151,7 +161,7 @@ table caption { position: absolute; width: 1px; height: 1px; padding: 0; margin:
   .page-head { flex-direction: column; }
   .head-actions, .page-head > div:last-child { width: 100%; }
   .head-actions button { flex: 1; }
-  .stat-row, .summary-cards, .field-grid, .choice-grid, .resource-banner, .deployment-map, .state-grid, .resource-grid, .form-grid, .access-context { grid-template-columns: 1fr; }
+  .stat-row, .summary-cards, .field-grid, .choice-grid, .resource-banner, .deployment-map, .state-grid, .resource-grid, .form-grid, .access-context, .mapping-grid { grid-template-columns: 1fr; }
   .search-row { height: auto; flex-wrap: wrap; padding: 8px 10px; }
   .search-row input { min-width: 0; height: 40px; }
   .search-row button { width: 100%; }

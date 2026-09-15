@@ -82,6 +82,39 @@ KlueOps의 접근 제어는 `사용자 역할`, `역할이 부여된 scope`, `Te
 
 Operator의 rollback은 Preview, RBAC, exact confirmation을 통과한 일반 workload 범위로 제한한다. Uninstall, shared exposure, Namespace 생성과 cluster-scoped resource는 Cluster Admin 이상만 실행한다.
 
+### 3.3 공개 배포용 OIDC Group Mapping
+
+OIDC Group은 Tenant나 제품 역할 그 자체가 아니라 외부 IdP가 전달하는 사용자 집합이다. KlueOps는 Group 이름을 보고 암묵적으로 권한을 부여하지 않고 다음 Mapping을 명시적으로 저장한다.
+
+```text
+OIDC issuer + group claim value
+→ TenantMembership
+→ Role
+→ Scope(Tenant/Workspace/Cluster/Namespace)
+```
+
+공유 Keycloak Realm에서 Company AA를 온보딩하는 권장 예시는 다음과 같다.
+
+| Keycloak Group | 사용자 | KlueOps Mapping |
+| --- | --- | --- |
+| `/companies/aa/cluster-admins` | u1 | Tenant `AA` / Cluster Admin / Tenant scope |
+| `/companies/aa/operators` | u2, u3 | Tenant `AA` / Operator / Tenant scope |
+
+u1을 특정 Cluster만 관리하게 하려면 첫 Mapping의 scope를 `Cluster: aa-prod`로 좁힌다. u2와 u3를 특정 Namespace로 제한해야 하면 `/companies/aa/payments-operators` 같은 별도 Group을 만들고 `Namespace: payments`에 Mapping한다.
+
+공개 제품에서는 IdP 구조가 다르므로 Group prefix나 이름을 KlueOps가 강제하지 않는다. 관리자가 issuer와 claim value를 Tenant/Role/Scope에 연결한다. 단, shared Realm에서는 `/companies/{tenant-code}/{role}` 같은 Tenant-qualified 경로를 권장하며, 전역 `cluster-admins` 또는 `operators` Group을 모든 Tenant에 자동 적용하지 않는다.
+
+운영 원칙:
+
+- Group Mapping을 구성원 관리의 기본 방식으로 사용하고 사용자별 RoleBinding은 예외·임시 권한에 사용한다.
+- 사용자는 여러 Tenant Group에 속할 수 있으며 Tenant 선택 시 해당 Tenant Mapping만 계산한다.
+- Group 권한과 사용자 직접 권한은 허용 capability의 합집합이다. 명시적 deny는 MVP에 넣지 않고 권한 회수는 Group 탈퇴/Mapping 삭제/직접 Binding 삭제로 처리한다.
+- `Platform Manager` Group은 별도 관리하고 Platform scope Mapping을 생성할 수 있는 주체를 기존 Platform Manager로 제한한다.
+- Group Mapping 변경은 다음 요청부터 반영하고 session access revision을 갱신해 장기 session도 재평가한다.
+- Group claim이 누락되거나 Mapping이 없으면 자동으로 Tenant 권한을 추측하지 않는다.
+
+권장 저장 모델은 `oidc_group_mappings(id, issuer, group_value, tenant_id, role, scope_type, workspace_id, cluster_id, namespace, active, created_by, created_at)`이다. `issuer + group_value + tenant + role + scope` 조합은 unique이며 Tenant/Cluster 관계를 저장 시 검증한다.
+
 ## 4. 메뉴 접근 정책
 
 메뉴는 label별 ACL을 직접 저장하지 않고 안정적인 `featureKey`와 `requiredCapabilities`로 정의한다.
@@ -190,6 +223,8 @@ Session 응답은 전역 union capability만 반환하지 않는다.
 - `POST /api/tenants/{tenantId}/members/{membershipId}/offboard-plan`
 - `POST /api/tenants/{tenantId}/members/{membershipId}/offboard`
 - `GET/PATCH /api/tenants/{tenantId}/features`
+- `GET/POST /api/tenants/{tenantId}/oidc-group-mappings`
+- `PATCH/DELETE /api/tenants/{tenantId}/oidc-group-mappings/{mappingId}`
 - 기존 `/api/security/users`는 Platform Manager용 전체 directory 진단으로 제한
 
 Backend는 request body의 tenantId를 신뢰하지 않고 선택한 Tenant header/session과 parent Resource에서 scope를 유도한다. collection query도 `WHERE tenant_id = :tenantId`를 기본으로 하고 Platform Manager의 cross-tenant 조회만 명시적인 all-tenants endpoint/filter로 제공한다.
@@ -208,6 +243,8 @@ Application Delivery 도메인 구현(P2-B 이후)은 P2-A0~A5가 완료된 뒤 
 ## 9. 필수 수용시험
 
 - Tenant A Operator가 Tenant B Cluster/Analysis/Chart/Application ID를 알아도 404
+- `/companies/aa/operators`의 u2/u3는 AA Tenant에서만 Operator가 되고 다른 Tenant에서는 권한 없음
+- `/companies/aa/cluster-admins`의 u1은 AA 전체 또는 Mapping에 지정한 Cluster만 관리
 - Tenant A Role만 있는 사용자가 Tenant B를 선택하면 해당 메뉴와 mutation capability가 없음
 - Operator는 배포/rollback 가능, uninstall/source credential/외부 exposure 변경 불가
 - Cluster Admin은 허용 Cluster의 전체 Application 작업 가능, Tenant member와 Platform Provider 관리 불가

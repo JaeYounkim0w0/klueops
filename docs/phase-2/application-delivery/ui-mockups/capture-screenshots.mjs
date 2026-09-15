@@ -41,4 +41,5 @@ await page.setViewportSize({ width: 1440, height: 1000 });
 await capture("21-users-access.png", "access-control");
 await capture("22-user-invite.png", "access-control", (p) => p.getByRole("button", { name: "＋ User 추가" }).click());
 await capture("23-user-offboard-plan.png", "access-control", (p) => p.getByRole("button", { name: "접근 중지 계획" }).click());
+await capture("24-oidc-group-mapping.png", "access-control", (p) => p.getByRole("button", { name: "＋ OIDC Group Mapping" }).click());
 await browser.close();

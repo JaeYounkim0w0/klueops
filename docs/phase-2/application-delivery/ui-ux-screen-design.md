@@ -306,10 +306,13 @@ Credential은 저장 후 재표시하지 않고 교체와 삭제만 제공한다
 - Platform Manager는 모든 Tenant를 선택하고 모든 기능을 관리한다.
 - Tenant Admin은 해당 Tenant의 초대, suspend/offboard와 RoleBinding을 관리하지만 Platform 설정은 볼 수 없다.
 - 메뉴는 Tenant Feature와 현재 scope effective capability의 교집합이며 직접 URL/API도 같은 정책을 검사한다.
+- OIDC Group Mapping은 `issuer + group → Tenant + Role + Scope`를 명시적으로 연결하며 Group 이름만으로 전역 권한을 추측하지 않는다.
 
 ![User 초대](ui-mockups/screenshots/22-user-invite.png)
 
 ![User 접근 중지 계획](ui-mockups/screenshots/23-user-offboard-plan.png)
+
+![OIDC Group Mapping](ui-mockups/screenshots/24-oidc-group-mapping.png)
 
 외부 OIDC에서는 KlueOps가 비밀번호 사용자를 생성하지 않고 pending membership만 만든다. Keycloak 관리 연동에서만 IdP 사용자 생성과 required action을 지원한다. `삭제`는 기본적으로 suspend/offboard이며 Audit actor snapshot을 보존한다.
 

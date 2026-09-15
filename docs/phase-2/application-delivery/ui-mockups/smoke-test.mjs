@@ -48,6 +48,10 @@ assert.equal(await invite.isEnabled(), true);
 await page.getByRole("button", { name: "대화상자 닫기" }).click();
 await page.getByRole("button", { name: "접근 중지 계획" }).click();
 assert.equal(await page.getByRole("button", { name: "Exact confirmation으로" }).isVisible(), true);
+await page.getByRole("button", { name: "대화상자 닫기" }).click();
+await page.getByRole("button", { name: "＋ OIDC Group Mapping" }).click();
+assert.match(await page.getByRole("dialog").innerText(), /AA Company[\s\S]*Operator[\s\S]*다른 Tenant에는 적용되지 않습니다/);
+assert.equal(await page.getByRole("button", { name: "Mapping 저장" }).isDisabled(), true);
 
 for (const width of [900, 390]) {
   await page.setViewportSize({ width, height: 900 });
