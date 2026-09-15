@@ -2,7 +2,7 @@
 
 기준일: 2026-09-15
 
-상태: HTML 시안과 핵심 제품 화면 구현 완료, 전 제품 visual regression 확대는 후속
+상태: HTML 시안, P2-0 공통 제품 UI와 핵심 제품 화면 구현 완료, route별 visual regression 자동화 확대는 후속
 
 시안 회귀 확인은 mockup 디렉터리를 정적 서버로 연 뒤 `node smoke-test.mjs`와 `node capture-screenshots.mjs`로 재현한다. `CHROME_PATH`는 system Chrome을 사용할 때만 지정하며, 생략하면 Playwright bundled Chromium을 사용한다.
 
@@ -32,6 +32,15 @@ Tenant별 메뉴는 선택한 Tenant/Workspace의 effective capability와 Tenant
 - 공통 component로 일관성을 확보하며 화면마다 시안 CSS를 복제하지 않는다.
 - 기존 사용자 흐름, route, 권한과 API 결과는 UI 변경 전후 동일하게 동작해야 한다.
 - 대표 route와 loading/empty/error/permission-denied/modal 상태의 기준 screenshot을 승인하고 visual regression에 보관한다.
+
+### 실제 제품 적용 결과
+
+- `App.vue`의 전체 layout을 짙은 고정 navigation과 상단 context bar를 갖는 공통 product shell로 변경했다.
+- Tenant/Workspace selector는 좌측 메뉴 내부가 아니라 모든 화면에서 범위를 먼저 확인할 수 있는 상단 bar에 배치했다.
+- 운영 통합 검색과 알림은 상단 전역 action으로 제공하고, 모바일에서는 메뉴 button과 overlay navigation으로 전환한다.
+- semantic color, surface, radius, elevation과 focus token은 `frontend/src/styles/base.css`, 공통 shell 규칙은 `frontend/src/styles/product-shell.css`가 소유한다.
+- Applications는 요약 지표, 검색·상태 필터가 있는 목록, 선택 Application의 Runtime·Endpoint·최근 작업 inspector로 구성했다. 모바일에서는 inspector를 목록보다 먼저 보여 즉시 상태와 위험 작업을 확인한다.
+- 로컬 Kubernetes의 실제 OIDC 세션에서 Applications, Dashboard, 모바일 navigation과 Application 배포 chooser를 확인했다. 자동 visual regression의 전체 route 확대는 테스트 기반 확장 항목으로 남긴다.
 
 ## 1. 시안 실행
 

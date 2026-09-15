@@ -2,7 +2,7 @@
 
 기준일: 2026-09-15
 
-상태: 핵심 bounded context와 기본 Exposure 구현 완료, 선택형 저장소·고급 네트워크 연동은 후속
+상태: P2-0 공통 제품 UI, 핵심 bounded context와 기본 Exposure 구현 완료, 선택형 저장소·고급 네트워크 연동은 후속
 
 구현 기준선은 PostgreSQL metadata/artifact 저장, Backend 내부 Application Delivery port/service/adapter, 임시 kubeconfig를 사용하는 제한된 Helm CLI 실행, Chart-managed Ingress/HTTPRoute 검증·발견, Service 기반 HTTPRoute companion, Async Job과 ReleaseOperation 복구다. 별도 Runner 서비스 추출, OCI/Object Storage와 DNS/TLS Provider는 실제 확장 조건이 생길 때 적용한다.
 
@@ -26,9 +26,11 @@ P2-0은 Backend API나 기존 업무 기능을 재작성하지 않는다. `front
 
 - global shell, page header, action bar, card/table/form, status/risk, loading/empty/error와 modal/drawer를 공통 primitive로 정리한다.
 - route component는 page composition에 집중하고 long-running state는 기존 global Job Center store를 사용한다.
-- 한 번에 전체 화면을 교체하지 않고 shell → 공통 primitive → 핵심 운영 화면 → 설정 화면 순으로 migration한다.
+- 인증 route 전체가 `App.vue`의 공통 shell과 `product-shell.css`를 사용한다. 화면별 업무 CSS는 이 기반 위에 composition만 확장한다.
 - 각 migration slice는 기존 API/permission/E2E 회귀, 1280/1440/1680 screenshot과 responsive/accessibility 검사를 통과해야 한다.
 - 기존 1차 기능의 의미를 바꾸는 개선은 P2-0 visual refresh에 섞지 않고 별도 요구사항과 승인 대상으로 분리한다.
+
+실제 공통 shell은 dark navigation, sticky Tenant/Workspace context bar, global search/notification action과 mobile overlay navigation으로 구성한다. Applications의 목록·inspector는 해당 shell의 semantic token을 사용하며, 과도한 wide card 확장을 방지하기 위해 최대 content width와 명시적 responsive breakpoint를 둔다.
 
 ## 2. 논리 구조
 

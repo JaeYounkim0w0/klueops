@@ -4,6 +4,7 @@ Frontend style code is centralized in this directory.
 
 - `base.css`: document, typography, and native element defaults.
 - `main.css`: shared shell, layout, table, modal, chat, and legacy cross-domain classes.
+- `product-shell.css`: Phase 2 공통 제품 shell, semantic token 적용, 상단 context bar와 전역 responsive visual refresh.
 - `components/analysis.css`: AI Analysis run controls and command-safety component styles.
 - `components/cluster-detail.css`: cluster inventory, resource detail, and log-viewer styles.
 - `components/commercial-readiness.css`: release evidence and operational telemetry styles.

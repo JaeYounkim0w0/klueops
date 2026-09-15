@@ -17,10 +17,8 @@ COLLECTION_GUIDANCE = (
     "source별 성공, 실패, 건너뜀, 지연을 확인합니다. PARTIAL이면 실패 source를 "
     "확인하고 credential, API 연결 또는 권한을 복구한 뒤 같은 범위를 재분석합니다."
 )
-# Keep a macOS Word-compatible Hangul font explicitly assigned to every run.
-# The bundled headless LibreOffice renderer on this host does not expose Hangul
-# glyphs, so DOCX text/font integrity and page geometry are verified separately.
-GUIDE_FONT = "AppleGothic"
+# macOS Word에서 한글 글리프를 안정적으로 표시하는 글꼴을 명시한다.
+GUIDE_FONT = "Arial Unicode MS"
 CONSOLE_HEADING = "Kubernetes 콘솔"
 CONSOLE_VERIFICATION_GUIDANCE = (
     "변경 또는 삭제 명령이 끝나면 운영 결과 검증에서 Kubernetes 상태의 전후 비교 판정과 "
@@ -43,6 +41,10 @@ INCIDENT_EVIDENCE_GUIDANCE = (
     "전후 Snapshot 해시가 포함됩니다. credential, 실시간 로그와 Snapshot 원문은 포함되지 않습니다."
 )
 AI_PROVIDER_HEADING = "AI Provider와 Local Models"
+GLOBAL_SHELL_GUIDANCE = (
+    "상단 컨텍스트 바에서 현재 Tenant와 Workspace를 확인하고 변경합니다. "
+    "목록과 분석 결과는 선택한 운영 범위에 맞춰 다시 조회됩니다."
+)
 IMAGE_ALT_TEXTS = (
     "KlueOps 메뉴를 운영 관리, AI, 설정 영역으로 구분한 구조도",
     "감지부터 검증과 해결까지 이어지는 권장 운영 흐름도",
@@ -219,7 +221,8 @@ def compact_console_section(document: Document) -> None:
         paragraph.paragraph_format.space_after = Pt(1)
         paragraph.paragraph_format.line_spacing = 1
         for run in paragraph.runs:
-            run.font.size = Pt(9)
+            # 콘솔 안내는 항목이 많아 다음 장에 두 줄만 남지 않도록 조금 더 조밀하게 배치한다.
+            run.font.size = Pt(8)
 
 
 def main() -> None:
@@ -229,6 +232,18 @@ def main() -> None:
             paragraph.text = "플랫폼 기능과 권장 운영 흐름"
         elif paragraph.text.startswith("좌측 메뉴는 운영 관리, AI, 설정의 세 영역"):
             paragraph.text = paragraph.text.replace("좌측 메뉴는", "플랫폼 기능은", 1)
+        elif paragraph.text.startswith("제품 방향  현재 제품은 Kubernetes 운영 AIOps에 집중합니다"):
+            paragraph.text = (
+                "제품 방향  KlueOps는 Kubernetes 운영 AIOps와 Tenant별 Helm Application Delivery를 제공합니다. "
+                "Argo CD나 Flux를 설치하거나 Git 상태를 지속 동기화하지 않으며, 별도 GitOps Controller의 책임과 섞지 않습니다."
+            )
+
+    if not any(paragraph.text == GLOBAL_SHELL_GUIDANCE for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text == "공통 화면 요소")
+        current = insert_after(anchor, GLOBAL_SHELL_GUIDANCE, "List Bullet")
+        current = insert_after(current, "짙은 좌측 내비게이션은 운영 관리, AI와 설정 기능을 구분하며 현재 메뉴를 파란 표시선으로 보여줍니다.", "List Bullet")
+        current = insert_after(current, "상단 검색과 운영 알림은 어느 메뉴에서도 사용할 수 있으며, 알림을 열면 관련 화면으로 이동할 수 있습니다.", "List Bullet")
+        insert_after(current, "좁은 화면에서는 메뉴 버튼으로 내비게이션을 열고, 배경을 선택하거나 메뉴를 고르면 자동으로 닫힙니다.", "List Bullet")
 
     if not any(COLLECTION_GUIDANCE == paragraph.text for paragraph in document.paragraphs):
         anchor = next(

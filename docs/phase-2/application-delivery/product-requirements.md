@@ -2,11 +2,11 @@
 
 기준일: 2026-09-15
 
-상태: 핵심 범위 구현 및 로컬 수용 검증 완료, 고급 확장 항목은 후속
+상태: 핵심 범위와 P2-0 공통 제품 UI 구현 및 로컬 수용 검증 완료, 고급 확장 항목은 후속
 
 ## 구현 기준선
 
-2026-09-15 `feature/phase-2` 기준으로 Tenant별 Artifact Hub 검색·가져오기, Chart Library와 Source, 암호화된 Values revision, 대상 Cluster/Namespace 선택과 Namespace 생성, Helm preview/install/upgrade/rollback/uninstall, Application runtime·Service·Ingress·HTTPRoute 조회, Tenant 역할·메뉴 기능 정책·사용자 membership/offboarding, Ollama 및 외부 Provider profile·목적별 routing을 구현했다. 실제 OIDC 로그인 후 검색부터 배포·상태 확인·삭제까지 로컬 Kubernetes에서 검증했으며, Chart Values가 생성한 Ingress와 KlueOps가 Service에 연결한 companion HTTPRoute는 각각 실제 HTTP 응답까지 확인했다.
+2026-09-15 `feature/phase-2` 기준으로 Tenant별 Artifact Hub 검색·가져오기, Chart Library와 Source, 암호화된 Values revision, 대상 Cluster/Namespace 선택과 Namespace 생성, Helm preview/install/upgrade/rollback/uninstall, Application runtime·Service·Ingress·HTTPRoute 조회, Tenant 역할·메뉴 기능 정책·사용자 membership/offboarding, Ollama 및 외부 Provider profile·목적별 routing을 구현했다. P2-0은 짙은 공통 navigation shell, 상단 Tenant/Workspace context bar, semantic visual token과 전역 responsive surface로 실제 제품에 적용했다. Applications는 상태 요약, 검색·상태 필터 목록과 선택 상세 panel 구조로 시안의 정보 위계를 반영했다. 실제 OIDC 로그인 후 검색부터 배포·상태 확인·삭제까지 로컬 Kubernetes에서 검증했으며, Chart Values가 생성한 Ingress와 KlueOps가 Service에 연결한 companion HTTPRoute는 각각 실제 HTTP 응답까지 확인했다.
 
 다음 항목은 설계를 유지하지만 이번 핵심 구현 완료 범위에는 포함하지 않는다.
 

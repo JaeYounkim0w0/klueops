@@ -147,24 +147,11 @@ watch(
             <small>{{ t('shell.console') }}</small>
           </div>
         </div>
-        <button
-          type="button"
-          class="mobile-nav-toggle"
-          :aria-expanded="mobileNavOpen"
-          aria-controls="primary-navigation"
-          :aria-label="mobileNavOpen ? t('shell.closeMenu') : t('shell.openMenu')"
-          :title="mobileNavOpen ? t('shell.closeMenu') : t('shell.openMenu')"
-          @click="mobileNavOpen = !mobileNavOpen"
-        >
-          <i :class="mobileNavOpen ? 'pi pi-times' : 'pi pi-bars'"></i>
-        </button>
       </div>
-      <TenantWorkspaceSelector />
       <button v-if="auth.hasCapability('cluster:read')" type="button" class="sidebar-search-button" @click="operatorSearchOpen = true">
         <i class="pi pi-search"></i><span>{{ t('operatorSearch.title') }}</span><kbd>⌘K</kbd>
       </button>
       <nav id="primary-navigation" class="nav">
-        <NotificationCenter />
         <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('overview')" to="/" class="nav-item">
           <i class="pi pi-home"></i>
           <span>{{ t('shell.dashboard') }}</span>
@@ -273,24 +260,46 @@ watch(
       :aria-label="t('shell.closeMenu')"
       @click="mobileNavOpen = false"
     ></button>
-    <main class="content">
-      <RuntimeReadinessBanner />
-      <section v-if="routeFailure" class="route-failure-banner" role="alert">
-        <i class="pi pi-exclamation-triangle"></i>
-        <div>
-          <strong>{{ t('shell.routeFailureTitle') }}</strong>
-          <span>{{ routeFailure.message }}</span>
+    <div class="workspace-shell">
+      <header class="workspace-topbar">
+        <button
+          type="button"
+          class="mobile-nav-toggle"
+          :aria-expanded="mobileNavOpen"
+          aria-controls="primary-navigation"
+          :aria-label="mobileNavOpen ? t('shell.closeMenu') : t('shell.openMenu')"
+          :title="mobileNavOpen ? t('shell.closeMenu') : t('shell.openMenu')"
+          @click="mobileNavOpen = !mobileNavOpen"
+        >
+          <i :class="mobileNavOpen ? 'pi pi-times' : 'pi pi-bars'"></i>
+        </button>
+        <TenantWorkspaceSelector />
+        <div class="workspace-actions">
+          <button v-if="auth.hasCapability('cluster:read')" type="button" class="workspace-action-button workspace-search-trigger" :aria-label="t('operatorSearch.title')" :title="t('operatorSearch.title')" @click="operatorSearchOpen = true">
+            <i class="pi pi-search"></i><span>{{ t('operatorSearch.title') }}</span><kbd>⌘K</kbd>
+          </button>
+          <NotificationCenter />
         </div>
-        <button type="button" class="secondary-button" @click="reloadApplication">
-          <i class="pi pi-refresh"></i>
-          {{ t('common.refresh') }}
-        </button>
-        <button type="button" class="icon-button" :aria-label="t('shell.dismissError')" :title="t('common.close')" @click="clearRouteFailure">
-          <i class="pi pi-times"></i>
-        </button>
-      </section>
-      <RouterView />
-    </main>
+      </header>
+      <main class="content">
+        <RuntimeReadinessBanner />
+        <section v-if="routeFailure" class="route-failure-banner" role="alert">
+          <i class="pi pi-exclamation-triangle"></i>
+          <div>
+            <strong>{{ t('shell.routeFailureTitle') }}</strong>
+            <span>{{ routeFailure.message }}</span>
+          </div>
+          <button type="button" class="secondary-button" @click="reloadApplication">
+            <i class="pi pi-refresh"></i>
+            {{ t('common.refresh') }}
+          </button>
+          <button type="button" class="icon-button" :aria-label="t('shell.dismissError')" :title="t('common.close')" @click="clearRouteFailure">
+            <i class="pi pi-times"></i>
+          </button>
+        </section>
+        <RouterView />
+      </main>
+    </div>
     <JobDock />
     <GlobalOperatorSearch :open="operatorSearchOpen" @close="operatorSearchOpen = false" />
     <div v-if="sessionWarningOpen" class="session-warning-backdrop">

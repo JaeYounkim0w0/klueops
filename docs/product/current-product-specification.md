@@ -61,6 +61,8 @@ Backend는 헥사고날 아키텍처를 사용한다. 도메인·애플리케이
 
 ### 4.1 Dashboard와 공통 운영 UX
 
+- Phase 2 공통 제품 Shell은 짙은 navigation, 상단 Tenant/Workspace context bar, 전역 검색·알림과 반응형 모바일 drawer를 모든 인증 route에 적용한다.
+- 공통 semantic token으로 배경, surface, 글자, 상태색, radius, elevation과 keyboard focus를 관리해 화면별 시각 표현 차이를 줄인다.
 - 클러스터, Incident, 분석 Job과 운영 위험을 요약한다.
 - 전역 Job Dock에서 화면 이동 후에도 분석 및 동기화 진행 상태와 소요 시간을 확인한다.
 - 운영 통합 검색으로 클러스터, 리소스, Incident, 분석과 Runbook을 찾고 관련 화면으로 이동한다.
@@ -210,12 +212,12 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 
 2026-09-15 기준 최신 통합 증빙은 다음과 같다.
 
-- Backend: PostgreSQL 17 Testcontainers, Flyway V1~V32 포함 267 tests 통과
+- Backend: PostgreSQL 17 Testcontainers, Flyway V1~V32 포함 272 tests 통과
 - Command Runner: 5 tests 통과
-- Frontend: 26 files, 92 tests, typecheck와 production build 통과
+- Frontend: 28 files, 95 tests, typecheck와 production build 통과
 - OpenAPI runtime snapshot과 Orval generated client drift 통과
 - architecture, security, packaging, docs와 maintainability gate 통과
-- Docker Desktop Kubernetes Helm revision 55에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
+- Docker Desktop Kubernetes Helm revision 83에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
 - OIDC 관리자 사용자로 `dev-master/default`의 격리 Runner `kubectl get pods --field-selector=status.phase!=Running,status.phase!=Succeeded -o wide` 실행 성공, exit code `0`, 130ms
 - 로컬 Keycloak 네 역할과 두 Tenant object scope 격리 검증 통과
 - read API 30회/동시성 10 기준 p95 14ms, Backend/Keycloak 순차 재시작, 앱 DB Flyway migration 28건·Keycloak `aiops` Realm sentinel 격리 복원과 AI timeout fallback 증빙
@@ -229,6 +231,7 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - 월간 Dependabot 정책은 Backend/Command Runner Maven, Frontend npm과 GitHub Actions의 minor/patch version update를 ecosystem별 최대 1개 PR로 제한하며 Docker 일반 update와 모든 major update는 자동 생성하지 않는다. Security update와 주간 supply-chain scan은 계속 유지하고 자동 merge하지 않는다.
 - README의 Dashboard와 Kubernetes Console/Cook Book 화면은 별도 namespace의 실제 설치에서 캡처했으며 계정, cluster 식별자와 내부 주소를 공개용 값으로 마스킹했다. 문서 검증은 두 화면 asset의 존재를 확인한다.
 - Docker Desktop의 `aiops-system`에서 OIDC 로그인 후 Artifact Hub 검색, nginx Chart import, 암호화 Values 저장·재조회, preview의 Secret redaction, Namespace 생성, Helm install의 `1/1` workload health와 Service endpoint, uninstall, Users & Access, AI Provider 연결 검증과 Ollama model 동기화를 브라우저로 확인했다.
+- Phase 2 공통 제품 Shell을 로컬 Kubernetes Frontend 이미지에 반영하고 실제 OIDC 세션에서 Applications 상태 요약·목록·Runtime/Endpoint inspector, Dashboard, 모바일 navigation과 Application 배포 chooser를 브라우저로 확인했다.
 
 검증 명령과 최신 로컬 품질 증적은 `docs/operations/release-candidate-checklist.md`를 따른다. 문서와 스크립트의 `release-candidate` 명칭은 기존 자동화 호환을 위해 유지하며 상용 릴리스 판정을 의미하지 않는다.
 

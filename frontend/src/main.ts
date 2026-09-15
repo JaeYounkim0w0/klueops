@@ -19,6 +19,7 @@ import './styles/components/application-delivery.css';
 import './styles/components/ai-providers.css';
 import './styles/components/access-control.css';
 import './styles/kubernetes-console.css';
+import './styles/product-shell.css';
 
 createApp(App)
   .use(createPinia())
