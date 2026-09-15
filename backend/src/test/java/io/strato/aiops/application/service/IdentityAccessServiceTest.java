@@ -4,6 +4,8 @@ import io.strato.aiops.application.port.out.RoleBindingRepositoryPort;
 import io.strato.aiops.application.port.out.UserAccountRepositoryPort;
 import io.strato.aiops.application.port.out.ClusterRepositoryPort;
 import io.strato.aiops.application.port.out.WorkspaceRepositoryPort;
+import io.strato.aiops.application.port.out.OidcGroupMappingRepositoryPort;
+import io.strato.aiops.application.port.out.TenantMembershipRepositoryPort;
 import io.strato.aiops.domain.cluster.Cluster;
 import io.strato.aiops.domain.cluster.ClusterEnvironment;
 import io.strato.aiops.domain.cluster.ClusterProvider;
@@ -14,6 +16,9 @@ import io.strato.aiops.domain.identity.PlatformRole;
 import io.strato.aiops.domain.identity.PrincipalType;
 import io.strato.aiops.domain.identity.RoleBinding;
 import io.strato.aiops.domain.identity.UserAccount;
+import io.strato.aiops.domain.identity.OidcGroupMapping;
+import io.strato.aiops.domain.identity.TenantMembership;
+import io.strato.aiops.domain.identity.MembershipStatus;
 import io.strato.aiops.domain.tenancy.Workspace;
 import org.junit.jupiter.api.Test;
 
@@ -38,8 +43,11 @@ class IdentityAccessServiceTest {
     private final InMemoryBindings bindings = new InMemoryBindings();
     private final InMemoryClusters clusters = new InMemoryClusters();
     private final InMemoryWorkspaces workspaces = new InMemoryWorkspaces();
+    private final InMemoryGroupMappings groupMappings = new InMemoryGroupMappings();
+    private final InMemoryMemberships memberships = new InMemoryMemberships();
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-02T00:00:00Z"), ZoneOffset.UTC);
-    private final IdentityAccessService service = new IdentityAccessService(users, bindings, clusters, workspaces, clock);
+    private final IdentityAccessService service = new IdentityAccessService(users, bindings, clusters, workspaces,
+            groupMappings, memberships, clock);
 
     @Test
     void provisionsOnceAndRefreshesIdentityOnLaterLogin() {
@@ -127,12 +135,40 @@ class IdentityAccessServiceTest {
     @Test
     void platformScopeCanSeeEveryCluster() {
         UserAccount user = service.provision(new ExternalIdentity("https://idp", "subject-6", "platform", "Platform",
-                "platform@example.com", Set.of("aiops-viewers")));
+                "platform@example.com", Set.of()));
+        bindings.save(RoleBinding.create(PrincipalType.USER, user.id().toString(), PlatformRole.VIEWER,
+                AccessScope.platform(), "admin", clock.instant()));
 
-        var access = service.resolveAccess(user, Set.of("aiops-viewers"));
+        var access = service.resolveAccess(user, Set.of());
 
         assertThat(service.hasPlatformScope(access, Capability.CLUSTER_READ)).isTrue();
         assertThat(service.visibleClusterIds(access)).isEmpty();
+    }
+
+    @Test
+    void doesNotInferTenantRoleFromConventionalGroupName() {
+        UserAccount user = service.provision(new ExternalIdentity("https://idp", "subject-no-implicit", "operator",
+                "Operator", "operator@example.com", Set.of("aiops-operators")));
+
+        var access = service.resolveAccess(user, Set.of("aiops-operators"));
+
+        assertThat(access.bindings()).isEmpty();
+        assertThat(access.capabilities()).isEmpty();
+    }
+
+    @Test
+    void resolvesOnlyExplicitIssuerAndGroupMapping() {
+        UUID tenantId = UUID.randomUUID();
+        UserAccount user = service.provision(new ExternalIdentity("https://idp", "mapped", "mapped", "Mapped",
+                null, Set.of("/companies/aa/operators")));
+        groupMappings.save(OidcGroupMapping.create("https://idp", "/companies/aa/operators", tenantId,
+                PlatformRole.OPERATOR, AccessScope.tenant(tenantId), "admin", clock.instant()));
+
+        var access = service.resolveAccess(user, Set.of("/companies/aa/operators"));
+
+        assertThat(service.effectiveCapabilities(access, tenantId, null))
+                .contains(Capability.APPLICATION_DEPLOY, Capability.ANALYSIS_RUN)
+                .doesNotContain(Capability.APPLICATION_DELETE);
     }
 
     @Test
@@ -220,6 +256,10 @@ class IdentityAccessServiceTest {
             return List.copyOf(items);
         }
 
+        @Override public Optional<RoleBinding> findById(UUID id) {
+            return items.stream().filter(item -> item.id().equals(id)).findFirst();
+        }
+
         @Override
         public RoleBinding save(RoleBinding binding) {
             items.removeIf(item -> item.id().equals(binding.id()));
@@ -253,5 +293,50 @@ class IdentityAccessServiceTest {
             return items.values().stream().filter(item -> item.tenantId().equals(tenantId)).toList();
         }
         @Override public List<Workspace> findAll() { return List.copyOf(items.values()); }
+    }
+
+    private static final class InMemoryGroupMappings implements OidcGroupMappingRepositoryPort {
+        private final List<OidcGroupMapping> items = new ArrayList<>();
+
+        @Override public List<OidcGroupMapping> findActive(String issuer, Collection<String> groups) {
+            return items.stream().filter(OidcGroupMapping::active)
+                    .filter(item -> item.issuer().equals(issuer) && groups.contains(item.groupValue())).toList();
+        }
+        @Override public List<OidcGroupMapping> findByTenantId(UUID tenantId) {
+            return items.stream().filter(item -> item.tenantId().equals(tenantId)).toList();
+        }
+        @Override public Optional<OidcGroupMapping> findByIdAndTenantId(UUID id, UUID tenantId) {
+            return items.stream().filter(item -> item.id().equals(id) && item.tenantId().equals(tenantId)).findFirst();
+        }
+        @Override public OidcGroupMapping save(OidcGroupMapping mapping) {
+            items.removeIf(item -> item.id().equals(mapping.id()));
+            items.add(mapping);
+            return mapping;
+        }
+        @Override public void delete(OidcGroupMapping mapping) { items.removeIf(item -> item.id().equals(mapping.id())); }
+    }
+
+    private static final class InMemoryMemberships implements TenantMembershipRepositoryPort {
+        private final List<TenantMembership> items = new ArrayList<>();
+
+        @Override public List<TenantMembership> findByTenantId(UUID tenantId) {
+            return items.stream().filter(item -> item.tenantId().equals(tenantId)).toList();
+        }
+        @Override public Optional<TenantMembership> findByIdAndTenantId(UUID id, UUID tenantId) {
+            return items.stream().filter(item -> item.id().equals(id) && item.tenantId().equals(tenantId)).findFirst();
+        }
+        @Override public List<TenantMembership> findInvitedByIssuerAndSubject(String issuer, String subject) {
+            return items.stream().filter(item -> item.status() == MembershipStatus.INVITED)
+                    .filter(item -> issuer.equals(item.pendingIssuer()) && subject.equals(item.pendingSubject())).toList();
+        }
+        @Override public List<TenantMembership> findInvitedByIssuerAndEmail(String issuer, String email) {
+            return items.stream().filter(item -> item.status() == MembershipStatus.INVITED)
+                    .filter(item -> issuer.equals(item.pendingIssuer()) && email.equalsIgnoreCase(item.pendingEmail())).toList();
+        }
+        @Override public TenantMembership save(TenantMembership membership) {
+            items.removeIf(item -> item.id().equals(membership.id()));
+            items.add(membership);
+            return membership;
+        }
     }
 }

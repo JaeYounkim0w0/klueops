@@ -17,8 +17,12 @@ class AccessPolicyTest {
     @Test
     void grantsCapabilitiesByRoleWithoutImplicitWriteAccess() {
         assertThat(policy.allows(PlatformRole.PLATFORM_ADMIN, Capability.IDENTITY_MANAGE)).isTrue();
+        assertThat(policy.allows(PlatformRole.TENANT_ADMIN, Capability.TENANT_MEMBER_MANAGE)).isTrue();
+        assertThat(policy.allows(PlatformRole.TENANT_ADMIN, Capability.AI_PROVIDER_MANAGE)).isFalse();
         assertThat(policy.allows(PlatformRole.CLUSTER_ADMIN, Capability.CLUSTER_MANAGE)).isTrue();
+        assertThat(policy.allows(PlatformRole.CLUSTER_ADMIN, Capability.APPLICATION_DELETE)).isTrue();
         assertThat(policy.allows(PlatformRole.OPERATOR, Capability.ANALYSIS_RUN)).isTrue();
+        assertThat(policy.allows(PlatformRole.OPERATOR, Capability.APPLICATION_DELETE)).isFalse();
         assertThat(policy.allows(PlatformRole.VIEWER, Capability.ANALYSIS_READ)).isTrue();
 
         assertThat(policy.allows(PlatformRole.CLUSTER_ADMIN, Capability.IDENTITY_MANAGE)).isFalse();

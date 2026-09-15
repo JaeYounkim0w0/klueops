@@ -35,7 +35,8 @@ public class ApiAuthorizationInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String path = request.getRequestURI();
-        if (!path.startsWith("/api/") || path.startsWith("/api/auth/") || path.startsWith("/api/security/")) {
+        if (!path.startsWith("/api/") || path.startsWith("/api/auth/") || path.startsWith("/api/security/")
+                || path.startsWith("/api/me/")) {
             return true;
         }
         Capability required = requiredCapability(path, request.getMethod());

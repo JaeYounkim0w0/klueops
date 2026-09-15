@@ -4,6 +4,8 @@ import io.strato.aiops.application.port.out.RoleBindingRepositoryPort;
 import io.strato.aiops.application.port.out.UserAccountRepositoryPort;
 import io.strato.aiops.application.port.out.ClusterRepositoryPort;
 import io.strato.aiops.application.port.out.WorkspaceRepositoryPort;
+import io.strato.aiops.application.port.out.OidcGroupMappingRepositoryPort;
+import io.strato.aiops.application.port.out.TenantMembershipRepositoryPort;
 import io.strato.aiops.domain.cluster.Cluster;
 import io.strato.aiops.domain.identity.AccessPolicy;
 import io.strato.aiops.domain.identity.Capability;
@@ -36,26 +38,30 @@ public class IdentityAccessService {
 
     private static final Duration LOGIN_ACTIVITY_WRITE_INTERVAL = Duration.ofMinutes(5);
 
+    // Bootstrap 관리자 그룹만 Platform scope로 허용한다. 나머지 OIDC 그룹은 명시적인 Tenant Mapping이 필요하다.
     private static final Map<String, PlatformRole> STANDARD_GROUP_ROLES = Map.of(
-            "aiops-platform-admins", PlatformRole.PLATFORM_ADMIN,
-            "aiops-cluster-admins", PlatformRole.CLUSTER_ADMIN,
-            "aiops-operators", PlatformRole.OPERATOR,
-            "aiops-viewers", PlatformRole.VIEWER
+            "aiops-platform-admins", PlatformRole.PLATFORM_ADMIN
     );
 
     private final UserAccountRepositoryPort users;
     private final RoleBindingRepositoryPort bindings;
     private final ClusterRepositoryPort clusters;
     private final WorkspaceRepositoryPort workspaces;
+    private final OidcGroupMappingRepositoryPort groupMappings;
+    private final TenantMembershipRepositoryPort memberships;
     private final Clock clock;
     private final AccessPolicy policy = new AccessPolicy();
 
     public IdentityAccessService(UserAccountRepositoryPort users, RoleBindingRepositoryPort bindings,
-                                 ClusterRepositoryPort clusters, WorkspaceRepositoryPort workspaces, Clock clock) {
+                                 ClusterRepositoryPort clusters, WorkspaceRepositoryPort workspaces,
+                                 OidcGroupMappingRepositoryPort groupMappings,
+                                 TenantMembershipRepositoryPort memberships, Clock clock) {
         this.users = users;
         this.bindings = bindings;
         this.clusters = clusters;
         this.workspaces = workspaces;
+        this.groupMappings = groupMappings;
+        this.memberships = memberships;
         this.clock = clock;
     }
 
@@ -64,13 +70,31 @@ public class IdentityAccessService {
         Instant now = clock.instant();
         UserAccount existing = users.findByIssuerAndSubject(identity.issuer(), identity.subject()).orElse(null);
         if (existing != null) {
-            return refreshIfNeeded(existing, identity, now);
+            UserAccount refreshed = refreshIfNeeded(existing, identity, now);
+            linkPendingMemberships(refreshed, identity, now);
+            return refreshed;
         }
 
         users.lockProvisioning(identity.issuer(), identity.subject());
-        return users.findByIssuerAndSubject(identity.issuer(), identity.subject())
+        UserAccount provisioned = users.findByIssuerAndSubject(identity.issuer(), identity.subject())
                 .map(account -> refreshIfNeeded(account, identity, now))
                 .orElseGet(() -> users.save(UserAccount.firstLogin(identity, now)));
+        linkPendingMemberships(provisioned, identity, now);
+        return provisioned;
+    }
+
+    private void linkPendingMemberships(UserAccount user, ExternalIdentity identity, Instant now) {
+        Set<UUID> linked = new HashSet<>();
+        List<io.strato.aiops.domain.identity.TenantMembership> pending = new ArrayList<>(
+                memberships.findInvitedByIssuerAndSubject(identity.issuer(), identity.subject()));
+        if (identity.emailVerified() && identity.email() != null && !identity.email().isBlank()) {
+            pending.addAll(memberships.findInvitedByIssuerAndEmail(identity.issuer(), identity.email()));
+        }
+        pending.stream().filter(item -> linked.add(item.id())).forEach(item -> {
+            memberships.save(item.activate(user.id(), now));
+            saveBinding(RoleBinding.create(PrincipalType.USER, user.id().toString(), item.role(), item.scope(),
+                    item.createdBy(), now));
+        });
     }
 
     private UserAccount refreshIfNeeded(UserAccount existing, ExternalIdentity identity, Instant now) {
@@ -88,6 +112,9 @@ public class IdentityAccessService {
         principals.add(user.id().toString());
         List<RoleBinding> assigned = new ArrayList<>(bindings.findByPrincipals(principals));
         Set<String> oidcGroups = groups == null ? Set.of() : groups;
+        groupMappings.findActive(user.issuer(), oidcGroups).forEach(mapping -> assigned.add(new RoleBinding(
+                mapping.id(), PrincipalType.GROUP, mapping.groupValue(), mapping.role(), mapping.scope(),
+                mapping.createdBy(), mapping.createdAt())));
         oidcGroups.forEach(group -> {
             String normalized = group.startsWith("/") ? group.substring(1) : group;
             PlatformRole role = STANDARD_GROUP_ROLES.get(normalized);
@@ -102,6 +129,15 @@ public class IdentityAccessService {
         Set<Capability> capabilities = new LinkedHashSet<>();
         assigned.forEach(binding -> capabilities.addAll(policy.capabilities(binding.role())));
         return new ResolvedAccess(user, Set.copyOf(capabilities), List.copyOf(assigned));
+    }
+
+    public Set<Capability> effectiveCapabilities(ResolvedAccess access, UUID tenantId, UUID workspaceId) {
+        AccessTarget target = new AccessTarget(tenantId, workspaceId, null, null);
+        Set<Capability> result = new LinkedHashSet<>();
+        access.bindings().stream()
+                .filter(binding -> binding.scope().type() == ScopeType.PLATFORM || binding.scope().includes(target))
+                .forEach(binding -> result.addAll(policy.capabilities(binding.role())));
+        return Set.copyOf(result);
     }
 
     @Transactional(readOnly = true)

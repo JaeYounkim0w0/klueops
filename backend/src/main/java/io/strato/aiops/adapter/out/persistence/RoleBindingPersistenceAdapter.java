@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 @Component
 class RoleBindingPersistenceAdapter implements RoleBindingRepositoryPort {
@@ -25,6 +26,11 @@ class RoleBindingPersistenceAdapter implements RoleBindingRepositoryPort {
     @Override
     public List<RoleBinding> findAll() {
         return repository.findAll(Sort.by(Sort.Direction.DESC, "createdAt")).stream().map(RoleBindingEntity::toDomain).toList();
+    }
+
+    @Override
+    public Optional<RoleBinding> findById(UUID id) {
+        return repository.findById(id).map(RoleBindingEntity::toDomain);
     }
 
     @Override

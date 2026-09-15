@@ -21,7 +21,8 @@ public class OidcIdentityMapper {
         String issuer = user.getIssuer() == null ? "unknown-issuer" : user.getIssuer().toString();
         String username = first(user.getClaimAsString("preferred_username"), user.getSubject());
         String displayName = first(user.getFullName(), username);
-        return new ExternalIdentity(issuer, user.getSubject(), username, displayName, user.getEmail(), groups(user));
+        return new ExternalIdentity(issuer, user.getSubject(), username, displayName, user.getEmail(),
+                Boolean.TRUE.equals(user.getEmailVerified()), groups(user));
     }
 
     private Set<String> groups(OidcUser user) {

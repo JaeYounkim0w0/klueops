@@ -9,8 +9,13 @@ public record ExternalIdentity(
         String username,
         String displayName,
         String email,
+        boolean emailVerified,
         Set<String> groups
 ) {
+    public ExternalIdentity(String issuer, String subject, String username, String displayName, String email,
+                            Set<String> groups) {
+        this(issuer, subject, username, displayName, email, false, groups);
+    }
     public ExternalIdentity {
         Objects.requireNonNull(issuer, "issuer is required");
         Objects.requireNonNull(subject, "subject is required");

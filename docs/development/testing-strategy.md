@@ -42,6 +42,8 @@
 - 실환경 수용 시험은 실행하지 않은 항목을 통과로 간주하지 않고 `CONDITIONAL` 또는 `BLOCKED`로 남긴다.
 - 변경·삭제 기능은 preview/dry-run, 권한 실패, 실행 성공, 사후 검증과 rollback 후보를 함께 시험한다.
 - 성능 시험은 warm-up, 데이터 규모, concurrency, 반복 수와 p50/p95/p99를 artifact에 기록한다.
+- 사용자 기능 완료 전 로컬 Kubernetes 배포와 실제 OIDC 로그인을 거친 자체 브라우저 수용시험을 수행한다. 자동 Playwright와 별개로 대표 workflow를 직접 조작하고 화면·Network·Console·Backend/Runner log를 함께 확인한다.
+- 브라우저 수용시험은 최소 성공 흐름, validation 실패, capability 거부, 새로고침/deep-link와 비동기 Job 이동 후 추적을 포함한다. 테스트 계정 credential은 문서·screenshot·log에 남기지 않는다.
 
 ## 테스트 피라미드
 
