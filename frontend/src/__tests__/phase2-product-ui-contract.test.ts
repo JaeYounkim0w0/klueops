@@ -10,6 +10,14 @@ describe('Phase 2 product UI contract', () => {
     expect(app).toContain('<TenantWorkspaceSelector />');
     expect(shell).toContain('background: var(--shell-navy)');
     expect(shell).toContain('.sidebar.nav-open');
+    expect(app).toContain("t('shell.incidentResponse')");
+    expect(app).toContain("t('shell.infrastructure')");
+    expect(app).toContain("t('shell.applicationDelivery')");
+    expect(app).toContain("t('shell.aiOperations')");
+    expect(app).toContain("t('shell.governance')");
+    expect(app).toContain("t('shell.platformSettings')");
+    expect(app).toContain("t('shell.personal')");
+    expect(app.match(/t\('shell\.userAccess'\)/g)).toHaveLength(1);
   });
 
   it('presents Applications as summary, searchable list and selected detail', () => {

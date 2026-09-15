@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { api, type ClusterResponse, type OidcGroupMappingResponse, type TenantFeatureKey,
   type TenantMemberOffboardPlanResponse, type TenantMemberResponse, type WorkspaceResponse } from '@/api/client';
@@ -9,6 +10,7 @@ import { useTenancyStore } from '@/stores/tenancy';
 type AccessTab = 'members' | 'groups' | 'features';
 const auth = useAuthStore();
 const tenancy = useTenancyStore();
+const router = useRouter();
 const members = ref<TenantMemberResponse[]>([]);
 const mappings = ref<OidcGroupMappingResponse[]>([]);
 const features = ref<Partial<Record<TenantFeatureKey, boolean>>>({});
@@ -102,7 +104,7 @@ async function toggleFeature(item: { key: TenantFeatureKey; mandatory?: boolean 
 
 <template>
   <section class="page delivery-page access-page">
-    <header class="delivery-hero"><div><span class="delivery-eyebrow">TENANT GOVERNANCE</span><h1>Users &amp; Access</h1><p>Keycloak 사용자를 Tenant에 연결하고 역할, 범위와 제품 기능을 관리합니다.</p></div><button v-if="tab !== 'features'" class="primary-button" type="button" @click="dialog = tab === 'members' ? 'invite' : 'group'"><i class="pi pi-plus"></i> {{ tab === 'members' ? '사용자 초대' : 'Group Mapping' }}</button></header>
+    <header class="delivery-hero"><div><span class="delivery-eyebrow">TENANT GOVERNANCE</span><h1>사용자 및 권한</h1><p>Keycloak 사용자를 Tenant에 연결하고 역할, 범위와 제품 기능을 관리합니다.</p></div><div class="header-actions"><button v-if="!auth.session.localDevelopment && auth.hasCapability('identity:manage')" class="secondary-button" type="button" @click="router.push('/settings/access')"><i class="pi pi-id-card"></i> 플랫폼 계정 권한</button><button v-if="tab !== 'features'" class="primary-button" type="button" @click="dialog = tab === 'members' ? 'invite' : 'group'"><i class="pi pi-plus"></i> {{ tab === 'members' ? '사용자 초대' : 'Group Mapping' }}</button></div></header>
     <div class="access-summary"><div><span>Tenant</span><strong>{{ tenancy.currentTenant?.name }}</strong></div><div><span>Members</span><strong>{{ members.length }}</strong></div><div><span>Active groups</span><strong>{{ mappings.filter(item => item.active).length }}</strong></div><div><span>권한 합산</span><strong>Grant union</strong></div></div>
     <div class="access-tabs"><button type="button" :class="{ active: tab === 'members' }" @click="tab = 'members'">구성원</button><button type="button" :class="{ active: tab === 'groups' }" @click="tab = 'groups'">OIDC Group Mapping</button><button type="button" :class="{ active: tab === 'features' }" @click="tab = 'features'">메뉴 및 기능</button></div>
     <div v-if="message" class="delivery-notice">{{ message }}</div>

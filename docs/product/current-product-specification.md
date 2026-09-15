@@ -149,6 +149,8 @@ AI Trust Center는 평가 corpus, category별 정확도, 근거 coverage, halluc
 - platform-admin, cluster-admin, operator, viewer capability를 API 서버에서 평가한다.
 - Tenant/Workspace 생성, 전역 scope 선택, Cluster placement와 접근 가능한 목록 필터링을 제공한다.
 - 사용자 관리, 운영 설정, reliability, 언어 설정과 접근 범위 화면을 제공한다.
+- 좌측 내비게이션은 `개요`, `운영 대응`, `인프라`, `Application Delivery`, `AI 운영`, `거버넌스`, `플랫폼 설정`, `개인 영역`으로 고정하며 capability가 없는 그룹은 제목과 항목을 함께 숨긴다.
+- 좌측의 `사용자 및 권한`은 Tenant Users & Access를 기본 진입점으로 사용하고 Platform Manager에게 플랫폼 계정 권한 화면 연결을 제공한다. 기존 두 접근 관리 URL은 호환성을 유지한다.
 
 ### 4.8 Application Delivery와 AI Provider
 
@@ -217,7 +219,7 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - Frontend: 28 files, 95 tests, typecheck와 production build 통과
 - OpenAPI runtime snapshot과 Orval generated client drift 통과
 - architecture, security, packaging, docs와 maintainability gate 통과
-- Docker Desktop Kubernetes Helm revision 83에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
+- Docker Desktop Kubernetes Helm revision 84에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
 - OIDC 관리자 사용자로 `dev-master/default`의 격리 Runner `kubectl get pods --field-selector=status.phase!=Running,status.phase!=Succeeded -o wide` 실행 성공, exit code `0`, 130ms
 - 로컬 Keycloak 네 역할과 두 Tenant object scope 격리 검증 통과
 - read API 30회/동시성 10 기준 p95 14ms, Backend/Keycloak 순차 재시작, 앱 DB Flyway migration 28건·Keycloak `aiops` Realm sentinel 격리 복원과 AI timeout fallback 증빙

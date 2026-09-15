@@ -27,6 +27,24 @@ let sessionTimer: number | undefined;
 let lastOperatorActivityAt = Date.now();
 let lastExtensionAttemptAt = 0;
 
+const canOpenIncidentResponse = computed(() =>
+  (auth.hasCapability('analysis:read') && auth.canNavigate('ai'))
+  || (auth.hasCapability('cluster:read') && auth.canNavigate('clusters')),
+);
+const canOpenInfrastructure = computed(() => auth.hasCapability('cluster:read') && auth.canNavigate('clusters'));
+const canOpenApplicationDelivery = computed(() => auth.hasCapability('application:read') && auth.canNavigate('applications'));
+const canOpenAiOperations = computed(() => auth.hasCapability('analysis:read') && auth.canNavigate('ai'));
+const canOpenGovernance = computed(() => canOpenInfrastructure.value || auth.hasCapability('audit:read'));
+const canOpenTenantAccess = computed(() => auth.hasCapability('tenant:member:manage') && auth.canNavigate('access'));
+const canOpenPlatformAccess = computed(() => !auth.session.localDevelopment && auth.hasCapability('identity:manage'));
+const canOpenAccess = computed(() => canOpenTenantAccess.value || canOpenPlatformAccess.value);
+const accessDestination = computed(() => canOpenTenantAccess.value ? '/settings/users-access' : '/settings/access');
+const canOpenPlatformSettings = computed(() =>
+  auth.hasCapability('platform:admin')
+  || (auth.hasCapability('ai-routing:manage') && auth.canNavigate('aiProviders'))
+  || canOpenAccess.value,
+);
+
 const sessionRemainingLabel = computed(() => {
   const minutes = Math.floor(sessionSecondsRemaining.value / 60);
   const seconds = sessionSecondsRemaining.value % 60;
@@ -152,69 +170,84 @@ watch(
         <i class="pi pi-search"></i><span>{{ t('operatorSearch.title') }}</span><kbd>⌘K</kbd>
       </button>
       <nav id="primary-navigation" class="nav">
-        <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('overview')" to="/" class="nav-item">
-          <i class="pi pi-home"></i>
-          <span>{{ t('shell.dashboard') }}</span>
-        </RouterLink>
-
-        <div class="nav-group">
-          <div class="nav-group-title">{{ t('shell.operations') }}</div>
-          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/triage" class="nav-item nav-child">
-            <i class="pi pi-filter"></i>
-            <span>{{ t('shell.triage') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('clusters')" to="/operations/fleet" class="nav-item nav-child">
-            <i class="pi pi-sitemap"></i>
-            <span>{{ t('shell.fleet') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/incidents" class="nav-item nav-child">
-            <i class="pi pi-exclamation-circle"></i>
-            <span>{{ t('shell.incidents') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('clusters')" to="/clusters" class="nav-item nav-child">
-            <i class="pi pi-cloud"></i>
-            <span>{{ t('shell.clusters') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('application:read') && auth.canNavigate('applications')" to="/applications" class="nav-item nav-child">
-            <i class="pi pi-box"></i>
-            <span>{{ t('shell.applications') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('clusters')" to="/policies" class="nav-item nav-child">
-            <i class="pi pi-shield"></i>
-            <span>{{ t('shell.policies') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('audit:read')" to="/audit" class="nav-item nav-child">
-            <i class="pi pi-history"></i>
-            <span>{{ t('shell.audit') }}</span>
+        <div v-if="auth.hasCapability('cluster:read') && auth.canNavigate('overview')" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.overviewGroup') }}</div>
+          <RouterLink to="/" class="nav-item">
+            <i class="pi pi-home"></i>
+            <span>{{ t('shell.dashboard') }}</span>
           </RouterLink>
         </div>
 
-        <div class="nav-group">
-          <div class="nav-group-title">{{ t('shell.ai') }}</div>
-          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/analysis" class="nav-item">
+        <div v-if="canOpenIncidentResponse" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.incidentResponse') }}</div>
+          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/triage" class="nav-item">
+            <i class="pi pi-filter"></i>
+            <span>{{ t('shell.triage') }}</span>
+          </RouterLink>
+          <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('clusters')" to="/operations/fleet" class="nav-item">
+            <i class="pi pi-sitemap"></i>
+            <span>{{ t('shell.fleet') }}</span>
+          </RouterLink>
+          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/incidents" class="nav-item">
+            <i class="pi pi-exclamation-circle"></i>
+            <span>{{ t('shell.incidents') }}</span>
+          </RouterLink>
+        </div>
+
+        <div v-if="canOpenInfrastructure" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.infrastructure') }}</div>
+          <RouterLink to="/clusters" class="nav-item">
+            <i class="pi pi-cloud"></i>
+            <span>{{ t('shell.clusters') }}</span>
+          </RouterLink>
+        </div>
+
+        <div v-if="canOpenApplicationDelivery" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.applicationDelivery') }}</div>
+          <RouterLink to="/applications" class="nav-item">
+            <i class="pi pi-box"></i>
+            <span>{{ t('shell.applications') }}</span>
+          </RouterLink>
+        </div>
+
+        <div v-if="canOpenAiOperations" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.aiOperations') }}</div>
+          <RouterLink to="/analysis" class="nav-item">
             <i class="pi pi-chart-line"></i>
             <span>{{ t('shell.analysis') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/ai-chat" class="nav-item">
+          <RouterLink to="/ai-chat" class="nav-item">
             <i class="pi pi-comments"></i>
             <span>{{ t('shell.chat') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/runbooks" class="nav-item">
+          <RouterLink to="/runbooks" class="nav-item">
             <i class="pi pi-book"></i>
             <span>{{ t('shell.runbooks') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/ai/trust" class="nav-item">
+          <RouterLink to="/ai/trust" class="nav-item">
             <i class="pi pi-verified"></i>
             <span>{{ t('shell.trustCenter') }}</span>
           </RouterLink>
         </div>
 
-        <div class="nav-group">
-          <div class="nav-group-title">{{ t('shell.settings') }}</div>
-          <RouterLink to="/settings/preferences" class="nav-item">
-            <i class="pi pi-language"></i>
-            <span>{{ t('shell.preferences') }}</span>
+        <div v-if="canOpenGovernance" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.governance') }}</div>
+          <RouterLink v-if="canOpenInfrastructure" to="/policies" class="nav-item">
+            <i class="pi pi-shield"></i>
+            <span>{{ t('shell.policies') }}</span>
           </RouterLink>
+          <RouterLink v-if="auth.hasCapability('audit:read')" to="/audit" class="nav-item">
+            <i class="pi pi-history"></i>
+            <span>{{ t('shell.audit') }}</span>
+          </RouterLink>
+          <RouterLink v-if="auth.hasCapability('audit:read')" to="/settings/reliability" class="nav-item">
+            <i class="pi pi-verified"></i>
+            <span>{{ t('shell.reliability') }}</span>
+          </RouterLink>
+        </div>
+
+        <div v-if="canOpenPlatformSettings" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.platformSettings') }}</div>
           <RouterLink v-if="auth.hasCapability('platform:admin')" to="/settings/operations" class="nav-item">
             <i class="pi pi-cog"></i>
             <span>{{ t('shell.dataRuntime') }}</span>
@@ -223,21 +256,26 @@ watch(
             <i class="pi pi-sparkles"></i>
             <span>AI Providers</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('audit:read')" to="/settings/reliability" class="nav-item">
-            <i class="pi pi-verified"></i>
-            <span>{{ t('shell.reliability') }}</span>
-          </RouterLink>
-          <RouterLink v-if="!auth.session.localDevelopment && auth.hasCapability('identity:manage')" to="/settings/access" class="nav-item">
-            <i class="pi pi-users"></i>
-            <span>{{ t('shell.access') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('tenant:member:manage') && auth.canNavigate('access')" to="/settings/users-access" class="nav-item">
+          <RouterLink
+            v-if="canOpenAccess"
+            :to="accessDestination"
+            class="nav-item"
+            :class="{ 'router-link-active': ['/settings/access', '/settings/users-access'].includes(route.path) }"
+          >
             <i class="pi pi-user-edit"></i>
-            <span>Users &amp; Access</span>
+            <span>{{ t('shell.userAccess') }}</span>
           </RouterLink>
           <RouterLink v-if="auth.hasCapability('platform:admin')" to="/settings/tenancy" class="nav-item">
             <i class="pi pi-building"></i>
             <span>{{ t('tenancy.manage') }}</span>
+          </RouterLink>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-title">{{ t('shell.personal') }}</div>
+          <RouterLink to="/settings/preferences" class="nav-item">
+            <i class="pi pi-language"></i>
+            <span>{{ t('shell.preferences') }}</span>
           </RouterLink>
         </div>
       </nav>

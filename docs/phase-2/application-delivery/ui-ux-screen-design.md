@@ -46,7 +46,7 @@ Tenant별 메뉴는 선택한 Tenant/Workspace의 effective capability와 Tenant
 
 [HTML 시안 열기](ui-mockups/index.html)
 
-브라우저에서 직접 열면 좌측 `Applications`, `Users & Access`, `AI Providers` 메뉴와 workflow 버튼을 통해 설계 기준을 확인할 수 있다. 실제 제품도 동일한 핵심 정보 구조와 query parameter deep-link를 지원하며, HTML은 구현 화면의 시각·상호작용 회귀 기준으로 유지한다.
+브라우저에서 직접 열면 `Application Delivery`, `사용자 및 권한`, `AI Providers` 진입점과 workflow 버튼을 통해 설계 기준을 확인할 수 있다. 실제 제품도 동일한 핵심 정보 구조와 query parameter deep-link를 지원하며, HTML은 구현 화면의 시각·상호작용 회귀 기준으로 유지한다.
 
 ```text
 ui-mockups/index.html?screen=discover
@@ -77,29 +77,19 @@ ui-mockups/index.html?screen=models
 ## 3. Navigation
 
 ```text
-운영 관리
-├─ Dashboard
-├─ Triage
-├─ Fleet Command
-├─ Incidents
-├─ Clusters
-├─ Applications
-│  ├─ Discover
-│  ├─ Chart Library
-│  │  └─ Sources
-│  └─ Deployed Applications
-├─ Policies
-└─ Audit
-
-설정
-├─ 사용자 설정
-├─ Data & Runtime
-├─ AI Provider
-│  └─ Local Models
-└─ 접근 관리
+개요                         Dashboard
+운영 대응                    Triage · Fleet Command · Incidents
+인프라                       Clusters
+Application Delivery         Applications
+AI 운영                      AI Analysis · AI Chat · Runbooks · AI 신뢰 센터
+거버넌스                     Policies · Audit · Operations Reliability
+플랫폼 설정                  Data & Runtime · AI Providers · 사용자 및 권한 · Tenant 관리
+개인 영역                    사용자 설정
 ```
 
-Feature가 비활성화되면 Applications 하위 메뉴 전체를 숨기고 직접 URL은 기능 비활성 Problem Detail 화면으로 연결한다.
+메뉴 그룹은 화면마다 바뀌지 않고 고정한다. 로그인 사용자의 capability와 Tenant Feature에 따라 접근할 수 없는 그룹은 제목과 항목을 함께 숨긴다. Feature가 비활성화되면 Applications 진입점을 숨기고 직접 URL은 기능 비활성 Problem Detail 화면으로 연결한다.
+
+`사용자 및 권한`은 좌측에 하나만 표시한다. Tenant 구성원 관리 권한이 있으면 Users & Access로 이동하며, Platform Manager는 화면 상단의 `플랫폼 계정 권한`을 통해 OIDC 사용자 활성 상태와 전역 역할 binding을 관리한다. 기존 `/settings/access`와 `/settings/users-access` URL은 북마크와 운영 절차 호환을 위해 유지한다.
 
 Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 여는 overlay panel이다. Install/Upgrade/Rollback/Uninstall 외에도 Chart import와 Local Model download를 함께 보여주며 각 항목에서 관련 Application, Chart 또는 Provider로 이동한다.
 

@@ -17,7 +17,7 @@
 
 ## 메뉴 안내
 
-짙은 좌측 내비게이션은 운영 관리, AI와 설정 기능을 구분하며 현재 메뉴를 파란 표시선으로 보여준다. 운영 통합 검색과 알림은 상단에서 항상 사용할 수 있다.
+짙은 좌측 내비게이션은 `개요`, `운영 대응`, `인프라`, `Application Delivery`, `AI 운영`, `거버넌스`, `플랫폼 설정`, `개인 영역`으로 업무를 구분하며 현재 메뉴를 파란 표시선으로 보여준다. 권한이 없는 그룹은 제목과 메뉴를 함께 숨기고, 운영 통합 검색과 알림은 상단에서 항상 사용할 수 있다.
 
 | 메뉴 | 주요 용도 |
 | --- | --- |
@@ -29,8 +29,9 @@
 | AI Chat | 일반 상담 또는 선택한 Kubernetes 리소스 기반 상담 |
 | Incidents | 반복 장애, 담당자, 상태, 영향 범위와 타임라인 관리 |
 | Runbooks | 검증 명령, 안전한 조치, 예상 결과와 복구 절차 관리 |
-| Operations | Watch, 품질 인증, 정리 정책, 운영 신뢰성 확인 |
-| Settings | 사용자·OIDC Group, Tenant/Workspace, AI Provider·모델, 시스템 설정 및 감사 이력 관리 |
+| 거버넌스 | Policies, Audit, Watch와 운영 신뢰성 확인 |
+| 플랫폼 설정 | 사용자·OIDC Group, Tenant/Workspace, AI Provider·모델과 시스템 설정 관리 |
+| 사용자 및 권한 | Tenant 구성원·그룹·기능 정책 관리, Platform Manager의 플랫폼 계정 권한 화면 연결 |
 
 ## Helm Application 배포 시작
 

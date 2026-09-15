@@ -5,9 +5,11 @@ from pathlib import Path
 import os
 
 from docx import Document
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Pt
+from docx.shared import Inches, Pt
 from docx.text.paragraph import Paragraph
 
 
@@ -46,9 +48,18 @@ GLOBAL_SHELL_GUIDANCE = (
     "목록과 분석 결과는 선택한 운영 범위에 맞춰 다시 조회됩니다."
 )
 IMAGE_ALT_TEXTS = (
-    "KlueOps 메뉴를 운영 관리, AI, 설정 영역으로 구분한 구조도",
     "감지부터 검증과 해결까지 이어지는 권장 운영 흐름도",
     "Platform, Tenant, Workspace, Cluster, Namespace, Resource의 관리 범위와 데이터 흐름도",
+)
+NAVIGATION_GROUP_ROWS = (
+    ("개요", "Dashboard"),
+    ("운영 대응", "Triage · Fleet Command · Incidents"),
+    ("인프라", "Clusters"),
+    ("Application Delivery", "Applications"),
+    ("AI 운영", "AI Analysis · AI Chat · Runbooks · AI 신뢰 센터"),
+    ("거버넌스", "Policies · Audit · Operations Reliability"),
+    ("플랫폼 설정", "Data & Runtime · AI Providers · 사용자 및 권한 · Tenant 관리"),
+    ("개인 영역", "사용자 설정"),
 )
 
 
@@ -163,6 +174,101 @@ def apply_image_alt_text(document: Document) -> None:
         properties.set("title", description)
 
 
+def update_navigation_map(document: Document) -> None:
+    """기존 3분류 그림을 권한 친화적인 업무 영역 표로 교체한다."""
+    intro = next(
+        paragraph for paragraph in document.paragraphs
+        if paragraph.text.startswith((
+            "플랫폼 기능은 운영 관리, AI, 설정의 세 영역",
+            "좌측 메뉴는 개요, 운영 대응, 인프라",
+        ))
+    )
+    intro.text = (
+        "좌측 메뉴는 개요, 운영 대응, 인프라, Application Delivery, AI 운영, 거버넌스, "
+        "플랫폼 설정과 개인 영역으로 구성됩니다. 구조는 화면마다 바뀌지 않으며, 로그인 사용자의 "
+        "capability와 Tenant 기능 정책에 따라 접근할 수 없는 그룹은 제목과 메뉴를 함께 숨깁니다."
+    )
+
+    caption = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith((
+        "그림 1 좌측 메뉴",
+        "그림 1 역할과 기능에 따른 좌측 메뉴 그룹",
+    )))
+    previous_element = caption._element.getprevious()
+    if previous_element is not None and previous_element.xpath(".//w:drawing"):
+        previous_element.getparent().remove(previous_element)
+
+    existing = next((
+        table for table in document.tables
+        if len(table.columns) == 2
+        and table.cell(0, 0).text == "업무 영역"
+        and table.cell(0, 1).text == "포함 메뉴"
+    ), None)
+    if existing is not None:
+        existing._tbl.getparent().remove(existing._tbl)
+
+    # 재실행 시에도 동일한 셀 서식과 메뉴 순서를 보장하도록 표를 다시 구성한다.
+    table = document.add_table(rows=1, cols=2)
+    table.style = "Table Grid"
+    table.autofit = False
+    table.columns[0].width = Inches(1.8)
+    table.columns[1].width = Inches(5.0)
+    borders = OxmlElement("w:tblBorders")
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        border = OxmlElement(f"w:{edge}")
+        border.set(qn("w:val"), "single")
+        border.set(qn("w:sz"), "6")
+        border.set(qn("w:color"), "D9D9D9")
+        borders.append(border)
+    table._tbl.tblPr.append(borders)
+    headers = table.rows[0].cells
+    headers[0].text = "업무 영역"
+    headers[1].text = "포함 메뉴"
+    for cell in headers:
+        shading = OxmlElement("w:shd")
+        shading.set(qn("w:fill"), "173653")
+        cell._tc.get_or_add_tcPr().append(shading)
+        cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+        for paragraph in cell.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            for run in paragraph.runs:
+                run.bold = True
+                run.font.size = Pt(9)
+                run.font.name = GUIDE_FONT
+                run._element.get_or_add_rPr().rFonts.set(qn("w:eastAsia"), GUIDE_FONT)
+                color = OxmlElement("w:color")
+                color.set(qn("w:val"), "FFFFFF")
+                run._element.get_or_add_rPr().append(color)
+    for index, (group, menus) in enumerate(NAVIGATION_GROUP_ROWS, start=1):
+        cells = table.add_row().cells
+        cells[0].text = group
+        cells[1].text = menus
+        for cell_index, cell in enumerate(cells):
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            if index % 2 == 0:
+                shading = OxmlElement("w:shd")
+                shading.set(qn("w:fill"), "F3F7FB")
+                cell._tc.get_or_add_tcPr().append(shading)
+            for paragraph in cell.paragraphs:
+                paragraph.paragraph_format.space_before = Pt(0)
+                paragraph.paragraph_format.space_after = Pt(0)
+                paragraph.paragraph_format.line_spacing = 1
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER if cell_index == 0 else WD_ALIGN_PARAGRAPH.LEFT
+                for run in paragraph.runs:
+                    run.bold = cell_index == 0
+                    run.font.size = Pt(8.5)
+    for row in table.rows:
+        for cell in row.cells:
+            margins = OxmlElement("w:tcMar")
+            for side, width in (("top", "70"), ("start", "100"), ("bottom", "70"), ("end", "100")):
+                margin = OxmlElement(f"w:{side}")
+                margin.set(qn("w:w"), width)
+                margin.set(qn("w:type"), "dxa")
+                margins.append(margin)
+            cell._tc.get_or_add_tcPr().append(margins)
+    caption._element.addprevious(table._tbl)
+    caption.text = "그림 1 역할과 기능에 따른 좌측 메뉴 그룹"
+
+
 def normalize_section_page_breaks(document: Document) -> None:
     paragraphs = document.paragraphs
     for index, paragraph in enumerate(paragraphs[:-1]):
@@ -192,8 +298,14 @@ def normalize_section_page_breaks(document: Document) -> None:
 
 
 def compact_short_tables(document: Document) -> None:
-    for table_index in (1, 3):
-        table = document.tables[table_index]
+    compact_headers = {
+        ("영역", "역할", "운영 팁"),
+        ("메뉴 그룹", "필요 Capability", "대표 사용자"),
+    }
+    for table in document.tables:
+        headers = tuple(cell.text for cell in table.rows[0].cells)
+        if headers not in compact_headers:
+            continue
         for row_index, row in enumerate(table.rows):
             row_properties = row._tr.get_or_add_trPr()
             if row_properties.find(qn("w:cantSplit")) is None:
@@ -230,8 +342,11 @@ def main() -> None:
     for paragraph in document.paragraphs:
         if paragraph.text == "좌측 메뉴의 목적과 권장 운영 흐름":
             paragraph.text = "플랫폼 기능과 권장 운영 흐름"
-        elif paragraph.text.startswith("좌측 메뉴는 운영 관리, AI, 설정의 세 영역"):
-            paragraph.text = paragraph.text.replace("좌측 메뉴는", "플랫폼 기능은", 1)
+        elif paragraph.text == "짙은 좌측 내비게이션은 운영 관리, AI와 설정 기능을 구분하며 현재 메뉴를 파란 표시선으로 보여줍니다.":
+            paragraph.text = (
+                "짙은 좌측 내비게이션은 기능을 업무 영역별로 구분하며 현재 메뉴를 파란 표시선으로 보여줍니다. "
+                "권한이 없는 그룹은 제목과 메뉴를 함께 표시하지 않습니다."
+            )
         elif paragraph.text.startswith("제품 방향  현재 제품은 Kubernetes 운영 AIOps에 집중합니다"):
             paragraph.text = (
                 "제품 방향  KlueOps는 Kubernetes 운영 AIOps와 Tenant별 Helm Application Delivery를 제공합니다. "
@@ -241,7 +356,7 @@ def main() -> None:
     if not any(paragraph.text == GLOBAL_SHELL_GUIDANCE for paragraph in document.paragraphs):
         anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text == "공통 화면 요소")
         current = insert_after(anchor, GLOBAL_SHELL_GUIDANCE, "List Bullet")
-        current = insert_after(current, "짙은 좌측 내비게이션은 운영 관리, AI와 설정 기능을 구분하며 현재 메뉴를 파란 표시선으로 보여줍니다.", "List Bullet")
+        current = insert_after(current, "짙은 좌측 내비게이션은 기능을 업무 영역별로 구분하며 현재 메뉴를 파란 표시선으로 보여줍니다. 권한이 없는 그룹은 제목과 메뉴를 함께 표시하지 않습니다.", "List Bullet")
         current = insert_after(current, "상단 검색과 운영 알림은 어느 메뉴에서도 사용할 수 있으며, 알림을 열면 관련 화면으로 이동할 수 있습니다.", "List Bullet")
         insert_after(current, "좁은 화면에서는 메뉴 버튼으로 내비게이션을 열고, 배경을 선택하거나 메뉴를 고르면 자동으로 닫힙니다.", "List Bullet")
 
@@ -307,6 +422,7 @@ def main() -> None:
         insert_after(anchor, INCIDENT_EVIDENCE_GUIDANCE, "List Bullet")
 
     update_phase_two_sections(document)
+    update_navigation_map(document)
 
     apply_supported_font(document)
     apply_image_alt_text(document)
