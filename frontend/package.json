@@ -22,14 +22,14 @@
     "pinia": "^2.2.6",
     "primeicons": "^7.0.0",
     "primevue": "^4.2.5",
-    "vue": "^3.5.12",
+    "vue": "^3.5.42",
     "vue-i18n": "^11.4.10",
     "vue-router": "^4.4.5"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.63.0",
     "@vitejs/plugin-vue": "^5.1.4",
-    "@vue/tsconfig": "^0.5.1",
+    "@vue/tsconfig": "^0.9.1",
     "orval": "^7.3.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
