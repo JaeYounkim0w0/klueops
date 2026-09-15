@@ -101,7 +101,15 @@ function listenerSummary(gateway: GatewayOptionResponse): string {
       </p>
     </div>
 
-    <div v-if="discoveryStatus !== 'AVAILABLE' || !gateways.length" class="route-prerequisite-guide">
+    <div v-if="discoveryStatus === 'UNAVAILABLE'" class="route-prerequisite-guide">
+      <i class="pi pi-exclamation-triangle"></i>
+      <div>
+        <strong>Service와 Gateway 선택 정보를 준비하지 못했습니다.</strong>
+        <p>위 오류를 먼저 해결한 뒤 다시 조회하세요. Chart 렌더링 실패를 Gateway 미설치로 판단하지 않습니다.</p>
+      </div>
+    </div>
+
+    <div v-else-if="!gateways.length" class="route-prerequisite-guide">
       <i class="pi pi-exclamation-triangle"></i>
       <div>
         <strong>선택할 수 있는 Gateway가 없습니다.</strong>

@@ -16,6 +16,7 @@ import java.util.zip.GZIPInputStream;
 @Component
 public class HelmChartArchiveInspector implements ChartArchiveInspectionPort {
     private static final int TAR_BLOCK = 512;
+    private static final int MAXIMUM_AI_REFERENCE_BYTES = 512 * 1024;
     private final long maximumCompressedBytes;
     private final long maximumExpandedBytes;
     private final int maximumFiles;
@@ -40,6 +41,8 @@ public class HelmChartArchiveInspector implements ChartArchiveInspectionPort {
             long expanded = 0;
             int files = 0;
             String chartYaml = null;
+            String defaultValuesYaml = null;
+            String valuesSchemaJson = null;
             while (readBlock(gzip, header)) {
                 if (allZero(header)) break;
                 String name = text(header, 0, 100);
@@ -53,12 +56,23 @@ public class HelmChartArchiveInspector implements ChartArchiveInspectionPort {
                 if (files > maximumFiles || expanded + size > maximumExpandedBytes) {
                     throw new IllegalArgumentException("Chart archive expands beyond the configured safety limit");
                 }
-                boolean metadata = name.endsWith("/Chart.yaml") && name.chars().filter(ch -> ch == '/').count() == 1;
-                ByteArrayOutputStream capture = metadata ? new ByteArrayOutputStream() : null;
+                boolean rootFile = name.chars().filter(ch -> ch == '/').count() == 1;
+                boolean metadata = rootFile && name.endsWith("/Chart.yaml");
+                boolean defaultValues = rootFile && name.endsWith("/values.yaml");
+                boolean valuesSchema = rootFile && name.endsWith("/values.schema.json");
+                boolean reference = defaultValues || valuesSchema;
+                // LLM 참조 자료는 Chart 전체가 아니라 bounded root Values/Schema만 수집한다.
+                ByteArrayOutputStream capture = (metadata || (reference && size <= MAXIMUM_AI_REFERENCE_BYTES))
+                        ? new ByteArrayOutputStream() : null;
                 copyEntry(gzip, size, capture);
                 expanded += size;
                 skipPadding(gzip, size);
-                if (capture != null) chartYaml = capture.toString(StandardCharsets.UTF_8);
+                if (capture != null) {
+                    String content = capture.toString(StandardCharsets.UTF_8);
+                    if (metadata) chartYaml = content;
+                    else if (defaultValues) defaultValuesYaml = content;
+                    else if (valuesSchema) valuesSchemaJson = content;
+                }
             }
             if (chartYaml == null || chartYaml.isBlank()) {
                 throw new IllegalArgumentException("Chart.yaml was not found at the chart root");
@@ -67,7 +81,8 @@ public class HelmChartArchiveInspector implements ChartArchiveInspectionPort {
             String name = requiredMetadata(metadata, "name");
             String version = requiredMetadata(metadata, "version");
             return new InspectedArchive(name, version, metadata.path("appVersion").asText(null),
-                    metadata.path("description").asText(null), chartYaml, files, expanded);
+                    metadata.path("description").asText(null), chartYaml, defaultValuesYaml, valuesSchemaJson,
+                    files, expanded);
         } catch (IOException exception) {
             throw new IllegalArgumentException("Invalid Helm chart archive", exception);
         }

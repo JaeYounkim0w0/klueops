@@ -243,7 +243,9 @@ Install 실행이 `202 Accepted`되면 같은 transaction에서 `Application(DEP
 
 Job Center는 Async Job의 queue, progress, cancel과 일시적 실행 출력을 보여주는 전역 read model이다. Application Detail의 History는 `ReleaseOperation`을 기준으로 해당 대상의 install/upgrade/rollback/uninstall 결과와 Audit을 보여준다. 두 화면은 같은 `asyncJobId`로 연결하며 별도 Application Operations aggregate나 중복 API를 만들지 않는다.
 
-Secret-like Values는 평문 검색, diff와 AI 전송에서 제외한다. DB 저장이 필요한 경우 기존 AES-256-GCM master key 계약으로 전체 Values payload를 암호화하고 key name과 mask만 UI에 노출한다.
+Secret-like Values는 평문 검색, diff와 AI 전송에서 제외한다. DB 저장이 필요한 경우 기존 AES-256-GCM master key 계약으로 전체 Values payload를 암호화하고 key name과 mask만 UI에 노출한다. AI 전송 전 민감 key 값을 `***REDACTED***`로 치환하고, 제안 검증 후에는 사용자가 입력한 원래 값을 서버에서 복원하므로 marker가 실제 Revision 값으로 저장되지 않는다.
+
+Values 제안은 `helm-values.v2` 계약을 사용한다. Backend가 immutable Chart artifact의 root `values.yaml`과 선택형 `values.schema.json`을 bounded context로 추출하고 Chart/package, 제공사/source, Chart/App version과 현재 Custom Values를 함께 `HELM_VALUES` Provider에 전달한다. 첫 결과는 동일 artifact의 `helm template`로 검증하며 실패하면 masked·bounded Helm 오류를 한 번 재피드백한다. 두 번째 결과도 실패하면 제안을 반환하지 않는다. 수동 Revision 저장도 같은 렌더 검증을 통과해야 하며 Helm 프로세스 실행 중 DB transaction을 유지하지 않는다.
 
 ## 6. Port 설계
 
@@ -263,7 +265,7 @@ interface ChartArtifactStorePort {
 }
 
 interface HelmValuesSuggestionPort {
-    ValuesSuggestion suggest(SanitizedValuesContext context);
+    String suggest(TenantId tenantId, ExactChartValuesContext context);
 }
 
 interface HelmRunnerPort {
@@ -380,6 +382,8 @@ flowchart TD
 ```
 
 위험 신호는 `BLOCKED`, `REQUIRES_APPROVAL`, `WARNING`, `PASSED`로 표시한다. CRD, cluster-wide RBAC, webhook, privileged/host access, hook Job와 PVC 삭제 가능성은 별도 승인 없이는 실행하지 않는다.
+
+Helm 3 release metadata는 대상 Namespace의 Secret에 저장된다. Backend는 Preview와 비동기 install/upgrade 직전에 등록 Cluster credential로 SelfSubjectAccessReview를 수행해 Secret `get/list/create` 최소 권한을 확인한다. Namespace 목록 조회 권한만 있는 대상을 배포 가능 대상으로 오인하지 않으며, 거부된 verb와 Namespace를 사용자에게 표시한다. 이 원격 검증 중에는 DB transaction을 유지하지 않는다.
 
 ### 8.1 Exposure 실행 순서
 

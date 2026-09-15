@@ -96,6 +96,12 @@ public class JdbcApplicationDeliveryRepositoryAdapter implements ApplicationDeli
     }
 
     @Override
+    public Optional<TenantChart> findChart(UUID tenantId, UUID chartId) {
+        return first(jdbc.query("select * from tenant_charts where tenant_id=? and id=?", this::chart,
+                tenantId, chartId));
+    }
+
+    @Override
     public TenantChart saveChart(TenantChart chart) {
         jdbc.update("""
                 insert into tenant_charts(id,tenant_id,name,description,source_type,source_name,repository_url,

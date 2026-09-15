@@ -19,8 +19,8 @@ COLLECTION_GUIDANCE = (
     "source별 성공, 실패, 건너뜀, 지연을 확인합니다. PARTIAL이면 실패 source를 "
     "확인하고 credential, API 연결 또는 권한을 복구한 뒤 같은 범위를 재분석합니다."
 )
-# macOS Word와 headless PDF 렌더러 모두에서 한글 글리프가 유지되는 시스템 글꼴을 명시한다.
-GUIDE_FONT = "Apple SD Gothic Neo"
+# macOS Word와 headless LibreOffice 모두에서 한글 글리프가 유지되는 범용 Unicode 글꼴을 명시한다.
+GUIDE_FONT = "Arial Unicode MS"
 CONSOLE_HEADING = "Kubernetes 콘솔"
 CONSOLE_VERIFICATION_GUIDANCE = (
     "변경 또는 삭제 명령이 끝나면 운영 결과 검증에서 Kubernetes 상태의 전후 비교 판정과 "
@@ -43,6 +43,18 @@ INCIDENT_EVIDENCE_GUIDANCE = (
     "전후 Snapshot 해시가 포함됩니다. credential, 실시간 로그와 Snapshot 원문은 포함되지 않습니다."
 )
 AI_PROVIDER_HEADING = "AI Provider와 Local Models"
+VALUES_AI_GUIDANCE = (
+    "AI로 Values 제안은 선택한 Chart의 이름과 제공사, Chart와 Application 버전, 기본 values.yaml 골격과 "
+    "values.schema.json을 기준으로 요청을 반영합니다. 생성 결과는 같은 Chart로 Helm 렌더링을 통과한 경우만 표시됩니다."
+)
+VALUES_VALIDATION_GUIDANCE = (
+    "새 Values는 범용 예시 key 없이 빈 override에서 시작합니다. 수동으로 작성한 YAML도 Revision 저장 전에 정확한 "
+    "Chart로 렌더링하며, AI 제안이 두 번의 생성과 검증 안에 성공하지 못하면 수동 편집을 계속 사용합니다."
+)
+HELM_STORAGE_GUIDANCE = (
+    "Preview는 등록 Cluster credential이 대상 Namespace에서 Helm release Secret을 get/list/create할 수 있는지 먼저 "
+    "확인합니다. Namespace 조회가 되더라도 이 권한이 부족하면 승인 전에 차단하고 거부된 권한을 표시합니다."
+)
 GLOBAL_SHELL_GUIDANCE = (
     "상단 컨텍스트 바에서 현재 Tenant와 Workspace를 확인하고 변경합니다. "
     "목록과 분석 결과는 선택한 운영 범위에 맞춰 다시 조회됩니다."
@@ -116,6 +128,15 @@ def update_phase_two_sections(document: Document) -> None:
         anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("Values Profile과 대상 Cluster/Namespace를 정한 뒤"))
         current = insert_after(anchor, service_port_guidance, "List Bullet")
         insert_after(current, gateway_prerequisite_guidance, "List Bullet")
+
+    if not any(paragraph.text == VALUES_AI_GUIDANCE for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("Values Profile과 대상 Cluster/Namespace를 정한 뒤"))
+        current = insert_after(anchor, VALUES_AI_GUIDANCE, "List Bullet")
+        insert_after(current, VALUES_VALIDATION_GUIDANCE, "List Bullet")
+
+    if not any(paragraph.text == HELM_STORAGE_GUIDANCE for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("Values Profile과 대상 Cluster/Namespace를 정한 뒤"))
+        insert_after(anchor, HELM_STORAGE_GUIDANCE, "List Bullet")
 
     # 더 이상 제품 방향과 맞지 않는 Argo CD 중심 도식과 참고 링크를 제거한다.
     obsolete_caption = next(

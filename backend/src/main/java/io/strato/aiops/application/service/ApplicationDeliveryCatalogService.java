@@ -2,14 +2,12 @@ package io.strato.aiops.application.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.strato.aiops.application.port.out.ApplicationDeliveryRepositoryPort;
 import io.strato.aiops.application.port.out.ChartArchiveInspectionPort;
 import io.strato.aiops.application.port.out.ChartAcquisitionPort;
 import io.strato.aiops.application.port.out.ChartCatalogPort;
 import io.strato.aiops.application.port.out.SecretCryptoPort;
 import io.strato.aiops.application.port.out.RemoteSourceValidationPort;
-import io.strato.aiops.application.port.out.HelmValuesSuggestionPort;
 import io.strato.aiops.domain.applicationdelivery.ChartSourceType;
 import io.strato.aiops.domain.applicationdelivery.ChartSource;
 import io.strato.aiops.domain.applicationdelivery.ChartTrustStatus;
@@ -40,17 +38,18 @@ public class ApplicationDeliveryCatalogService {
     private final ApplicationDeliveryRepositoryPort repository;
     private final SecretCryptoPort secretCrypto;
     private final ObjectMapper objectMapper;
-    private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
     private final Clock clock;
     private final RemoteSourceValidationPort sourceValidator;
-    private final HelmValuesSuggestionPort valuesSuggestion;
+    private final HelmValuesSuggestionService valuesSuggestion;
+    private final ValuesRevisionWriter revisionWriter;
 
     public ApplicationDeliveryCatalogService(ChartCatalogPort catalog, ChartAcquisitionPort acquisition,
                                              ChartArchiveInspectionPort archiveInspector,
                                              ApplicationDeliveryRepositoryPort repository,
                                              SecretCryptoPort secretCrypto, ObjectMapper objectMapper, Clock clock,
                                              RemoteSourceValidationPort sourceValidator,
-                                             HelmValuesSuggestionPort valuesSuggestion) {
+                                             HelmValuesSuggestionService valuesSuggestion,
+                                             ValuesRevisionWriter revisionWriter) {
         this.catalog = catalog;
         this.acquisition = acquisition;
         this.archiveInspector = archiveInspector;
@@ -60,6 +59,7 @@ public class ApplicationDeliveryCatalogService {
         this.clock = clock;
         this.sourceValidator = sourceValidator;
         this.valuesSuggestion = valuesSuggestion;
+        this.revisionWriter = revisionWriter;
     }
 
     @Transactional
@@ -160,15 +160,11 @@ public class ApplicationDeliveryCatalogService {
         return repository.findProfiles(tenantId, chartVersionId, 100);
     }
 
-    @Transactional
     public ValuesRevision createRevision(UUID tenantId, UUID profileId, String valuesYaml, String actor) {
-        repository.findProfile(tenantId, profileId).orElseThrow();
-        validateValues(valuesYaml);
-        int revision = repository.nextRevision(profileId);
-        ValuesRevision saved = new ValuesRevision(UUID.randomUUID(), profileId, revision,
-                secretCrypto.encrypt(valuesYaml), sha256(valuesYaml.getBytes(StandardCharsets.UTF_8)),
-                revision == 1 ? null : revision - 1, actor, clock.instant());
-        return repository.saveRevision(saved);
+        ValuesProfile profile = repository.findProfile(tenantId, profileId).orElseThrow();
+        // Helm CLI 검증은 DB transaction 밖에서 수행해 느린 외부 프로세스가 connection을 점유하지 않게 한다.
+        valuesSuggestion.requireValid(tenantId, profile.chartVersionId(), valuesYaml);
+        return revisionWriter.create(tenantId, profileId, valuesYaml, actor);
     }
 
     @Transactional(readOnly = true)
@@ -183,60 +179,9 @@ public class ApplicationDeliveryCatalogService {
         return secretCrypto.decrypt(revision.encryptedValues());
     }
 
-    public String suggestValues(UUID tenantId, UUID chartVersionId, String currentValues, String instruction) {
-        repository.findVersion(tenantId, chartVersionId).orElseThrow();
-        validateValues(currentValues);
-        if (instruction == null || instruction.isBlank() || instruction.length() > 2000)
-            throw new IllegalArgumentException("A Values instruction of up to 2000 characters is required");
-        String suggestion = stripMarkdown(valuesSuggestion.suggest(tenantId, maskSensitiveValues(currentValues),
-                instruction.trim()));
-        validateValues(suggestion);
-        return suggestion;
-    }
-
-    private String maskSensitiveValues(String valuesYaml) {
-        try {
-            Object value = yamlMapper.readValue(valuesYaml, Object.class);
-            maskSensitiveNode(value);
-            return yamlMapper.writeValueAsString(value);
-        } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("Values YAML is invalid", exception);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private void maskSensitiveNode(Object value) {
-        if (value instanceof Map<?, ?> map) {
-            ((Map<Object, Object>) map).replaceAll((key, child) -> {
-                if (String.valueOf(key).matches("(?i).*(password|secret|token|api[-_]?key|credential).*") )
-                    return "***REDACTED***";
-                maskSensitiveNode(child);
-                return child;
-            });
-        } else if (value instanceof List<?> list) {
-            list.forEach(this::maskSensitiveNode);
-        }
-    }
-
-    private String stripMarkdown(String value) {
-        String result = value == null ? "" : value.trim();
-        if (result.startsWith("```")) {
-            int firstBreak = result.indexOf('\n');
-            int end = result.lastIndexOf("```");
-            if (firstBreak >= 0 && end > firstBreak) result = result.substring(firstBreak + 1, end).trim();
-        }
-        return result;
-    }
-
-    private void validateValues(String valuesYaml) {
-        if (valuesYaml == null || valuesYaml.isBlank()) throw new IllegalArgumentException("Values YAML is required");
-        if (valuesYaml.length() > 1024 * 1024) throw new IllegalArgumentException("Values YAML exceeds 1 MiB");
-        try {
-            Object parsed = yamlMapper.readValue(valuesYaml, Object.class);
-            if (!(parsed instanceof Map<?, ?>)) throw new IllegalArgumentException("Values YAML root must be an object");
-        } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("Values YAML is invalid", exception);
-        }
+    public HelmValuesSuggestionService.SuggestionResult suggestValues(UUID tenantId, UUID chartVersionId,
+                                                                       String currentValues, String instruction) {
+        return valuesSuggestion.suggest(tenantId, chartVersionId, currentValues, instruction);
     }
 
     private String metadata(ChartArchiveInspectionPort.InspectedArchive inspected) {

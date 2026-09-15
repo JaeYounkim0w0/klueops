@@ -77,5 +77,9 @@ describe('Phase 2 product UI contract', () => {
 
     expect(valuesStudio).toContain('class="delivery-assistant-actions"');
     expect(deliveryStyle).toContain('.delivery-assistant-actions { display: flex; justify-content: flex-end;');
+    expect(valuesStudio).toContain("const EMPTY_CUSTOM_VALUES = '{}\\n';");
+    expect(valuesStudio).toContain('실제 Helm 렌더링을 통과한 결과만 표시합니다');
+    expect(valuesStudio).toContain('assistantMessage');
+    expect(valuesStudio).toContain('Helm 검증 완료');
   });
 });

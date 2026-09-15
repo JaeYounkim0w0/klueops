@@ -1691,6 +1691,18 @@ export interface DeploymentAcceptedResponse {
   operationId: string;
 }
 
+export interface ValuesSuggestionResponse {
+  valuesYaml: string;
+  promptVersion: string;
+  validationStatus: 'HELM_TEMPLATE_VALIDATED';
+  attempts: number;
+  chartName: string;
+  providerName?: string;
+  chartVersion: string;
+  applicationVersion?: string;
+  schemaIncluded: boolean;
+}
+
 export interface ReleaseOperationResponse {
   id: string;
   jobId: string;
@@ -2002,7 +2014,7 @@ export const api = {
     `/api/v2/application-delivery/values-revisions/${encodeURIComponent(revisionId)}/values?tenantId=${encodeURIComponent(tenantId)}`
   ),
   suggestValues: (body: { tenantId: string; chartVersionId: string; currentValuesYaml: string; instruction: string }) =>
-    request<{ valuesYaml: string }>('/api/v2/application-delivery/values-suggestions', {
+    request<ValuesSuggestionResponse>('/api/v2/application-delivery/values-suggestions', {
       method: 'POST', body: JSON.stringify(body),
     }, { timeoutMs: 180_000 }),
   getDeploymentTargetOptions: (body: {

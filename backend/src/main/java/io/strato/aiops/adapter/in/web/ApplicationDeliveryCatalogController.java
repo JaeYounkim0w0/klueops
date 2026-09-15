@@ -3,6 +3,7 @@ package io.strato.aiops.adapter.in.web;
 import io.strato.aiops.adapter.in.web.security.CurrentAccessResolver;
 import io.strato.aiops.application.port.out.ChartCatalogPort;
 import io.strato.aiops.application.service.ApplicationDeliveryCatalogService;
+import io.strato.aiops.application.service.HelmValuesSuggestionService;
 import io.strato.aiops.application.service.IdentityAccessService;
 import io.strato.aiops.application.service.ResolvedAccess;
 import io.strato.aiops.application.service.TenantFeatureGuard;
@@ -183,10 +184,11 @@ public class ApplicationDeliveryCatalogController {
     }
 
     @PostMapping("/values-suggestions")
-    public ValuesPayloadResponse suggestValues(@Valid @RequestBody ValuesSuggestionRequest request,
-                                                Authentication authentication) {
+    @Operation(summary = "Suggest and Helm-validate custom Values for an exact chart version")
+    public ValuesSuggestionResponse suggestValues(@Valid @RequestBody ValuesSuggestionRequest request,
+                                                   Authentication authentication) {
         require(authentication, request.tenantId(), Capability.VALUES_EDIT);
-        return new ValuesPayloadResponse(catalogService.suggestValues(request.tenantId(), request.chartVersionId(),
+        return ValuesSuggestionResponse.from(catalogService.suggestValues(request.tenantId(), request.chartVersionId(),
                 request.currentValuesYaml(), request.instruction()));
     }
 
@@ -214,6 +216,15 @@ public class ApplicationDeliveryCatalogController {
                                            @NotBlank String endpoint, String credential, boolean enabled) {
     }
     public record ValuesPayloadResponse(String valuesYaml) {
+    }
+    public record ValuesSuggestionResponse(String valuesYaml, String promptVersion, String validationStatus,
+                                           int attempts, String chartName, String providerName, String chartVersion,
+                                           String applicationVersion, boolean schemaIncluded) {
+        static ValuesSuggestionResponse from(HelmValuesSuggestionService.SuggestionResult result) {
+            return new ValuesSuggestionResponse(result.valuesYaml(), result.promptVersion(), result.validationStatus(),
+                    result.attempts(), result.chartName(), result.providerName(), result.chartVersion(),
+                    result.applicationVersion(), result.schemaIncluded());
+        }
     }
     public record ValuesSuggestionRequest(@NotNull UUID tenantId, @NotNull UUID chartVersionId,
                                           @NotBlank String currentValuesYaml, @NotBlank String instruction) { }

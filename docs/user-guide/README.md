@@ -36,8 +36,8 @@
 ## Helm Application 배포 시작
 
 1. `Applications > Chart Library`에서 보유 Chart를 선택한다. 필요한 Chart가 없으면 `Discover`에서 검색해 현재 Tenant로 가져오거나 Source/.tgz를 등록한다.
-2. Values Profile을 생성하고 YAML을 저장한다. AI 제안은 diff를 검토한 뒤 적용하며 Secret은 입력·출력에서 노출하지 않는다.
-3. `배포`에서 권한이 있는 Cluster와 기존 Namespace를 선택한다. 새 Namespace는 capability가 있을 때만 생성한다.
+2. Values Profile을 생성하고 YAML을 저장한다. 새 Profile은 빈 override `{}`에서 시작하며 수동 YAML도 해당 Chart로 Helm 렌더링을 통과해야 저장된다. `AI로 Values 제안`은 선택한 Chart의 제공사, Chart/App 버전, 기본 Values와 Schema를 기준으로 요청을 반영하고 Helm 검증이 끝난 결과만 보여준다. Chart 정보와 검증 횟수를 확인하고 제안을 검토한 뒤 적용한다. Secret 값은 AI로 전송하지 않는다.
+3. `배포`에서 권한이 있는 Cluster와 기존 Namespace를 선택한다. 새 Namespace는 capability가 있을 때만 생성한다. Preview는 등록 Cluster credential이 대상 Namespace의 Helm release Secret을 `get/list/create`할 수 있는지 먼저 검사하며, 부족하면 승인 전에 차단하고 필요한 권한을 표시한다.
 4. 노출 방식은 `Cluster 내부`, `Chart에서 관리`, `KlueOps HTTPRoute` 중에서 고른다. Chart의 Values가 Ingress/HTTPRoute를 지원하면 `Chart에서 관리`를 선택한다. `KlueOps HTTPRoute`는 렌더링된 Service/Port와 대상 Cluster의 READY Gateway를 목록에서 고른 뒤 hostname/path를 입력한다. Service Port는 `spec.ports[].port`이며 `targetPort`나 `nodePort`가 아니다.
 5. HTTPRoute 목록이 비어 있으면 Cluster Admin이 Gateway API CRD, Gateway Controller와 HTTP/HTTPS listener가 있는 Gateway를 준비했는지 `kubectl get gatewayclass`, `kubectl get gateway -A`로 확인한다. 등록한 Cluster credential에도 Gateway `get/list` 읽기 권한이 필요하다. KlueOps가 이를 자동 설치하지 않는다. 나중에 설치했다면 `다시 조회`하고, 먼저 내부용으로 배포했다면 Application Upgrade에서 노출을 추가한다.
 6. Preview에서 렌더링 결과와 경고를 확인한다. `Chart에서 관리`는 렌더 결과에 Ingress 또는 HTTPRoute가 실제 포함되어야 한다. 정확한 확인 문구를 입력해 실행한다.

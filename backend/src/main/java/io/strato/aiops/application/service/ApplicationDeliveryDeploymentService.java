@@ -60,6 +60,7 @@ public class ApplicationDeliveryDeploymentService {
     private final RenderedManifestSanitizationPort manifestSanitizer;
     private final ApplicationRuntimeInspectionPort runtimeInspection;
     private final ApplicationExposurePort exposure;
+    private final HelmReleaseStoragePreflight helmStoragePreflight;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -74,7 +75,7 @@ public class ApplicationDeliveryDeploymentService {
                                                 ApplicationDeploymentExecutorPort executor,
                                                 RenderedManifestSanitizationPort manifestSanitizer,
                                                 ApplicationRuntimeInspectionPort runtimeInspection,
-                                                ApplicationExposurePort exposure,
+                                                ApplicationExposurePort exposure, HelmReleaseStoragePreflight helmStoragePreflight,
                                                 ObjectMapper objectMapper, Clock clock) {
         this.catalog = catalog;
         this.lifecycle = lifecycle;
@@ -89,6 +90,7 @@ public class ApplicationDeliveryDeploymentService {
         this.manifestSanitizer = manifestSanitizer;
         this.runtimeInspection = runtimeInspection;
         this.exposure = exposure;
+        this.helmStoragePreflight = helmStoragePreflight;
         this.objectMapper = objectMapper;
         this.clock = clock;
     }
@@ -107,6 +109,8 @@ public class ApplicationDeliveryDeploymentService {
         ApplicationExposureMode exposureMode = ApplicationExposureMode.fromNullable(exposureType);
         validateTarget(namespace, releaseName, exposureMode, hostname, exposurePath, backendServiceName,
                 backendServicePort, gatewayName, gatewayNamespace);
+        KubernetesConnectionCredential connectionCredential = connectionCredential(clusterId);
+        helmStoragePreflight.require(connectionCredential, namespace);
         var version = catalog.findVersion(tenantId, chartVersionId).orElseThrow();
         String values = valuesRevisionId == null ? null : decryptedValues(tenantId, valuesRevisionId);
         String manifest = helmRunner.render(releaseName, namespace, catalog.loadArtifact(tenantId, chartVersionId), values);
@@ -190,9 +194,11 @@ public class ApplicationDeliveryDeploymentService {
         lifecycle.saveOperation(new ReleaseOperation(operationId, applicationId, jobId, operationType, "RUNNING",
                 null, null, null, plan.createdBy(), started, null));
         try {
+            KubernetesConnectionCredential connectionCredential = connectionCredential(plan.clusterId());
+            helmStoragePreflight.require(connectionCredential, plan.namespace());
             if (ApplicationExposureMode.fromNullable(plan.exposureType()) == ApplicationExposureMode.HTTP_ROUTE) {
                 // Preview 이후 Gateway가 삭제되거나 준비 상태가 바뀐 경우 Helm 변경 전에 중단한다.
-                requireGateway(exposure.discoverHttpGateways(connectionCredential(plan.clusterId())),
+                requireGateway(exposure.discoverHttpGateways(connectionCredential),
                         plan.gatewayNamespace(), plan.gatewayName());
             }
             helmRunner.install(plan, catalog.loadArtifact(tenantId, plan.chartVersionId()),

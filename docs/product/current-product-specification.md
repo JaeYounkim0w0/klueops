@@ -156,7 +156,9 @@ AI Trust Center는 평가 corpus, category별 정확도, 근거 coverage, halluc
 
 - Artifact Hub에서 Helm Chart를 검색해 정확한 버전을 Tenant Library로 가져오거나 `.tgz`, Helm Repository source를 등록한다.
 - Chart artifact는 digest와 함께 Tenant 범위로 보관하며 Custom은 암호화된 versioned Values Profile만 지원한다.
-- 보유 Chart를 기본 진입점으로 선택하고 Values, Cluster/Namespace, `Cluster 내부`·`Chart에서 관리`·`KlueOps HTTPRoute` Exposure와 preview를 거쳐 Helm install을 실행한다. Chart-managed 모드는 렌더된 Ingress/HTTPRoute 존재를 검증하고, KlueOps HTTPRoute는 Service/Port와 Gateway listener를 사전 확인한다.
+- Values Studio는 범용 Chart key를 기본 입력하지 않고 빈 override에서 시작한다. 수동 Revision은 정확한 immutable Chart로 Helm 렌더링한 뒤 저장한다.
+- AI Values 제안은 Chart 이름·package·제공사, Chart/App 버전, 해당 artifact의 기본 Values 골격과 선택형 JSON Schema를 `helm-values.v2` bounded prompt로 사용한다. 생성 결과는 최대 2회 안에서 Helm 검증·오류 재피드백을 거치며 검증된 YAML만 사용자에게 표시한다. Secret 값은 prompt에서 마스킹하고 결과에서 원래 값을 복원한다.
+- 보유 Chart를 기본 진입점으로 선택하고 Values, Cluster/Namespace, `Cluster 내부`·`Chart에서 관리`·`KlueOps HTTPRoute` Exposure와 preview를 거쳐 Helm install을 실행한다. Chart-managed 모드는 렌더된 Ingress/HTTPRoute 존재를 검증하고, KlueOps HTTPRoute는 Service/Port와 Gateway listener를 사전 확인한다. Preview와 실제 실행 직전에는 등록 Cluster credential의 대상 Namespace Helm Secret `get/list/create` 권한을 SSAR로 확인한다.
 - install/upgrade/rollback/uninstall은 비동기 Job과 ReleaseOperation으로 추적하며 중단된 작업은 timeout 후 실패 상태로 복구한다.
 - Application 상세에서 Helm 상태, workload/Pod health, Service·Ingress·HTTPRoute 접근 endpoint와 `READY/APPLIED/DEGRADED` 상태, operation history를 확인한다.
 - Tenant 기능 정책과 `TENANT_ADMIN`, `CLUSTER_ADMIN`, `OPERATOR`, `VIEWER` capability를 메뉴와 API에서 함께 평가한다. Platform Manager는 모든 Tenant 제품 권한을 가지되 대상 Kubernetes RBAC는 우회하지 않는다.
@@ -219,7 +221,7 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - Frontend: 28 files, 97 tests, typecheck와 production build 통과
 - OpenAPI runtime snapshot과 Orval generated client drift 통과
 - architecture, security, packaging, docs와 maintainability gate 통과
-- Docker Desktop Kubernetes Helm revision 90에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
+- Docker Desktop Kubernetes Helm revision 99에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
 - OIDC 관리자 사용자로 `dev-master/default`의 격리 Runner `kubectl get pods --field-selector=status.phase!=Running,status.phase!=Succeeded -o wide` 실행 성공, exit code `0`, 130ms
 - 로컬 Keycloak 네 역할과 두 Tenant object scope 격리 검증 통과
 - read API 30회/동시성 10 기준 p95 14ms, Backend/Keycloak 순차 재시작, 앱 DB Flyway migration 28건·Keycloak `aiops` Realm sentinel 격리 복원과 AI timeout fallback 증빙
@@ -234,6 +236,7 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - README의 Dashboard와 Kubernetes Console/Cook Book 화면은 별도 namespace의 실제 설치에서 캡처했으며 계정, cluster 식별자와 내부 주소를 공개용 값으로 마스킹했다. 문서 검증은 두 화면 asset의 존재를 확인한다.
 - Docker Desktop의 `aiops-system`에서 OIDC 로그인 후 Artifact Hub 검색, nginx Chart import, 암호화 Values 저장·재조회, preview의 Secret redaction, Namespace 생성, Helm install의 `1/1` workload health와 Service endpoint, uninstall, Users & Access, AI Provider 연결 검증과 Ollama model 동기화를 브라우저로 확인했다.
 - Phase 2 공통 제품 Shell을 로컬 Kubernetes Frontend 이미지에 반영하고 실제 OIDC 세션에서 Applications 상태 요약·목록·Runtime/Endpoint inspector, Dashboard, 모바일 navigation과 Application 배포 chooser를 브라우저로 확인했다.
+- CloudPirates nginx Chart `0.16.8`/App `1.31.5`에서 숫자 `targetPort` 수동 Values의 Schema 차단과 올바른 named port 수동 Preview를 확인했다. 같은 Chart의 기본 Values/Schema를 사용하는 `helm-values.v2` AI 제안은 1회에 replicas 2, ClusterIP, `targetPort: "http"`를 생성해 Helm 검증을 통과했고, 실제 install `2/2 Ready`와 HTTP 200 접근을 확인했다. Helm Secret 권한이 없는 Namespace는 Preview에서 거부 verb를 표시해 승인 전에 차단했다.
 
 검증 명령과 최신 로컬 품질 증적은 `docs/operations/release-candidate-checklist.md`를 따른다. 문서와 스크립트의 `release-candidate` 명칭은 기존 자동화 호환을 위해 유지하며 상용 릴리스 판정을 의미하지 않는다.
 

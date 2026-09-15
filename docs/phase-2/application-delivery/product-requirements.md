@@ -153,7 +153,7 @@ Import 상태는 `IMPORTING → VALIDATING → READY | REJECTED`로 노출하며
 1. immutable Chart version을 선택한다.
 2. 새 Values Profile을 생성하거나 기존 revision을 복제한다.
 3. Schema Form, YAML Editor 또는 AI Assistant로 값을 수정한다.
-4. schema/type/unknown key와 Secret pattern을 검사한다.
+4. 수동 입력과 AI 결과 모두 선택한 immutable Chart artifact로 `helm template`을 실행해 schema/type/template 계약을 검사한다.
 5. 저장 시 전체 values, parent revision, author, SHA-256과 redacted diff를 기록한다.
 
 ### 6.4 대상과 Namespace
@@ -187,7 +187,7 @@ TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-m
 1. Chart version과 Values Profile revision을 고정한다.
 2. Tenant에 속한 Cluster, 허용 Namespace와 고유 Release 이름을 선택한다.
 3. Exposure mode와 Service/Port/hostname/TLS/DNS를 선택한다.
-4. render, policy, live diff와 RBAC/Gateway preflight를 실행한다.
+4. render, policy, live diff와 RBAC/Gateway preflight를 실행한다. Helm 3 release metadata 저장에 필요한 대상 Namespace Secret `get/list/create` 권한은 Preview와 실제 실행 직전에 SSAR로 재검증하며, 부족하면 exact confirmation 전에 차단한다.
 5. Helm resource와 companion resource의 생성·변경·삭제, cluster-scope, hook와 위험 설정을 표시한다.
 6. exact confirmation 후 async Helm job을 시작한다.
 7. 요청이 수락되면 Application을 `DEPLOYING` 상태로 만들어 Deployed Applications에 즉시 표시하고 Job Center/Job Dock에서 진행을 추적한다.
@@ -212,26 +212,30 @@ Application은 KlueOps가 배포한 Helm Release만 대상으로 하며 Cluster�
 
 ## 7. Custom Values와 AI Assistant
 
-AI는 배포자가 아니라 Values 제안자다. 출력은 다음 provider-neutral 계약만 사용한다.
+AI는 배포자가 아니라 Values 제안자다. `helm-values.v2` prompt는 현재 편집 중인 Custom Values를 기준으로 정확한 Chart 이름, package, 제공사/source, Chart version, App version, Chart root `values.yaml` 골격과 선택형 `values.schema.json`을 함께 전달한다. Chart reference의 주석과 설명은 신뢰하지 않는 data로 취급하며 prompt context는 크기를 제한한다.
+
+API는 실제 Helm 렌더링을 통과한 완전한 Custom Values YAML과 검증 metadata를 다음 provider-neutral 계약으로 반환한다.
 
 ```json
 {
-  "schemaVersion": "helm-values-suggestion.v1",
-  "summary": "요청을 반영한 변경 설명",
-  "patch": {
-    "replicaCount": 3,
-    "service": { "type": "ClusterIP" }
-  },
-  "assumptions": [],
-  "warnings": [],
-  "evidence": ["values.schema.json#/properties/replicaCount"]
+  "valuesYaml": "replicaCount: 3\nservice:\n  type: ClusterIP\n",
+  "promptVersion": "helm-values.v2",
+  "validationStatus": "HELM_TEMPLATE_VALIDATED",
+  "attempts": 1,
+  "chartName": "nginx",
+  "providerName": "cloudpirates-nginx",
+  "chartVersion": "0.16.8",
+  "applicationVersion": "1.31.5",
+  "schemaIncluded": true
 }
 ```
 
 - Chart README, comments와 templates는 신뢰하지 않는 data이며 system instruction이 아니다.
 - Secret value, Kubernetes credential, ConfigMap 원문과 인증서는 prompt에 포함하지 않는다.
-- LLM patch는 허용된 Values key에만 merge하고 전체 파일을 임의 교체하지 않는다.
-- schema validation과 `helm template`이 실패하면 제안을 적용하거나 배포하지 않는다.
+- LLM은 현재 Custom Values의 관련 없는 key를 보존하고 사용자 요청에 필요한 override만 변경한다. 범용 기본 key나 다른 Chart 버전의 구조를 추측하지 않는다.
+- schema validation 또는 `helm template`이 실패하면 bounded 오류를 한 번 재피드백하여 수정 제안을 생성한다. 최대 2회 모두 실패하면 결과를 반환하거나 적용하지 않는다.
+- 수동 YAML도 Revision 저장 전에 같은 Chart artifact로 렌더링하며, AI 실패와 무관하게 수동 편집은 계속 사용할 수 있다.
+- Secret 유사 key는 AI prompt에서 `***REDACTED***`로 치환하고, 검증된 결과를 반환할 때 원래 Custom Values의 값을 서버에서 복원한다.
 - 사용자가 diff를 승인하기 전에는 Values Profile revision을 만들지 않는다.
 - Provider failure 시 수동 Form/YAML 편집은 계속 사용할 수 있어야 한다.
 

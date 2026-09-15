@@ -21,6 +21,7 @@ public interface ApplicationDeliveryRepositoryPort {
     Artifact saveArtifact(String digestSha256, byte[] payload, Instant now);
     Optional<TenantChart> findChartByCoordinate(UUID tenantId, ChartSourceType sourceType, String sourceName,
                                                 String packageName);
+    Optional<TenantChart> findChart(UUID tenantId, UUID chartId);
     TenantChart saveChart(TenantChart chart);
     Optional<ChartVersion> findVersionByChartAndVersion(UUID tenantId, UUID chartId, String version);
     ChartVersion saveVersion(ChartVersion version);
