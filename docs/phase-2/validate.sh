@@ -6,7 +6,6 @@ delivery_root="$phase2_root/application-delivery"
 
 required_files=(
   "$phase2_root/README.md"
-  "$phase2_root/tenant-access-and-resource-ownership.md"
   "$delivery_root/product-requirements.md"
   "$delivery_root/architecture-design.md"
   "$delivery_root/ai-provider-and-model-strategy.md"
@@ -88,7 +87,9 @@ grep -q 'data-app-tab-panel="history"' "$delivery_root/ui-mockups/index.html"
 grep -q 'role="switch"' "$delivery_root/ui-mockups/index.html"
 grep -q "function uninstallConfirmation" "$delivery_root/ui-mockups/app.js"
 grep -q "function deploymentStartModal" "$delivery_root/ui-mockups/app.js"
-grep -q "Platform Manager" "$phase2_root/tenant-access-and-resource-ownership.md"
+grep -q "OIDC Group과 Company/Tenant Mapping" "$delivery_root/product-requirements.md"
+grep -q "effectiveCapabilities" "$delivery_root/architecture-design.md"
+grep -q "Users & Access" "$delivery_root/ui-ux-screen-design.md"
 grep -q "function offboardUserModal" "$delivery_root/ui-mockups/app.js"
 grep -q "function groupMappingModal" "$delivery_root/ui-mockups/app.js"
 

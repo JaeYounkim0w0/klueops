@@ -12,7 +12,7 @@ Application Delivery 화면을 구현하기 전에 현재 KlueOps 전체 화면�
 
 이 시안은 신규 Applications 화면에만 적용하는 별도 theme가 아니라 전체 제품의 target design이다. 기존 Login, Overview, Cluster/Console, Analysis/Chat, Operations/Incident/Runbook, Policy/Audit와 Settings도 같은 shell, token, component와 interaction 원칙을 사용해야 한다.
 
-Tenant별 메뉴는 선택한 Tenant/Workspace의 effective capability와 Tenant feature policy를 함께 적용한다. Platform Manager는 모든 Tenant와 메뉴를 사용하며, Tenant Admin/Cluster Admin/Operator/Viewer는 [Tenant 접근 권한·User 생명주기·Resource 소유권](../tenant-access-and-resource-ownership.md)의 역할 Matrix를 따른다. 메뉴 숨김은 API 보안을 대신하지 않는다.
+Tenant별 메뉴는 선택한 Tenant/Workspace의 effective capability와 Tenant feature policy를 함께 적용한다. Platform Manager는 모든 Tenant와 메뉴를 사용한다. Tenant Admin은 해당 Tenant의 구성원·기능·공유 Chart·AI routing, Cluster Admin은 허용 Cluster의 설정과 Application 수명주기, Operator는 허용 Cluster/Namespace의 분석·배포·Rollback, Viewer는 read-only 메뉴만 사용한다. 메뉴 숨김은 API 보안을 대신하지 않는다.
 
 ### P2-0 화면 적용 순서
 
@@ -308,6 +308,17 @@ Credential은 저장 후 재표시하지 않고 교체와 삭제만 제공한다
 - 메뉴는 Tenant Feature와 현재 scope effective capability의 교집합이며 직접 URL/API도 같은 정책을 검사한다.
 - OIDC Group Mapping은 `issuer + group → Tenant + Role + Scope`를 명시적으로 연결하며 Group 이름만으로 전역 권한을 추측하지 않는다.
 
+상단 Tenant selector는 Platform Manager에게 전체 Tenant를, Tenant 역할 사용자에게 membership이 있는 Tenant만 표시한다. Tenant 변경 시 구성원 목록, Access Preview, Feature와 좌측 메뉴를 한 access revision으로 다시 불러오며 이전 Tenant 데이터는 즉시 비운다.
+
+| 역할 | Users & Access에서 가능한 동작 | 숨김/차단 동작 |
+| --- | --- | --- |
+| Platform Manager | 모든 Tenant 구성원·Group Mapping·기능 정책, Platform Manager 관리 | 원격 Cluster RBAC가 거부한 작업 |
+| Tenant Admin | 현재 Tenant 초대, Role/Scope 변경, 접근 중지·탈퇴, Group Mapping, Tenant Feature | Platform Manager 부여/회수, 다른 Tenant, Platform Provider/Model |
+| Cluster Admin | 자기 접근 정보와 허용 Cluster 구성원 조회 | User/Group/Feature mutation |
+| Operator/Viewer | 자기 역할·scope·표시 메뉴 확인 | 다른 User와 정책 관리 |
+
+Company AA 예시에서는 `/companies/aa/cluster-admins`의 u1을 `AA / Cluster Admin / Tenant 또는 지정 Cluster`, `/companies/aa/operators`의 u2·u3를 `AA / Operator / Tenant 또는 지정 Namespace`로 Mapping한다. Group 문자열은 자유 입력이지만 issuer와 실제 claim sample을 검증하고, Tenant-qualified Group path를 권장한다.
+
 ![User 초대](ui-mockups/screenshots/22-user-invite.png)
 
 ![User 접근 중지 계획](ui-mockups/screenshots/23-user-offboard-plan.png)
@@ -472,7 +483,23 @@ Uninstall은 Pod뿐 아니라 PVC, hook과 external resource 보존 여부를 �
 | Model `…` | capability/regression/Tenant 허용/삭제 가능 검사 menu | 사용 중 model 삭제 차단 |
 | `AI Providers` | Provider와 Tenant routing 화면 복귀 | 선택 Ollama profile 유지 |
 
-### 15.12 Modal 상태와 오류
+### 15.12 Users & Access
+
+| Control | Overlay/상태 | Confirm 이후 |
+| --- | --- | --- |
+| Tenant selector | 접근 가능한 Tenant 목록, 역할과 membership 상태 표시 | access contract 재조회 후 메뉴·목록·Preview 원자적 교체 |
+| User row | 역할, scope, source(Group/direct), 상태와 Access Preview Drawer | 관리 권한이 있으면 편집 action 노출 |
+| `User 추가` | 관리형 Keycloak은 User 생성, 외부 OIDC는 pending email/subject 등록 모드 | `INVITED` membership 생성 및 초대/IdP 준비 안내 |
+| `역할·Scope 편집` | before/after capability와 표시 메뉴 Preview | 다음 요청부터 access revision 갱신; 자기 권한 위험 변경 차단 |
+| `접근 중지` | session, token, 진행 Job 영향과 복구 가능 여부 Preview | User suspend와 session revoke, 결과 Audit 기록 |
+| `탈퇴 처리` | RoleBinding, credential, Job, ownership transfer와 IdP 범위 plan | exact username 입력 후 offboard; Audit actor snapshot 유지 |
+| `OIDC Group Mapping` | issuer, group claim, Tenant, Role, Tenant/Workspace/Cluster/Namespace scope 입력 | claim sample·관계 검증 후 Mapping 저장 및 access revision 갱신 |
+| Group Mapping `…` | 편집/비활성/삭제와 영향 사용자 Preview | 다음 요청부터 회수; Platform Manager Mapping은 별도 권한 검사 |
+| `Tenant 기능` switch | 영향 메뉴·직접 route/API와 필수 기능 여부 Preview | Feature OFF/ON 적용; Role capability는 추가하지 않음 |
+
+마지막 Platform Manager의 접근 중지·탈퇴·Role 회수는 Confirm 단계로 진입하지 않고 대체 관리자 지정 안내를 표시한다. 다른 Tenant Resource를 직접 URL로 연 경우 존재 여부를 숨기는 Not Found 화면을, Feature OFF와 capability 부족은 각각 다른 원인·관리자 문의 경로를 표시한다.
+
+### 15.13 Modal 상태와 오류
 
 | 상태 | 표시 원칙 |
 | --- | --- |
@@ -485,7 +512,7 @@ Uninstall은 Pod뿐 아니라 PVC, hook과 external resource 보존 여부를 �
 | Expired plan | 실행 차단, Preview 재생성만 제공 |
 | Permission changed | 실행 차단, 필요한 권한과 Cluster 관리자 문의 안내 |
 
-### 15.13 구현 필수 상태 Matrix
+### 15.14 구현 필수 상태 Matrix
 
 | 상태 | 필수 화면 행동 |
 | --- | --- |

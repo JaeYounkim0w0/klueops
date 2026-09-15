@@ -16,7 +16,7 @@
 - Applications의 배포 시작 chooser는 Library/Discover/Direct Import의 진입점만 결정한다. Chart version이 확정된 뒤에만 `DeploymentPlan`을 만들며, chooser나 catalog 탐색 단계에서는 Cluster write 권한을 요구하지 않는다.
 - 실행 추적은 기존 Async Job/Job Center, 대상별 영속 이력은 Application/ReleaseOperation projection을 사용한다.
 - Application Delivery 기능 개발 전 `P2-0`에서 기존 제품 전체 Frontend를 Phase 2 HTML 시안과 동일한 공통 design system으로 현대화한다.
-- P2-A에서 scope별 effective capability와 Tenant feature policy, User membership/offboarding, 기존 Cluster 파생 ownership query guard를 먼저 완료한다. 상세 기준은 [Tenant 접근 권한·User 생명주기·Resource 소유권](../tenant-access-and-resource-ownership.md)이다.
+- P2-A에서 scope별 effective capability와 Tenant feature policy, User membership/offboarding, 기존 Cluster 파생 ownership query guard를 먼저 완료한다. 세부 계약은 이 문서의 Domain model과 Access API를 기준으로 한다.
 
 ### 1.1 P2-0 Frontend 기반 경계
 
@@ -133,6 +133,39 @@ Helm OCI 참고: <https://docs.helm.sh/docs/topics/registries/>
 
 Chart/Source/Values처럼 Tenant가 직접 공유하는 Resource는 `tenantId`를 소유한다. Analysis/Application처럼 Cluster가 필수인 Resource는 중복 `tenantId`, `workspaceId`를 저장하지 않고 불변인 Cluster ownership에서 유도한다. 이 경우 모든 repository query는 Cluster를 join해 현재 Tenant를 검사하고 Cluster hard delete와 일반 Tenant 이동을 금지한다. Platform Manager만 명시적인 cross-tenant query를 사용할 수 있다.
 
+### 5.1 Access aggregate와 현재 migration gap
+
+현재 Session capability는 모든 RoleBinding의 union이고 표준 OIDC Group이 Platform scope 권한으로 해석될 수 있다. P2-A에서는 선택한 Tenant/Workspace별 `effectiveCapabilities`로 바꾸고, 명시적으로 등록된 Platform Manager Group 외의 implicit Platform mapping을 제거한다. 기존 `/api/security/users`는 Platform Manager용 directory 진단으로 제한하고 Tenant 구성원 관리는 별도 scoped API로 분리한다.
+
+기존 저장 enum `PLATFORM_ADMIN`은 migration 동안 Platform Manager의 호환 이름으로 읽되 UI에는 `Platform Manager`만 표시한다. DB/API migration이 끝나면 저장 enum도 `PLATFORM_MANAGER`로 정리한다.
+
+```text
+TenantMembership
+- id, tenantId, userId?, pendingIssuer?, pendingSubject?, pendingEmail?
+- status: INVITED | ACTIVE | SUSPENDED | OFFBOARDED
+- createdBy, createdAt, suspendedAt?, offboardedAt?
+
+TenantFeaturePolicy
+- tenantId, featureKey, enabled, updatedBy, updatedAt
+
+OidcGroupMapping
+- id, issuer, groupValue, tenantId, role, scopeType
+- workspaceId?, clusterId?, namespace?, active, createdBy, createdAt
+```
+
+`issuer + groupValue + tenantId + role + scope`는 unique이며 저장 시 Cluster/Workspace가 같은 Tenant인지 검증한다. Group Mapping과 사용자 직접 RoleBinding의 grant는 합집합이고 MVP에 deny는 없다. 변경 시 access revision을 증가시켜 다음 요청부터 장기 Session도 재평가한다.
+
+### 5.2 Ownership 불변성과 query 규칙
+
+- Tenant 직접 소유: Tenant, Workspace, Membership, FeaturePolicy, Chart/Version/Source, Values Profile/Revision, Tenant AI routing/BYOK profile.
+- Cluster 파생 소유: Analysis/evidence, Managed Application, DeploymentPlan, ReleaseOperation, CompanionResource, Cluster Incident/Signal, Cluster 작업 Job/Notification.
+- Tenant 직접 소유 repository는 `tenantId`, Cluster 파생 repository는 `tenantId + clusterId`를 필수 인자로 받고 ID 단독 조회 method를 노출하지 않는다.
+- Cluster 파생 조회는 `child JOIN clusters ON child.cluster_id = clusters.id WHERE clusters.tenant_id = :currentTenantId`를 강제한다.
+- Cluster의 `tenant_id/workspace_id`는 생성 후 불변이고 hard delete 대신 soft delete 또는 FK `RESTRICT`를 사용한다.
+- Application을 참조하는 Analysis는 `(application_id, cluster_id)` composite FK 또는 동일 Cluster 검증으로 cross-cluster 연결을 차단한다.
+
+### 5.3 Application Delivery model
+
 ```text
 ChartSource
 - id, tenantId
@@ -158,14 +191,14 @@ ValuesRevision
 - redactedDiffJson, parentRevision, createdBy, createdAt
 
 DeploymentPlan
-- id, tenantId, workspaceId, clusterId, namespace
+- id, clusterId, namespace
 - chartVersionId, valuesRevisionId, releaseName
 - namespacePlanId, exposurePlanId
 - renderedManifestHash, policyResultJson, expiresAt
 - confirmationText, status
 
 Application
-- id, tenantId, workspaceId, clusterId, namespace
+- id, clusterId, namespace
 - name, currentReleaseId?, lifecycleStatus, health, endpointHealth
 - lifecycleStatus: DEPLOYING | ACTIVE | UPGRADING | ROLLING_BACK | UNINSTALLING | FAILED
 
@@ -249,6 +282,41 @@ interface ManagedResourceRunnerPort {
 Runner는 임의 YAML을 받지 않는다. Backend가 schema와 allowlist로 만든 HTTPRoute/Ingress companion resource만 typed request로 전달하며 Cluster/Namespace/Gateway/Service는 plan과 일치해야 한다.
 
 ## 7. API 초안
+
+### 7.1 Access와 User lifecycle
+
+Session은 전역 capability union 대신 선택 scope의 access contract를 반환한다.
+
+```json
+{
+  "platformRole": "PLATFORM_MANAGER",
+  "selectedScope": { "tenantId": "...", "workspaceId": "..." },
+  "effectiveCapabilities": ["cluster:read", "application:deploy"],
+  "enabledFeatures": ["CORE_OVERVIEW", "APPLICATION_DELIVERY"],
+  "navigation": [{ "key": "applications", "visible": true }]
+}
+```
+
+```text
+GET    /api/me/access?tenantId=&workspaceId=
+GET    /api/tenants/{tenantId}/members
+POST   /api/tenants/{tenantId}/members
+PATCH  /api/tenants/{tenantId}/members/{membershipId}
+POST   /api/tenants/{tenantId}/members/{membershipId}/offboard-plan
+POST   /api/tenants/{tenantId}/members/{membershipId}/offboard
+GET    /api/tenants/{tenantId}/features
+PATCH  /api/tenants/{tenantId}/features
+GET    /api/tenants/{tenantId}/oidc-group-mappings
+POST   /api/tenants/{tenantId}/oidc-group-mappings
+PATCH  /api/tenants/{tenantId}/oidc-group-mappings/{mappingId}
+DELETE /api/tenants/{tenantId}/oidc-group-mappings/{mappingId}
+```
+
+Backend는 body의 `tenantId`를 신뢰하지 않고 선택 scope와 parent Resource에서 Tenant를 유도한다. 다른 Tenant Resource에는 404, capability 부족에는 403, 비활성 Feature에는 `FEATURE_DISABLED` Problem Detail을 반환한다. Platform Manager의 cross-tenant 조회는 명시적인 all-tenants query로만 허용한다.
+
+Keycloak 관리 adapter는 User 생성, required action과 계정 비활성화를 제공한다. 일반 외부 OIDC adapter는 pending membership만 만들며 비밀번호를 다루지 않는다. Offboard 실행은 plan hash와 exact username을 검증한 뒤 RoleBinding/session/personal credential을 한 transaction 경계에서 회수하고, 실행 중 Job 처리와 IdP 결과는 보상 가능한 step으로 기록한다. 마지막 Platform Manager 대상 plan은 생성 단계부터 차단한다.
+
+### 7.2 Application Delivery
 
 ```text
 GET    /api/v2/application-delivery/catalog/search
@@ -387,6 +455,11 @@ portal:
 - Artifact Hub contract fixture와 timeout/rate-limit fallback
 - malicious tar, SSRF redirect, oversized Chart와 provenance test
 - Tenant A/B object scope와 capability matrix test
+- Tenant 선택 변경 시 `effectiveCapabilities`, enabled feature와 navigation 재계산 test
+- OIDC Group Mapping의 issuer/group/Tenant/Role/Scope 격리와 implicit Platform 권한 미부여 test
+- Company AA u1 Cluster Admin, u2/u3 Operator Mapping 및 Cluster/Namespace scope 축소 test
+- suspend 즉시 access 차단, offboard 회수/Audit 보존, 마지막 Platform Manager 보호 test
+- Cluster 파생 Resource의 Tenant join guard와 cross-tenant ID 404 test
 - fake AI provider의 schema/timeout/masking test
 - ephemeral namespace에서 install → upgrade → rollback → uninstall E2E
 - 기존/신규 Namespace 권한, quota와 uninstall 시 Namespace 보존 test

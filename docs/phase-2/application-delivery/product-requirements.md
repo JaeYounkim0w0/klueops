@@ -237,7 +237,29 @@ Artifact Hub의 official/verified publisher 표시는 검색 판단 근거이지
 
 ## 9. 권한
 
-공통 역할, Tenant 기능별 메뉴 접근, User 초대·비활성화·탈퇴와 Resource ownership 정비는 [Tenant 접근 권한·User 생명주기·Resource 소유권](../tenant-access-and-resource-ownership.md)을 기준으로 한다. Cluster 필수 Resource는 중복 Tenant/Workspace column 없이 Cluster ownership에서 유도하고, Tenant 공유 Resource만 Tenant를 직접 소유한다. Application Delivery는 이 공통 보안 기반이 완성된 뒤 구현한다.
+Application Delivery는 다음 공통 Tenant 보안 기반이 완성된 뒤 구현한다.
+
+```text
+허용 = Tenant 기능 ON
+    ∩ 선택한 Tenant/Workspace에서 Role이 부여한 Capability
+    ∩ 대상 Resource가 허용 Scope 안에 있음
+    ∩ 원격 Kubernetes Credential/RBAC 허용(Cluster 작업인 경우)
+```
+
+- 메뉴 숨김은 편의 기능일 뿐 보안 경계가 아니다. 직접 URL과 모든 Backend API에서 capability와 scope를 다시 검사한다.
+- Tenant 기능 설정은 Role에 없는 권한을 추가하지 않고 기능을 끄는 방향으로만 동작한다.
+- Platform Manager는 모든 Tenant와 KlueOps capability를 가지지만 원격 Kubernetes Credential/RBAC를 우회하지 않는다.
+- Tenant 간 Resource 이동은 일반 수정이 아니라 Platform Manager 전용 ownership transfer 또는 export/import로 처리한다.
+
+### 9.1 역할과 Capability
+
+| 역할 | 기본 Scope | 책임 |
+| --- | --- | --- |
+| Platform Manager | Platform | 모든 Tenant, Platform 설정, Provider/Model, Tenant/User/Role, 모든 Resource와 Audit |
+| Tenant Admin | Tenant/Workspace | 구성원, 기능 정책, 공유 Chart/Source, Tenant AI routing과 Tenant 내 운영 |
+| Cluster Admin | Tenant/Workspace/Cluster | 허용 Cluster 등록·설정, Namespace와 Application 전체 수명주기 |
+| Operator | Cluster/Namespace 또는 상위 scope | 분석, 일반 workload 배포·Upgrade·Rollback, Cook Book/Console 실행 |
+| Viewer | 비-Platform scope | 허용 Resource, 분석, Application과 Audit의 read-only 조회 |
 
 | Capability | 동작 |
 | --- | --- |
@@ -254,13 +276,61 @@ Artifact Hub의 official/verified publisher 표시는 검색 판단 근거이지
 | `ai-provider:manage` | Provider profile과 Tenant 허용 정책 관리 |
 | `ai-model:manage` | Ollama local model 조회·다운로드·검증·삭제 |
 
-역할 기본값은 다음과 같다.
+| Capability 영역 | Platform Manager | Tenant Admin | Cluster Admin | Operator | Viewer |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| Tenant/구성원 | 전체 관리 | 현재 Tenant 관리 | 조회 | 조회 | 조회 |
+| Cluster | 전체 관리 | 현재 Tenant 관리 | 허용 scope 관리 | 조회 | 조회 |
+| AI Analysis | 실행/조회 | 실행/조회 | 실행/조회 | 실행/조회 | 조회 |
+| Chart/Source | 전체 관리 | 현재 Tenant 관리 | 조회 | Chart 조회 | 조회 |
+| Values | 편집 | 편집 | 편집 | 편집 | 조회 |
+| Application | 전체 수명주기 | 전체 수명주기 | 허용 scope 전체 수명주기 | 배포/Upgrade/Rollback | 조회 |
+| Policy/Audit | 관리/조회 | 현재 Tenant 관리/조회 | 허용 scope 관리/조회 | 실행/자기 Audit | 조회 |
+| AI Routing | 전체 관리 | 현재 Tenant 관리 | — | — | — |
+| Provider/Model | 전체 관리 | — | — | — | — |
 
-- Platform Manager: 모든 Tenant와 모든 capability
-- Tenant Admin: 해당 Tenant 구성원/기능/Chart Library/AI routing과 Tenant 내 운영
-- Cluster Admin: 허용 Cluster의 등록·정책·Application 전체 수명주기
-- Operator: 허용 Cluster/Namespace의 분석, 배포·Upgrade·Rollback; Uninstall/Source credential/shared exposure 제외
-- Viewer: 허용 scope read-only
+Operator의 rollback은 Preview, RBAC와 exact confirmation을 통과한 일반 workload로 제한한다. Uninstall, shared exposure, Namespace 생성과 cluster-scoped resource는 Cluster Admin 이상만 실행한다. Tenant Admin은 Platform Provider credential, Local Model 설치와 다른 Tenant를 관리할 수 없고 Cluster Admin은 Tenant 구성원이나 공유 Source credential을 변경할 수 없다.
+
+### 9.2 Tenant 기능과 메뉴
+
+메뉴는 label별 ACL 대신 안정적인 `featureKey`와 `requiredCapabilities`로 정의한다.
+
+| 메뉴 | Feature key | 표시 조건 |
+| --- | --- | --- |
+| Overview | `CORE_OVERVIEW` | `cluster:read` |
+| Clusters | `CLUSTER_OPERATIONS` | `cluster:read` |
+| Cook Book/Console | `KUBERNETES_CONSOLE` | 조회 `cluster:read`, 실행 `operation:execute` |
+| AI Analysis/Chat | `AI_OPERATIONS` | 조회 `analysis:read`, 실행 `analysis:run` |
+| Application Delivery | `APPLICATION_DELIVERY` | `chart:read` 또는 `application:read` |
+| Sources | `APPLICATION_DELIVERY` | `chart:manage` |
+| AI Provider Routing | `AI_PROVIDER_ROUTING` | `ai-routing:manage` |
+| Provider/Local Models | `AI_PROVIDER_PLATFORM` | `ai-provider:manage` 또는 `ai-model:manage` |
+| Users & Access | `ACCESS_CONTROL` | `tenant:member:manage` 또는 Platform Manager |
+| Tenants/Platform Runtime | `PLATFORM_ADMINISTRATION` | Platform Manager |
+
+Feature OFF는 `FEATURE_DISABLED`, capability 부족은 403 `CAPABILITY_DENIED`, 다른 Tenant Resource는 존재 여부를 숨기기 위해 404를 반환한다. `CORE_OVERVIEW`, Access Control과 Audit처럼 안전상 필수인 기능은 Tenant에서 비활성화할 수 없다.
+
+### 9.3 OIDC Group과 Company/Tenant Mapping
+
+OIDC Group은 외부 IdP의 사용자 집합이며 Company나 Tenant, KlueOps 역할 그 자체가 아니다. KlueOps는 Group 이름에서 권한을 추측하지 않고 `OIDC issuer + group claim → TenantMembership → Role → Scope`를 명시적으로 저장한다.
+
+Company AA의 권장 예시는 `/companies/aa/cluster-admins`의 u1을 `AA / Cluster Admin / Tenant scope`, `/companies/aa/operators`의 u2·u3를 `AA / Operator / Tenant scope`로 Mapping하는 것이다. 필요하면 u1은 특정 Cluster로, u2·u3는 별도 Group을 통해 특정 Namespace로 scope를 좁힌다. Group Mapping을 기본으로 사용하고 사용자 직접 RoleBinding은 예외·임시 권한에 사용한다. 두 경로의 허용 권한은 합집합이며 MVP에는 명시적 deny를 두지 않는다. Platform Manager Group Mapping은 기존 Platform Manager만 만들 수 있다.
+
+### 9.4 User 생명주기
+
+User 상태는 `INVITED → ACTIVE → SUSPENDED → OFFBOARDED`다.
+
+- Keycloak 관리 연동에서는 User 생성과 required action/초대 메일을 지원한다.
+- 외부 OIDC에서는 비밀번호 User를 만들지 않고 email/subject 또는 Group 기반 pending membership을 사전 등록한다.
+- `SUSPENDED`는 로그인/API를 차단하되 복구할 수 있고, `OFFBOARDED`는 RoleBinding, session, personal credential과 미완료 Job 접근을 회수한다.
+- 운영 UI는 모호한 삭제 대신 `접근 중지`와 `탈퇴 처리`를 사용하고, 탈퇴 전에 영향 Preview와 ownership transfer, exact username 확인을 요구한다.
+- 마지막 Platform Manager의 제거·비활성화·탈퇴는 차단하며 User 제거 후에도 Audit actor snapshot을 보존한다.
+- Pending membership을 email로 연결할 때는 verified email과 issuer allowlist를 모두 요구한다.
+
+### 9.5 Resource ownership 요구사항
+
+Chart, Source, Values Profile, Tenant Membership/Feature/AI routing처럼 Tenant에서 공유하는 Resource는 `tenant_id`를 직접 소유한다. Analysis, Managed Application, DeploymentPlan, ReleaseOperation처럼 Cluster가 필수인 Resource는 `cluster_id`만 저장하고 불변인 Cluster ownership에서 Tenant/Workspace를 유도한다. 후자는 모든 조회에서 Cluster의 현재 Tenant를 join해 검사하고 Cluster hard delete와 일반 Tenant 이동을 금지한다. 동일 Chart payload는 digest로 deduplicate할 수 있지만 metadata, 승인, Values와 사용 이력은 Tenant별로 분리한다.
+
+Tenant 비활성화 시 신규 mutation과 login scope 선택을 차단하되 Platform Manager의 Audit/export는 유지한다. Tenant 삭제는 dependency report, retention/export, exact confirmation과 비동기 cleanup을 거치는 Platform Manager 전용 workflow이며 운영 화면에서 즉시 hard delete하지 않는다.
 
 모든 object 조회와 mutation은 Tenant → Workspace → Cluster → Namespace scope를 application service에서 다시 평가한다. HTTP method나 Frontend 표시 여부만 신뢰하지 않는다.
 
@@ -282,13 +352,19 @@ Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한�
 12. Runner timeout/cancel/restart recovery와 Secret/output 마스킹
 13. 9B 이하 Ollama model install/검증/목적별 routing과 사용 중 삭제 차단
 14. Ollama/OpenAI/Google GenAI profile별 fake adapter 회귀 및 외부 전송 동의 검증
+15. Tenant A 사용자가 Tenant B의 Cluster/Analysis/Chart/Application ID를 알아도 404
+16. Company AA Group Mapping에서 u1은 지정 Cluster Admin scope, u2·u3는 지정 Operator scope만 획득
+17. 선택 Tenant를 바꾸면 `effectiveCapabilities`, 메뉴와 mutation 권한이 즉시 해당 scope로 재계산
+18. User suspend/offboard의 session·RoleBinding·credential 회수와 Audit actor 보존
+19. 마지막 Platform Manager 제거 차단과 Platform Manager의 모든 Tenant 접근 검증
+20. Feature OFF 상태에서 메뉴, 직접 route와 API가 일관된 차단 결과를 반환
 
 ## 11. 단계별 구현
 
 | 단계 | 범위 |
 | --- | --- |
 | P2-0 | 기존 KlueOps 전체 UI audit와 제품형 visual refresh, design token/공통 component, responsive·접근성·visual/functional regression gate |
-| P2-A | Platform Manager/Tenant 역할, scope별 capability·메뉴 기능 정책, User 생명주기, Resource 직접 ownership과 migration |
+| P2-A | Platform Manager/Tenant 역할, scope별 capability·메뉴 기능 정책, User 생명주기, Tenant 직접/Cluster 파생 ownership guard와 migration |
 | P2-B | Artifact Hub/repository/OCI/upload, Tenant Chart Library |
 | P2-C | Schema Form, YAML, Values Profile/version/diff |
 | P2-D | AI Provider profile과 Values Assistant |
@@ -298,3 +374,14 @@ Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한�
 | P2-H | AI Analysis/Incident 연결, 전체 수용시험과 문서화 |
 
 구현 순서는 `P2-0 → P2-A → ... → P2-H`다. P2-0은 이후 화면이 같은 visual system 위에서 개발되도록 하는 선행 기반이며, 임시로 Phase 2 시안과 기존 제품이 서로 다른 디자인 체계로 공존하게 두지 않는다.
+
+P2-A는 다음 순서를 지킨다.
+
+1. P2-A0: Platform Manager 명칭, Tenant Admin, capability/feature catalog와 migration
+2. P2-A1: scope별 effective access/session/navigation, implicit Platform Group mapping 제거
+3. P2-A2: Cluster 파생 ownership join guard와 Tenant 직접 소유 FK/repository 정비
+4. P2-A3: membership, invite/suspend/offboard와 scoped RoleBinding API
+5. P2-A4: Users & Access, Access Preview와 Tenant Feature UI
+6. P2-A5: Tenant A/B/Platform Manager 보안 수용시험
+
+P2-B의 Chart/Application 구현은 P2-A5를 통과한 뒤 시작한다.

@@ -20,7 +20,6 @@ Local LLM은 특정 계열에 고정하지 않고 9B 이하 후보를 동일 fix
 - [아키텍처 설계](application-delivery/architecture-design.md)
 - [AI Provider 및 모델 전략](application-delivery/ai-provider-and-model-strategy.md)
 - [UI/UX 화면 설계](application-delivery/ui-ux-screen-design.md)
-- [Tenant 접근 권한·User 생명주기·Resource 소유권](tenant-access-and-resource-ownership.md)
 - [실행 가능한 HTML 시안](application-delivery/ui-mockups/index.html)
 
 ## 문서 상태
