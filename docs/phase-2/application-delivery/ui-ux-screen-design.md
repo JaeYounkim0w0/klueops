@@ -12,6 +12,8 @@ Application Delivery 화면을 구현하기 전에 현재 KlueOps 전체 화면�
 
 이 시안은 신규 Applications 화면에만 적용하는 별도 theme가 아니라 전체 제품의 target design이다. 기존 Login, Overview, Cluster/Console, Analysis/Chat, Operations/Incident/Runbook, Policy/Audit와 Settings도 같은 shell, token, component와 interaction 원칙을 사용해야 한다.
 
+Tenant별 메뉴는 선택한 Tenant/Workspace의 effective capability와 Tenant feature policy를 함께 적용한다. Platform Manager는 모든 Tenant와 메뉴를 사용하며, Tenant Admin/Cluster Admin/Operator/Viewer는 [Tenant 접근 권한·User 생명주기·Resource 소유권](../tenant-access-and-resource-ownership.md)의 역할 Matrix를 따른다. 메뉴 숨김은 API 보안을 대신하지 않는다.
+
 ### P2-0 화면 적용 순서
 
 1. design token, typography, icon과 global shell/sidebar/header
@@ -35,7 +37,7 @@ Application Delivery 화면을 구현하기 전에 현재 KlueOps 전체 화면�
 
 [HTML 시안 열기](ui-mockups/index.html)
 
-브라우저에서 직접 열면 좌측 `Applications` 메뉴와 workflow 버튼을 통해 열 개 시안을 확인할 수 있다. Query parameter deep-link도 지원한다.
+브라우저에서 직접 열면 좌측 `Applications`, `Users & Access`, `AI Providers` 메뉴와 workflow 버튼을 통해 전체 시안을 확인할 수 있다. Query parameter deep-link도 지원한다.
 
 ```text
 ui-mockups/index.html?screen=discover
@@ -106,6 +108,7 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 | AD-08 | Application Detail | Workload/Pod/Endpoint/Configuration/History/Uninstall |
 | AI-01 | AI Provider Settings | Local/외부 Provider profile과 Tenant routing 관리 |
 | AI-02 | Local Models | 9B 이하 Ollama model download/검증/승인/삭제 보호 |
+| IAM-01 | Users & Access | Tenant 구성원 초대·상태·역할/scope와 메뉴 접근 Preview |
 
 ### 4.1 Deployment 기능 배치
 
@@ -265,7 +268,7 @@ Application uninstall은 Chart Library artifact와 공유 Namespace를 삭제하
 
 ![AI Provider 설정 시안](ui-mockups/screenshots/06-ai-provider-settings.png)
 
-### Platform Admin
+### Platform Manager
 
 - Ollama/OpenAI/Google GenAI/OpenAI-compatible profile 등록
 - endpoint/API key existing Secret, model과 timeout
@@ -293,6 +296,22 @@ Credential은 저장 후 재표시하지 않고 교체와 삭제만 제공한다
 - loaded model 수, keep-alive, volume과 queue budget 표시
 
 ![Ollama Local Model 추가 Modal](ui-mockups/screenshots/16-local-model-add.png)
+
+## 14.1 IAM-01 Users & Access
+
+![Tenant Users & Access](ui-mockups/screenshots/21-users-access.png)
+
+- 선택 Tenant의 구성원 상태, 역할과 Tenant/Workspace/Cluster/Namespace scope를 한 목록에서 확인한다.
+- 선택 사용자의 “표시되는 메뉴”와 제한되는 위험 행위를 Access Preview로 설명한다.
+- Platform Manager는 모든 Tenant를 선택하고 모든 기능을 관리한다.
+- Tenant Admin은 해당 Tenant의 초대, suspend/offboard와 RoleBinding을 관리하지만 Platform 설정은 볼 수 없다.
+- 메뉴는 Tenant Feature와 현재 scope effective capability의 교집합이며 직접 URL/API도 같은 정책을 검사한다.
+
+![User 초대](ui-mockups/screenshots/22-user-invite.png)
+
+![User 접근 중지 계획](ui-mockups/screenshots/23-user-offboard-plan.png)
+
+외부 OIDC에서는 KlueOps가 비밀번호 사용자를 생성하지 않고 pending membership만 만든다. Keycloak 관리 연동에서만 IdP 사용자 생성과 required action을 지원한다. `삭제`는 기본적으로 suspend/offboard이며 Audit actor snapshot을 보존한다.
 
 ## 15. 클릭·Popup·Confirmation 상세 명세
 

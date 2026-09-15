@@ -37,4 +37,8 @@ await page.setViewportSize({ width: 390, height: 844 });
 await capture("19-applications-mobile.png", "applications");
 await page.setViewportSize({ width: 900, height: 900 });
 await capture("20-applications-tablet.png", "applications");
+await page.setViewportSize({ width: 1440, height: 1000 });
+await capture("21-users-access.png", "access-control");
+await capture("22-user-invite.png", "access-control", (p) => p.getByRole("button", { name: "＋ User 추가" }).click());
+await capture("23-user-offboard-plan.png", "access-control", (p) => p.getByRole("button", { name: "접근 중지 계획" }).click());
 await browser.close();

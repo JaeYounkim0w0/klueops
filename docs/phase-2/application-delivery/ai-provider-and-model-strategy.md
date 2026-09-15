@@ -97,7 +97,7 @@ Spring AI는 Ollama, OpenAI와 Google GenAI를 포함한 provider-neutral ChatMo
 Provider credential과 Tenant 선택을 분리한다.
 
 ```text
-Platform Admin
+Platform Manager
 └─ Provider Profile 등록
    ├─ Local Ollama
    ├─ OpenAI Production
@@ -209,7 +209,7 @@ Fallback은 profile에 설정해도 다음을 만족해야 한다.
 
 ## 10. Provider 설정 UX
 
-Platform Admin 화면은 다음 순서를 사용한다.
+Platform Manager 화면은 다음 순서를 사용한다.
 
 1. Provider type과 profile 이름 선택
 2. Base URL과 existing Secret/API key 입력
@@ -227,7 +227,7 @@ Tenant Admin은 key를 보지 않고 purpose별 profile/model, 외부 전송과 
 Ollama Provider Profile에는 `Models 관리` 진입점을 제공한다. 현재 `qwen2.5-coder:7b`를 유지한 채 여러 model tag를 설치할 수 있으며 Router가 요청 purpose의 정확한 model tag를 Ollama 요청에 지정한다.
 
 ```text
-Platform Admin
+Platform Manager
 → AI Providers
 → Default Ollama
 → Models 관리
@@ -253,7 +253,7 @@ Ollama API adapter는 다음 endpoint만 allowlist한다.
 - `parameter_size` 파싱 결과가 9B를 초과하거나 불명확하면 활성화하지 않는다.
 - 임의 URL/파일/Modelfile 입력은 MVP에서 허용하지 않고 Ollama library model tag만 받는다.
 - 다운로드 전 예상 크기, 남은 volume, license와 source를 보여준다.
-- model pull/delete는 Platform Admin 전용 async Job이며 중복 요청과 동시 download를 제한한다.
+- model pull/delete는 Platform Manager 전용 async Job이며 중복 요청과 동시 download를 제한한다.
 - 현재 routing, fallback 또는 실행 중 Job이 참조하는 model은 삭제하지 않는다.
 - `DOWNLOADING → INSTALLED → VALIDATING → CANDIDATE → APPROVED | REJECTED` 상태를 기록한다.
 - Candidate는 회귀 fixture 실행에만 사용할 수 있고 Tenant production routing에는 Approved model만 노출한다.

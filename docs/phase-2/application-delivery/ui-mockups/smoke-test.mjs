@@ -38,6 +38,17 @@ assert.equal(await saveProvider.isDisabled(), true);
 await page.getByRole("checkbox").check();
 assert.equal(await saveProvider.isEnabled(), true);
 
+await page.goto(`${base}/?screen=access-control`);
+assert.match(await page.locator(".access-preview").innerText(), /Operator[\s\S]*Applications[\s\S]*Chart Sources/);
+await page.getByRole("button", { name: "＋ User 추가" }).click();
+const invite = page.getByRole("button", { name: "초대 생성" });
+assert.equal(await invite.isDisabled(), true);
+await page.getByRole("checkbox").check();
+assert.equal(await invite.isEnabled(), true);
+await page.getByRole("button", { name: "대화상자 닫기" }).click();
+await page.getByRole("button", { name: "접근 중지 계획" }).click();
+assert.equal(await page.getByRole("button", { name: "Exact confirmation으로" }).isVisible(), true);
+
 for (const width of [900, 390]) {
   await page.setViewportSize({ width, height: 900 });
   await page.goto(`${base}/?screen=applications`);

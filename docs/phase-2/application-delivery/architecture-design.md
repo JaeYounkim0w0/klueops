@@ -16,6 +16,7 @@
 - Applications의 배포 시작 chooser는 Library/Discover/Direct Import의 진입점만 결정한다. Chart version이 확정된 뒤에만 `DeploymentPlan`을 만들며, chooser나 catalog 탐색 단계에서는 Cluster write 권한을 요구하지 않는다.
 - 실행 추적은 기존 Async Job/Job Center, 대상별 영속 이력은 Application/ReleaseOperation projection을 사용한다.
 - Application Delivery 기능 개발 전 `P2-0`에서 기존 제품 전체 Frontend를 Phase 2 HTML 시안과 동일한 공통 design system으로 현대화한다.
+- P2-A에서 scope별 effective capability와 Tenant feature policy, User membership/offboarding, 기존 Cluster/Application/Analysis ownership migration을 먼저 완료한다. 상세 기준은 [Tenant 접근 권한·User 생명주기·Resource 소유권](../tenant-access-and-resource-ownership.md)이다.
 
 ### 1.1 P2-0 Frontend 기반 경계
 
@@ -129,6 +130,8 @@ KlueOps는 Harbor나 MinIO를 기본 dependency로 설치하지 않는다. 기�
 Helm OCI 참고: <https://docs.helm.sh/docs/topics/registries/>
 
 ## 5. Domain model
+
+모든 Tenant Resource는 `tenantId`를 직접 소유한다. Cluster 기반 Resource에도 조회 시 join으로만 유도하지 않고 immutable `tenantId`, `workspaceId` snapshot과 composite FK를 둔다. Platform Manager만 cross-tenant query를 사용할 수 있으며 일반 repository port는 tenantId 없는 ID 단독 조회를 노출하지 않는다.
 
 ```text
 ChartSource

@@ -20,6 +20,7 @@ Local LLM은 특정 계열에 고정하지 않고 9B 이하 후보를 동일 fix
 - [아키텍처 설계](application-delivery/architecture-design.md)
 - [AI Provider 및 모델 전략](application-delivery/ai-provider-and-model-strategy.md)
 - [UI/UX 화면 설계](application-delivery/ui-ux-screen-design.md)
+- [Tenant 접근 권한·User 생명주기·Resource 소유권](tenant-access-and-resource-ownership.md)
 - [실행 가능한 HTML 시안](application-delivery/ui-mockups/index.html)
 
 ## 문서 상태
@@ -29,6 +30,7 @@ Local LLM은 특정 계열에 고정하지 않고 9B 이하 후보를 동일 fix
 | 제품 범위 | 설계 완료 |
 | 아키텍처 | 설계 완료 |
 | UI/UX | Phase 2 상호작용·반응형·접근성·운영 상태 시안 완료, P2-0 기존 제품 UI 현대화 요구사항 확정 |
+| Tenant/RBAC | Platform Manager, Tenant 역할, 메뉴 정책, User 생명주기와 Resource 직접 소유권 설계 확정 |
 | Backend/Frontend 구현 | 미착수 |
 | 로컬 Kubernetes 수용시험 | 미착수 |
 

@@ -6,6 +6,7 @@ delivery_root="$phase2_root/application-delivery"
 
 required_files=(
   "$phase2_root/README.md"
+  "$phase2_root/tenant-access-and-resource-ownership.md"
   "$delivery_root/product-requirements.md"
   "$delivery_root/architecture-design.md"
   "$delivery_root/ai-provider-and-model-strategy.md"
@@ -40,6 +41,9 @@ required_screenshots=(
   "18-required-states.png"
   "19-applications-mobile.png"
   "20-applications-tablet.png"
+  "21-users-access.png"
+  "22-user-invite.png"
+  "23-user-offboard-plan.png"
 )
 
 for file in "${required_files[@]}"; do
@@ -53,7 +57,7 @@ for screenshot in "${required_screenshots[@]}"; do
   }
 done
 
-for screen in discover library sources values exposure preview applications application-detail states ai-settings models; do
+for screen in discover library sources values exposure preview applications application-detail states access-control ai-settings models; do
   grep -q "data-screen-panel=\"$screen\"" "$delivery_root/ui-mockups/index.html" || {
     echo "Missing mockup screen: $screen" >&2
     exit 1
@@ -83,5 +87,7 @@ grep -q 'data-app-tab-panel="history"' "$delivery_root/ui-mockups/index.html"
 grep -q 'role="switch"' "$delivery_root/ui-mockups/index.html"
 grep -q "function uninstallConfirmation" "$delivery_root/ui-mockups/app.js"
 grep -q "function deploymentStartModal" "$delivery_root/ui-mockups/app.js"
+grep -q "Platform Manager" "$phase2_root/tenant-access-and-resource-ownership.md"
+grep -q "function offboardUserModal" "$delivery_root/ui-mockups/app.js"
 
 echo "Phase 2 documents and UI artifacts are complete."

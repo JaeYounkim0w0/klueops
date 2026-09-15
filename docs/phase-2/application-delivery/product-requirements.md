@@ -78,7 +78,7 @@ P2-0은 단순 색상 변경이 아니라 기존 제품 전체의 정보 구조�
 
 | 사용자 | 주요 작업 |
 | --- | --- |
-| Platform Admin | 기능 활성화, Runner/저장 한도, 외부 AI Provider와 전역 정책 관리 |
+| Platform Manager | 기능 활성화, Runner/저장 한도, 외부 AI Provider와 전역 정책 및 모든 Tenant 관리 |
 | Tenant Admin | Tenant Chart source/credential, 허용 Cluster와 AI profile 관리 |
 | Application Operator | Chart 검색/import, Values Profile 작성, preview와 배포 수행 |
 | Viewer | Chart, Values diff, Release 상태와 Audit 조회 |
@@ -237,6 +237,8 @@ Artifact Hub의 official/verified publisher 표시는 검색 판단 근거이지
 
 ## 9. 권한
 
+공통 역할, Tenant 기능별 메뉴 접근, User 초대·비활성화·탈퇴와 기존 Resource ownership migration은 [Tenant 접근 권한·User 생명주기·Resource 소유권](../tenant-access-and-resource-ownership.md)을 기준으로 한다. Application Delivery는 이 공통 보안 기반이 완성된 뒤 구현한다.
+
 | Capability | 동작 |
 | --- | --- |
 | `chart:read` | Discover와 Tenant Library 조회 |
@@ -251,6 +253,14 @@ Artifact Hub의 official/verified publisher 표시는 검색 판단 근거이지
 | `namespace:create` | 정책에 맞는 Namespace 생성 계획과 실행 |
 | `ai-provider:manage` | Provider profile과 Tenant 허용 정책 관리 |
 | `ai-model:manage` | Ollama local model 조회·다운로드·검증·삭제 |
+
+역할 기본값은 다음과 같다.
+
+- Platform Manager: 모든 Tenant와 모든 capability
+- Tenant Admin: 해당 Tenant 구성원/기능/Chart Library/AI routing과 Tenant 내 운영
+- Cluster Admin: 허용 Cluster의 등록·정책·Application 전체 수명주기
+- Operator: 허용 Cluster/Namespace의 분석, 배포·Upgrade·Rollback; Uninstall/Source credential/shared exposure 제외
+- Viewer: 허용 scope read-only
 
 모든 object 조회와 mutation은 Tenant → Workspace → Cluster → Namespace scope를 application service에서 다시 평가한다. HTTP method나 Frontend 표시 여부만 신뢰하지 않는다.
 
@@ -278,7 +288,7 @@ Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한�
 | 단계 | 범위 |
 | --- | --- |
 | P2-0 | 기존 KlueOps 전체 UI audit와 제품형 visual refresh, design token/공통 component, responsive·접근성·visual/functional regression gate |
-| P2-A | domain/API 재정의, Tenant scope, capability와 migration |
+| P2-A | Platform Manager/Tenant 역할, scope별 capability·메뉴 기능 정책, User 생명주기, Resource 직접 ownership과 migration |
 | P2-B | Artifact Hub/repository/OCI/upload, Tenant Chart Library |
 | P2-C | Schema Form, YAML, Values Profile/version/diff |
 | P2-D | AI Provider profile과 Values Assistant |
