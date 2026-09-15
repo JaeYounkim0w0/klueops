@@ -31,8 +31,8 @@ KlueOps의 접근 제어는 `사용자 역할`, `역할이 부여된 scope`, `Te
 | Capability | Cluster/Analysis/Operation 중심 9개 | Chart/Application/Tenant member capability 확장 필요 |
 | Menu guard | Vue route meta와 `auth.hasCapability()` | scope별 capability가 아니라 전체 binding union이라 개선 필요 |
 | API guard | capability와 object scope 검사 | 신규 Phase 2 endpoint와 collection query의 tenant predicate 보강 필요 |
-| Existing Application | Cluster ID만 저장 | Tenant/Workspace 직접 ownership snapshot 추가 필요 |
-| AI Analysis | Cluster ID만 저장 | Tenant/Workspace 직접 ownership snapshot 추가 필요 |
+| Existing Application | Cluster ID로 Tenant/Workspace 소유권 유도 | Cluster ownership 불변·join guard를 전제로 유지 가능 |
+| AI Analysis | Cluster ID로 Tenant/Workspace 소유권 유도 | 중복 Tenant/Workspace column 없이 Cluster를 ownership root로 사용 |
 | Phase 2 Chart/Application | 문서상 Tenant scope | composite FK와 repository 규칙 구체화 필요 |
 | User | OIDC 최초 로그인 시 JIT 생성, 활성/비활성 지원 | 초대/사전 등록/탈퇴 workflow 필요 |
 | Role binding | User/Group + Platform/Tenant/Workspace/Cluster/Namespace scope | 기반 적합, scoped administration 필요 |
@@ -42,7 +42,7 @@ KlueOps의 접근 제어는 `사용자 역할`, `역할이 부여된 scope`, `Te
 1. Session의 capability가 모든 RoleBinding에서 평탄화된다. Tenant A의 권한 때문에 Tenant B 메뉴가 보일 수 있으므로 선택한 Tenant/Workspace 기준 `effectiveCapabilities`가 필요하다.
 2. OIDC 표준 group을 자동으로 Platform scope RoleBinding처럼 해석한다. multi-tenant 운영에서는 명시적으로 등록된 Platform Manager group을 제외하고 group도 Tenant/Workspace scope binding을 사용해야 한다.
 3. `/api/security`는 현재 Platform 수준 `identity:manage`만 전제로 전체 사용자를 조회한다. Tenant Admin을 추가하기 전에 Tenant별 membership endpoint와 query를 분리해야 한다.
-4. 기존 Application과 Analysis는 Cluster join으로 Tenant를 알 수 있지만 row 자체에 ownership이 없다. 조회 성능, 삭제된 Cluster의 감사 보존, 잘못된 join 방지를 위해 immutable ownership snapshot을 둔다.
+4. 기존 Application과 Analysis는 Cluster를 필수 참조하므로 Cluster를 ownership root로 사용한다. Cluster hard delete와 일반 Tenant 이동을 금지하고 모든 조회가 Cluster의 Tenant 조건을 join하도록 강제하면 중복 ownership column은 필요하지 않다.
 
 ## 3. 역할 모델
 
@@ -110,28 +110,32 @@ Operator의 rollback은 Preview, RBAC, exact confirmation을 통과한 일반 wo
 
 ## 5. Resource ownership
 
-### 5.1 직접 소유해야 하는 Resource
+### 5.1 직접 소유와 Cluster 파생 소유
 
-다음 row는 `tenant_id NOT NULL`을 가진다. Workspace가 적용되는 Resource는 `workspace_id NOT NULL`도 가진다.
+Tenant 공유 Resource는 `tenant_id NOT NULL`을 직접 가진다. Workspace가 적용되는 Resource는 `workspace_id`도 가진다.
 
-- Cluster, ClusterCredential metadata
-- AnalysisSession, Analysis result/command evidence, Incident와 Runbook의 Tenant copy
+- Tenant, Workspace, TenantMembership, TenantFeaturePolicy
 - Chart, ChartVersion, ChartSource, ValuesProfile/Revision
-- DeploymentPlan, Application, ReleaseOperation, CompanionResource
-- AI Conversation와 TenantAiRoutingPolicy
-- Async Job, Audit event, Notification
+- Tenant 전용 Runbook, TenantAiRoutingPolicy와 BYOK profile
 
-Cluster/Namespace 기반 Resource도 `tenant_id`, `workspace_id`, `cluster_id`를 함께 저장한다. DB에는 `(cluster_id, tenant_id, workspace_id)` composite FK를 두어 서로 다른 Tenant의 Cluster를 참조할 수 없게 한다. Application을 참조하는 Analysis에는 `(application_id, tenant_id)` composite FK도 둔다.
+Cluster에 반드시 속하는 Resource는 `cluster_id NOT NULL`만으로 Tenant/Workspace 소유권을 파생한다.
+
+- AnalysisSession, Analysis result/command evidence
+- Managed Application, DeploymentPlan, ReleaseOperation, CompanionResource
+- Cluster Incident/Signal, Cluster-scoped Runbook 실행
+- Cluster 작업 Async Job과 Notification
+
+이 모델의 전제는 `clusters.tenant_id/workspace_id`가 생성 후 불변이고 Cluster가 soft-delete 또는 FK `RESTRICT`로 보존되는 것이다. 일반 조회는 child ID만 사용하지 않고 `child JOIN clusters ON child.cluster_id = clusters.id WHERE clusters.tenant_id = :currentTenantId`를 강제한다. Application을 참조하는 Analysis는 `(application_id, cluster_id)` composite FK 또는 동일 Cluster application-service 검증으로 cross-cluster 연결을 차단한다.
 
 ChartVersion은 Tenant Chart의 하위 Resource다. 같은 digest가 여러 Tenant에 존재할 때 payload blob만 content-addressed storage에서 deduplicate할 수 있고, metadata/승인/trust/사용 이력은 Tenant별로 분리한다. Tenant A가 가져온 Chart 존재 여부나 Values를 Tenant B에 노출하지 않는다.
 
 ### 5.2 불변성과 삭제
 
-- 생성 후 `tenant_id`는 일반 update로 변경하지 않는다.
+- 생성 후 Tenant 직접 소유 Resource의 `tenant_id`와 Cluster의 `tenant_id/workspace_id`는 일반 update로 변경하지 않는다.
 - Tenant 비활성화 시 신규 mutation과 login scope 선택을 차단하되 Audit과 export는 Platform Manager가 조회할 수 있다.
 - Tenant 삭제는 dependency report, retention/export, exact confirmation과 async cleanup을 거치는 Platform Manager 전용 작업이다.
 - User/Resource 삭제 후에도 Audit의 actor/resource snapshot은 보존한다.
-- 모든 repository method는 `tenantId`를 필수 인자로 받고 ID 단독 조회 method를 application code에 노출하지 않는다.
+- Tenant 직접 소유 repository는 `tenantId`, Cluster 파생 소유 repository는 현재 Tenant와 `clusterId`를 필수 인자로 받고 ID 단독 조회 method를 application code에 노출하지 않는다.
 
 ## 6. User 생성, 활성화와 삭제
 
@@ -194,7 +198,7 @@ Backend는 request body의 tenantId를 신뢰하지 않고 선택한 Tenant head
 
 1. P2-A0: `Platform Manager` 명칭, Tenant Admin, 신규 capability/feature catalog와 migration
 2. P2-A1: scope별 effective access/session과 navigation contract; implicit platform group mapping 제거
-3. P2-A2: Resource ownership migration 및 composite FK/repository tenant guard
+3. P2-A2: Cluster 파생 ownership join guard, Tenant 직접 소유 Resource와 관계 FK/repository scope 정비
 4. P2-A3: Tenant membership, invite/suspend/offboard와 scoped RoleBinding API
 5. P2-A4: Users & Access, Role access preview, Tenant feature UI
 6. P2-A5: Tenant A/B/Platform Manager 보안 수용시험 후 Chart/Application 구현
@@ -213,4 +217,4 @@ Application Delivery 도메인 구현(P2-B 이후)은 P2-A0~A5가 완료된 뒤 
 - User suspend 즉시 신규 요청 차단, session revoke 후 재접속 차단
 - 마지막 Platform Manager 제거/비활성화/탈퇴 차단
 - offboard 후 RoleBinding과 secret/token access 제거, 기존 Audit actor 표시 유지
-- Cluster/Application/Analysis/Chart composite FK가 cross-tenant write 차단
+- Cluster 파생 Application/Analysis 조회가 반드시 Cluster Tenant join을 사용하고 cross-tenant ID 접근을 차단

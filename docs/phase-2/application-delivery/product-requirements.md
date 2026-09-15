@@ -237,7 +237,7 @@ Artifact Hub의 official/verified publisher 표시는 검색 판단 근거이지
 
 ## 9. 권한
 
-공통 역할, Tenant 기능별 메뉴 접근, User 초대·비활성화·탈퇴와 기존 Resource ownership migration은 [Tenant 접근 권한·User 생명주기·Resource 소유권](../tenant-access-and-resource-ownership.md)을 기준으로 한다. Application Delivery는 이 공통 보안 기반이 완성된 뒤 구현한다.
+공통 역할, Tenant 기능별 메뉴 접근, User 초대·비활성화·탈퇴와 Resource ownership 정비는 [Tenant 접근 권한·User 생명주기·Resource 소유권](../tenant-access-and-resource-ownership.md)을 기준으로 한다. Cluster 필수 Resource는 중복 Tenant/Workspace column 없이 Cluster ownership에서 유도하고, Tenant 공유 Resource만 Tenant를 직접 소유한다. Application Delivery는 이 공통 보안 기반이 완성된 뒤 구현한다.
 
 | Capability | 동작 |
 | --- | --- |

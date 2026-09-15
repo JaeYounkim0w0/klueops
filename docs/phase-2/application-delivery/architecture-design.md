@@ -16,7 +16,7 @@
 - Applications의 배포 시작 chooser는 Library/Discover/Direct Import의 진입점만 결정한다. Chart version이 확정된 뒤에만 `DeploymentPlan`을 만들며, chooser나 catalog 탐색 단계에서는 Cluster write 권한을 요구하지 않는다.
 - 실행 추적은 기존 Async Job/Job Center, 대상별 영속 이력은 Application/ReleaseOperation projection을 사용한다.
 - Application Delivery 기능 개발 전 `P2-0`에서 기존 제품 전체 Frontend를 Phase 2 HTML 시안과 동일한 공통 design system으로 현대화한다.
-- P2-A에서 scope별 effective capability와 Tenant feature policy, User membership/offboarding, 기존 Cluster/Application/Analysis ownership migration을 먼저 완료한다. 상세 기준은 [Tenant 접근 권한·User 생명주기·Resource 소유권](../tenant-access-and-resource-ownership.md)이다.
+- P2-A에서 scope별 effective capability와 Tenant feature policy, User membership/offboarding, 기존 Cluster 파생 ownership query guard를 먼저 완료한다. 상세 기준은 [Tenant 접근 권한·User 생명주기·Resource 소유권](../tenant-access-and-resource-ownership.md)이다.
 
 ### 1.1 P2-0 Frontend 기반 경계
 
@@ -131,7 +131,7 @@ Helm OCI 참고: <https://docs.helm.sh/docs/topics/registries/>
 
 ## 5. Domain model
 
-모든 Tenant Resource는 `tenantId`를 직접 소유한다. Cluster 기반 Resource에도 조회 시 join으로만 유도하지 않고 immutable `tenantId`, `workspaceId` snapshot과 composite FK를 둔다. Platform Manager만 cross-tenant query를 사용할 수 있으며 일반 repository port는 tenantId 없는 ID 단독 조회를 노출하지 않는다.
+Chart/Source/Values처럼 Tenant가 직접 공유하는 Resource는 `tenantId`를 소유한다. Analysis/Application처럼 Cluster가 필수인 Resource는 중복 `tenantId`, `workspaceId`를 저장하지 않고 불변인 Cluster ownership에서 유도한다. 이 경우 모든 repository query는 Cluster를 join해 현재 Tenant를 검사하고 Cluster hard delete와 일반 Tenant 이동을 금지한다. Platform Manager만 명시적인 cross-tenant query를 사용할 수 있다.
 
 ```text
 ChartSource
