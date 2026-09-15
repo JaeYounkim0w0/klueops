@@ -40,7 +40,7 @@ public class ApiAuthorizationInterceptor implements HandlerInterceptor {
             return true;
         }
         // Application Delivery v2는 Tenant query/body를 포함하므로 전용 Controller에서 parent ownership까지 검사한다.
-        if (path.startsWith("/api/v2/application-delivery/")) return true;
+        if (path.startsWith("/api/v2/application-delivery/") || path.startsWith("/api/v2/ai-configuration/")) return true;
         Capability required = requiredCapability(path, request.getMethod());
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         ResolvedAccess access = currentAccessResolver.resolve(authentication);

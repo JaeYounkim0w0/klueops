@@ -44,6 +44,10 @@ class ManagedApplicationEntity {
     private String lastSyncStatus;
     @Column(length = 1000)
     private String lastSyncError;
+    private Integer currentReleaseRevision;
+    private UUID chartVersionId;
+    private UUID valuesRevisionId;
+    private Instant archivedAt;
 
     protected ManagedApplicationEntity() {
     }
@@ -69,14 +73,20 @@ class ManagedApplicationEntity {
     }
 
     static ManagedApplicationEntity fromDomain(ManagedApplication application) {
-        return new ManagedApplicationEntity(application.id(), application.clusterId(), application.namespace(), application.name(),
+        ManagedApplicationEntity entity = new ManagedApplicationEntity(application.id(), application.clusterId(), application.namespace(), application.name(),
                 application.deploymentType(), application.image(), application.helmReleaseName(), application.helmChart(),
                 application.status(), application.createdBy(), application.createdAt(), application.updatedAt(),
                 application.lastSyncedAt(), application.lastSyncStatus(), application.lastSyncError());
+        entity.currentReleaseRevision = application.currentReleaseRevision();
+        entity.chartVersionId = application.chartVersionId();
+        entity.valuesRevisionId = application.valuesRevisionId();
+        entity.archivedAt = application.archivedAt();
+        return entity;
     }
 
     ManagedApplication toDomain() {
         return new ManagedApplication(id, clusterId, namespace, name, deploymentType, image, helmReleaseName, helmChart,
-                status, createdBy, createdAt, updatedAt, lastSyncedAt, lastSyncStatus, lastSyncError);
+                status, createdBy, createdAt, updatedAt, lastSyncedAt, lastSyncStatus, lastSyncError,
+                currentReleaseRevision, chartVersionId, valuesRevisionId, archivedAt);
     }
 }

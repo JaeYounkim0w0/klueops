@@ -188,7 +188,7 @@ watch(
             <i class="pi pi-cloud"></i>
             <span>{{ t('shell.clusters') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read')" to="/applications" class="nav-item nav-child">
+          <RouterLink v-if="auth.hasCapability('application:read')" to="/applications" class="nav-item nav-child">
             <i class="pi pi-box"></i>
             <span>{{ t('shell.applications') }}</span>
           </RouterLink>
@@ -232,6 +232,10 @@ watch(
             <i class="pi pi-cog"></i>
             <span>{{ t('shell.dataRuntime') }}</span>
           </RouterLink>
+          <RouterLink v-if="auth.hasCapability('ai:routing:manage')" to="/settings/ai-providers" class="nav-item">
+            <i class="pi pi-sparkles"></i>
+            <span>AI Providers</span>
+          </RouterLink>
           <RouterLink v-if="auth.hasCapability('audit:read')" to="/settings/reliability" class="nav-item">
             <i class="pi pi-verified"></i>
             <span>{{ t('shell.reliability') }}</span>
@@ -239,6 +243,10 @@ watch(
           <RouterLink v-if="!auth.session.localDevelopment && auth.hasCapability('identity:manage')" to="/settings/access" class="nav-item">
             <i class="pi pi-users"></i>
             <span>{{ t('shell.access') }}</span>
+          </RouterLink>
+          <RouterLink v-if="auth.hasCapability('tenant:member:manage')" to="/settings/users-access" class="nav-item">
+            <i class="pi pi-user-edit"></i>
+            <span>Users &amp; Access</span>
           </RouterLink>
           <RouterLink v-if="auth.hasCapability('platform:admin')" to="/settings/tenancy" class="nav-item">
             <i class="pi pi-building"></i>

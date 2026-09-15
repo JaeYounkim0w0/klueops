@@ -156,6 +156,9 @@ public class IdentityAccessService {
             throw new IllegalArgumentException("You cannot disable your own active session account");
         }
         UserAccount user = users.findById(userId).orElseThrow();
+        if (!active && isOnlyRemainingPlatformManager(userId, null)) {
+            throw new IllegalArgumentException("At least one active Platform Manager must remain");
+        }
         return users.save(user.withActive(active, clock.instant()));
     }
 
@@ -187,7 +190,36 @@ public class IdentityAccessService {
 
     @Transactional
     public void deleteBinding(UUID id) {
+        RoleBinding binding = bindings.findById(id).orElseThrow();
+        if (isPlatformManagerBinding(binding) && isOnlyRemainingPlatformManager(null, id)) {
+            throw new IllegalArgumentException("At least one active Platform Manager must remain");
+        }
         bindings.deleteById(id);
+    }
+
+    // 관리 실수로 전체 플랫폼 관리 권한이 사라지는 상황을 방지한다.
+    private boolean isOnlyRemainingPlatformManager(UUID disabledUserId, UUID deletedBindingId) {
+        return bindings.findAll().stream()
+                .filter(binding -> !binding.id().equals(deletedBindingId))
+                .filter(this::isPlatformManagerBinding)
+                .noneMatch(binding -> isUsablePlatformManager(binding, disabledUserId));
+    }
+
+    private boolean isPlatformManagerBinding(RoleBinding binding) {
+        return binding.role() == PlatformRole.PLATFORM_ADMIN
+                && binding.scope().type() == ScopeType.PLATFORM;
+    }
+
+    private boolean isUsablePlatformManager(RoleBinding binding, UUID disabledUserId) {
+        if (binding.principalType() == PrincipalType.GROUP) {
+            return true;
+        }
+        try {
+            UUID userId = UUID.fromString(binding.principalKey());
+            return !userId.equals(disabledUserId) && users.findById(userId).map(UserAccount::active).orElse(false);
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
     }
 
     public boolean hasCapability(Collection<Capability> capabilities, Capability required) {

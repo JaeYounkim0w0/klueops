@@ -21,10 +21,23 @@ public final class ManagedApplication {
     private final Instant lastSyncedAt;
     private final String lastSyncStatus;
     private final String lastSyncError;
+    private final Integer currentReleaseRevision;
+    private final UUID chartVersionId;
+    private final UUID valuesRevisionId;
+    private final Instant archivedAt;
 
     public ManagedApplication(UUID id, UUID clusterId, String namespace, String name, ApplicationDeploymentType deploymentType,
                               String image, String helmReleaseName, String helmChart, ApplicationStatus status, String createdBy,
                               Instant createdAt, Instant updatedAt, Instant lastSyncedAt, String lastSyncStatus, String lastSyncError) {
+        this(id, clusterId, namespace, name, deploymentType, image, helmReleaseName, helmChart, status, createdBy,
+                createdAt, updatedAt, lastSyncedAt, lastSyncStatus, lastSyncError, null, null, null, null);
+    }
+
+    public ManagedApplication(UUID id, UUID clusterId, String namespace, String name, ApplicationDeploymentType deploymentType,
+                              String image, String helmReleaseName, String helmChart, ApplicationStatus status, String createdBy,
+                              Instant createdAt, Instant updatedAt, Instant lastSyncedAt, String lastSyncStatus,
+                              String lastSyncError, Integer currentReleaseRevision, UUID chartVersionId,
+                              UUID valuesRevisionId, Instant archivedAt) {
         this.id = Objects.requireNonNull(id, "id must not be null");
         this.clusterId = Objects.requireNonNull(clusterId, "clusterId must not be null");
         this.namespace = Objects.requireNonNull(namespace, "namespace must not be null");
@@ -40,6 +53,10 @@ public final class ManagedApplication {
         this.lastSyncedAt = lastSyncedAt;
         this.lastSyncStatus = lastSyncStatus;
         this.lastSyncError = lastSyncError;
+        this.currentReleaseRevision = currentReleaseRevision;
+        this.chartVersionId = chartVersionId;
+        this.valuesRevisionId = valuesRevisionId;
+        this.archivedAt = archivedAt;
     }
 
     public static ManagedApplication dockerImage(UUID clusterId, String namespace, String name, String image, String actor) {
@@ -56,7 +73,20 @@ public final class ManagedApplication {
 
     public ManagedApplication synced(ApplicationStatus status, Instant syncedAt, String syncStatus, String syncError) {
         return new ManagedApplication(id, clusterId, namespace, name, deploymentType, image, helmReleaseName, helmChart,
-                status, createdBy, createdAt, Instant.now(), syncedAt, syncStatus, syncError);
+                status, createdBy, createdAt, Instant.now(), syncedAt, syncStatus, syncError,
+                currentReleaseRevision, chartVersionId, valuesRevisionId, archivedAt);
+    }
+
+    public ManagedApplication withStatus(ApplicationStatus status, String syncStatus, String syncError) {
+        return new ManagedApplication(id, clusterId, namespace, name, deploymentType, image, helmReleaseName, helmChart,
+                status, createdBy, createdAt, Instant.now(), Instant.now(), syncStatus, syncError,
+                currentReleaseRevision, chartVersionId, valuesRevisionId, archivedAt);
+    }
+
+    public ManagedApplication withReleaseMetadata(Integer revision, UUID versionId, UUID valuesId) {
+        return new ManagedApplication(id, clusterId, namespace, name, deploymentType, image, helmReleaseName, helmChart,
+                status, createdBy, createdAt, Instant.now(), lastSyncedAt, lastSyncStatus, lastSyncError,
+                revision, versionId, valuesId, archivedAt);
     }
 
     public UUID id() { return id; }
@@ -74,4 +104,8 @@ public final class ManagedApplication {
     public Instant lastSyncedAt() { return lastSyncedAt; }
     public String lastSyncStatus() { return lastSyncStatus; }
     public String lastSyncError() { return lastSyncError; }
+    public Integer currentReleaseRevision() { return currentReleaseRevision; }
+    public UUID chartVersionId() { return chartVersionId; }
+    public UUID valuesRevisionId() { return valuesRevisionId; }
+    public Instant archivedAt() { return archivedAt; }
 }

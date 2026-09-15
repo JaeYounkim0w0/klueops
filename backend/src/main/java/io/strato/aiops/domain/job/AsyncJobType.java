@@ -9,5 +9,6 @@ public enum AsyncJobType {
     HELM_INSTALL,
     HELM_UPGRADE,
     HELM_ROLLBACK,
+    HELM_UNINSTALL,
     AI_ANALYSIS
 }

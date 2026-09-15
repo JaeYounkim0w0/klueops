@@ -172,7 +172,7 @@ public class TenantAccessAdministrationService {
     }
 
     private List<RoleBinding> tenantBindings(UUID tenantId, UUID userId) {
-        return bindings.findAll().stream()
+        return bindings.findByPrincipal(userId.toString()).stream()
                 .filter(binding -> binding.principalType() == PrincipalType.USER)
                 .filter(binding -> binding.principalKey().equals(userId.toString()))
                 .filter(binding -> belongsToTenant(binding, tenantId))

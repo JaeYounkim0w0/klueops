@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 
 @Service("analysisSectionRunner")
 public class AnalysisSectionExecutor {
@@ -43,7 +44,11 @@ public class AnalysisSectionExecutor {
     }
 
     public CompletableFuture<Result> execute(String sectionName, String instruction, String context) {
-        CompletableFuture<Result> future = CompletableFuture.supplyAsync(() -> analyze(sectionName, instruction, context),
+        return execute(null, sectionName, instruction, context);
+    }
+
+    public CompletableFuture<Result> execute(UUID tenantId, String sectionName, String instruction, String context) {
+        CompletableFuture<Result> future = CompletableFuture.supplyAsync(() -> analyze(tenantId, sectionName, instruction, context),
                 executor);
         return future.completeOnTimeout(timeoutFallback(sectionName, context), timeoutMs, TimeUnit.MILLISECONDS)
                 .thenApply(result -> {
@@ -55,6 +60,11 @@ public class AnalysisSectionExecutor {
 
     public CompletableFuture<Result> executeOrReuse(String sectionName, String instruction, String context,
                                                      JsonNode previousResult, SupportedLocale locale) {
+        return executeOrReuse(null, sectionName, instruction, context, previousResult, locale);
+    }
+
+    public CompletableFuture<Result> executeOrReuse(UUID tenantId, String sectionName, String instruction, String context,
+                                                     JsonNode previousResult, SupportedLocale locale) {
         String fingerprint = contextFingerprint(context, locale);
         ObjectNode reused = reusableSection(previousResult, sectionName, fingerprint);
         if (reused != null) {
@@ -63,16 +73,16 @@ public class AnalysisSectionExecutor {
             reused.put("_contextFingerprint", fingerprint);
             return CompletableFuture.completedFuture(new Result(sectionName, reused, context.length(), 0, null));
         }
-        return execute(sectionName, instruction, context).thenApply(result -> {
+        return execute(tenantId, sectionName, instruction, context).thenApply(result -> {
             result.result().put("_contextFingerprint", fingerprint);
             return result;
         });
     }
 
-    private Result analyze(String sectionName, String instruction, String context) {
+    private Result analyze(UUID tenantId, String sectionName, String instruction, String context) {
         long startedNanos = System.nanoTime();
         try {
-            ObjectNode result = parseObject(aiAnalysisPort.analyzeSection(sectionName, instruction, context));
+            ObjectNode result = parseObject(aiAnalysisPort.analyzeSection(tenantId, sectionName, instruction, context));
             requireClusterOperationalContent(sectionName, result);
             result.put("_sectionName", sectionName);
             return new Result(sectionName, result, context.length(), elapsedMillis(startedNanos), null);

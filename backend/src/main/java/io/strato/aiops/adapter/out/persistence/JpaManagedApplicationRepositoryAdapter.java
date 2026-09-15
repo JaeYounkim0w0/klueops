@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +32,14 @@ public class JpaManagedApplicationRepositoryAdapter implements ManagedApplicatio
     @Override
     public List<ManagedApplication> findRecent(int limit) {
         return repository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, limit)).stream()
+                .map(ManagedApplicationEntity::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<ManagedApplication> findRecentByClusterIds(Collection<UUID> clusterIds, int limit) {
+        if (clusterIds.isEmpty()) return List.of();
+        return repository.findByClusterIdInOrderByCreatedAtDesc(clusterIds, PageRequest.of(0, limit)).stream()
                 .map(ManagedApplicationEntity::toDomain)
                 .toList();
     }

@@ -138,7 +138,7 @@ class AuthApiSecurityTest {
     }
 
     @Test
-    void enforcesCapabilitiesAfterAuthentication() throws Exception {
+    void rejectsAuthenticatedUsersWithoutExplicitRoleOrGroupMapping() throws Exception {
         mockMvc.perform(get("/api/clusters").with(oidcLogin().idToken(token -> token
                         .issuer("https://idp.example").subject("unassigned"))))
                 .andExpect(status().isForbidden())
@@ -147,7 +147,8 @@ class AuthApiSecurityTest {
         mockMvc.perform(get("/api/clusters").with(oidcLogin().idToken(token -> token
                         .issuer("https://idp.example").subject("viewer")
                         .claim("groups", java.util.List.of("aiops-viewers")))))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
     @Test

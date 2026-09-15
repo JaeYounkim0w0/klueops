@@ -1,7 +1,8 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 
-import { api, type TenantResponse, type WorkspaceResponse } from '@/api/client';
+import { api, ApiError, type TenantResponse, type WorkspaceResponse } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
 
 const TENANT_KEY = 'aiops.tenantId';
 const WORKSPACE_KEY = 'aiops.workspaceId';
@@ -30,6 +31,7 @@ export const useTenancyStore = defineStore('tenancy', () => {
         : tenants.value[0]?.id ?? '';
       persist(TENANT_KEY, currentTenantId.value);
       await loadWorkspaces(storage()?.getItem(WORKSPACE_KEY) ?? '');
+      await refreshEffectiveAccess();
       loaded.value = true;
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : 'Tenant context is unavailable.';
@@ -44,12 +46,14 @@ export const useTenancyStore = defineStore('tenancy', () => {
     currentTenantId.value = tenantId;
     persist(TENANT_KEY, tenantId);
     await loadWorkspaces('');
+    await refreshEffectiveAccess();
   }
 
   function selectWorkspace(workspaceId: string): void {
     if (!workspaces.value.some((item) => item.id === workspaceId)) return;
     currentWorkspaceId.value = workspaceId;
     persist(WORKSPACE_KEY, workspaceId);
+    void refreshEffectiveAccess();
   }
 
   async function refresh(): Promise<void> {
@@ -76,6 +80,16 @@ export const useTenancyStore = defineStore('tenancy', () => {
 
   function storage(): Storage | null {
     return typeof localStorage === 'undefined' ? null : localStorage;
+  }
+
+  async function refreshEffectiveAccess(): Promise<void> {
+    if (!currentTenantId.value) return;
+    try {
+      await useAuthStore().loadEffectiveAccess(currentTenantId.value, currentWorkspaceId.value || undefined);
+    } catch (cause) {
+      // Rolling upgrade 중 구형 backend의 404는 기존 session 권한으로만 동작하게 한다.
+      if (!(cause instanceof ApiError) || cause.status !== 404) throw cause;
+    }
   }
 
   return {

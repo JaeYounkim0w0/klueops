@@ -1,0 +1,17 @@
+.ai-providers-page > section { display: grid; gap: 13px; }
+.provider-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+.provider-card { display: grid; gap: 14px; border: 1px solid #dbe4ee; border-radius: 13px; background: #fff; padding: 16px; }
+.provider-card > header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.provider-card h3, .provider-card p { margin: 0; }.provider-card h3 { font-size: 14px; }.provider-card p { margin-top: 3px; color: #748397; font-size: 10px; }
+.provider-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #e9f2fe; color: #2769b9; }
+.provider-card dl { display: grid; margin: 0; border-block: 1px solid #edf1f5; padding-block: 7px; }
+.provider-card dl div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; padding: 5px 0; }
+.provider-card dt { color: #8491a2; font-size: 9px; }.provider-card dd { overflow: hidden; margin: 0; color: #43546a; font-size: 10px; text-overflow: ellipsis; }
+.secondary-button.full { justify-content: center; width: 100%; }
+.routing-list { overflow: hidden; border: 1px solid #dbe4ee; border-radius: 13px; background: #fff; }
+.routing-row { display: grid; grid-template-columns: minmax(180px, 1fr) 190px 190px 140px auto; align-items: end; gap: 12px; border-top: 1px solid #e8edf3; padding: 15px 17px; }
+.routing-row:first-child { border-top: 0; }.routing-row strong, .routing-row p { margin: 0; }.routing-row p { margin-top: 4px; color: #7b899b; font-size: 10px; }
+.routing-row label { display: grid; gap: 5px; color: #65758a; font-size: 9px; font-weight: 800; }.routing-row select { min-width: 0; border: 1px solid #cdd8e5; border-radius: 7px; background: #fff; padding: 8px; font-size: 10px; }
+.routing-row .transfer-toggle { display: flex; align-items: center; align-self: center; gap: 6px; }.checkbox-field { display: flex !important; grid-column: 1 / -1; align-items: center; gap: 7px !important; }
+@media (max-width: 1100px) { .provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.routing-row { grid-template-columns: 1fr 1fr 1fr; }.routing-row > div { grid-column: 1 / -1; } }
+@media (max-width: 700px) { .provider-grid { grid-template-columns: 1fr; }.routing-row { grid-template-columns: 1fr; align-items: stretch; }.routing-row > div { grid-column: auto; } }

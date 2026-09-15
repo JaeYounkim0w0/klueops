@@ -38,6 +38,15 @@ export interface AuthSession {
   session: BrowserSessionInfo | null;
 }
 
+export interface EffectiveAccess {
+  platformRole?: string;
+  tenantId: string;
+  workspaceId?: string;
+  effectiveCapabilities: string[];
+  enabledFeatures: string[];
+  navigation: Record<string, boolean>;
+}
+
 const ANONYMOUS: AuthSession = {
   authenticated: false,
   localDevelopment: false,
@@ -53,6 +62,7 @@ export const useAuthStore = defineStore('auth', () => {
   const session = ref<AuthSession>({ ...ANONYMOUS });
   const loaded = ref(false);
   const loading = ref(false);
+  const effectiveAccess = ref<EffectiveAccess | null>(null);
   const authenticated = computed(() => session.value.authenticated);
   const user = computed(() => session.value.user);
 
@@ -69,7 +79,15 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function hasCapability(capability: string): boolean {
-    return session.value.capabilities.includes(capability);
+    const capabilities = effectiveAccess.value?.effectiveCapabilities ?? session.value.capabilities;
+    return capabilities.includes(capability);
+  }
+
+  async function loadEffectiveAccess(tenantId: string, workspaceId?: string): Promise<void> {
+    if (!tenantId) { effectiveAccess.value = null; return; }
+    const query = new URLSearchParams({ tenantId });
+    if (workspaceId) query.set('workspaceId', workspaceId);
+    effectiveAccess.value = await requestJson<EffectiveAccess>(`/api/me/access?${query}`);
   }
 
   function beginLogin(returnTo = '/'): void {
@@ -124,10 +142,12 @@ export const useAuthStore = defineStore('auth', () => {
     session,
     loaded,
     loading,
+    effectiveAccess,
     authenticated,
     user,
     load,
     hasCapability,
+    loadEffectiveAccess,
     beginLogin,
     authenticatedReturnTo,
     continueLogin,

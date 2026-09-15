@@ -58,6 +58,16 @@ public class WorkloadExecutorConfig {
         return executor("command-console-", coreSize, maxSize, queueCapacity);
     }
 
+    @Bean("applicationDeliveryExecutor")
+    public ThreadPoolTaskExecutor applicationDeliveryExecutor(
+            @Value("${aiops.executors.application-delivery.core-size:2}") int coreSize,
+            @Value("${aiops.executors.application-delivery.max-size:4}") int maxSize,
+            @Value("${aiops.executors.application-delivery.queue-capacity:30}") int queueCapacity
+    ) {
+        // Helm 작업은 외부 I/O 중심이므로 분석 작업과 격리된 제한 큐를 사용한다.
+        return executor("application-delivery-", coreSize, maxSize, queueCapacity);
+    }
+
     @Bean("aiChatHeartbeatScheduler")
     @Primary
     public ThreadPoolTaskScheduler aiChatHeartbeatScheduler() {

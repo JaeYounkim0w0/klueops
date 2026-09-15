@@ -1,6 +1,7 @@
 package io.strato.aiops.adapter.out.helm;
 
 import org.springframework.stereotype.Component;
+import io.strato.aiops.application.port.out.RemoteSourceValidationPort;
 
 import java.net.InetAddress;
 import java.net.URI;
@@ -8,8 +9,9 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 
 @Component
-public class RemoteChartSourceValidator {
+public class RemoteChartSourceValidator implements RemoteSourceValidationPort {
 
+    @Override
     public URI requirePublicHttps(String value) {
         URI uri;
         try {

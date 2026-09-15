@@ -9,6 +9,7 @@ import java.util.Optional;
 
 public interface RoleBindingRepositoryPort {
     List<RoleBinding> findByPrincipals(Collection<String> principals);
+    default List<RoleBinding> findByPrincipal(String principal) { return findByPrincipals(List.of(principal)); }
     List<RoleBinding> findAll();
     Optional<RoleBinding> findById(UUID id);
     RoleBinding save(RoleBinding binding);

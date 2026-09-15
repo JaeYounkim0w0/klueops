@@ -212,6 +212,40 @@ class IdentityAccessServiceTest {
         assertThat(service.allowsWorkspace(access, Capability.CLUSTER_READ, workspaceB.id())).isFalse();
     }
 
+    @Test
+    void protectsLastActivePlatformManagerFromDisableAndBindingDeletion() {
+        UserAccount actor = service.provision(new ExternalIdentity("https://idp", "manager-actor", "actor",
+                "Actor", null, Set.of()));
+        UserAccount lastManager = service.provision(new ExternalIdentity("https://idp", "manager-last", "manager",
+                "Manager", null, Set.of()));
+        RoleBinding managerBinding = bindings.save(RoleBinding.create(PrincipalType.USER,
+                lastManager.id().toString(), PlatformRole.PLATFORM_ADMIN, AccessScope.platform(), "bootstrap",
+                clock.instant()));
+
+        assertThatThrownBy(() -> service.setActive(lastManager.id(), false, actor.id()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Platform Manager");
+        assertThatThrownBy(() -> service.deleteBinding(managerBinding.id()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Platform Manager");
+    }
+
+    @Test
+    void allowsPlatformManagerRemovalWhenAnotherActiveManagerRemains() {
+        UserAccount actor = service.provision(new ExternalIdentity("https://idp", "manager-one", "manager-one",
+                "Manager One", null, Set.of()));
+        UserAccount replacement = service.provision(new ExternalIdentity("https://idp", "manager-two", "manager-two",
+                "Manager Two", null, Set.of()));
+        RoleBinding actorBinding = bindings.save(RoleBinding.create(PrincipalType.USER, actor.id().toString(),
+                PlatformRole.PLATFORM_ADMIN, AccessScope.platform(), "bootstrap", clock.instant()));
+        bindings.save(RoleBinding.create(PrincipalType.USER, replacement.id().toString(),
+                PlatformRole.PLATFORM_ADMIN, AccessScope.platform(), "bootstrap", clock.instant()));
+
+        service.deleteBinding(actorBinding.id());
+
+        assertThat(bindings.items).noneMatch(binding -> binding.id().equals(actorBinding.id()));
+    }
+
     private static final class InMemoryUsers implements UserAccountRepositoryPort {
         private final Map<UUID, UserAccount> items = new LinkedHashMap<>();
         private int saveCount;

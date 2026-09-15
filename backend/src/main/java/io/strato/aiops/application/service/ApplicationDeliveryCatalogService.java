@@ -3,12 +3,12 @@ package io.strato.aiops.application.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.strato.aiops.adapter.out.helm.HelmChartArchiveInspector;
-import io.strato.aiops.adapter.out.helm.RemoteChartSourceValidator;
 import io.strato.aiops.application.port.out.ApplicationDeliveryRepositoryPort;
+import io.strato.aiops.application.port.out.ChartArchiveInspectionPort;
 import io.strato.aiops.application.port.out.ChartAcquisitionPort;
 import io.strato.aiops.application.port.out.ChartCatalogPort;
 import io.strato.aiops.application.port.out.SecretCryptoPort;
+import io.strato.aiops.application.port.out.RemoteSourceValidationPort;
 import io.strato.aiops.domain.applicationdelivery.ChartSourceType;
 import io.strato.aiops.domain.applicationdelivery.ChartSource;
 import io.strato.aiops.domain.applicationdelivery.ChartTrustStatus;
@@ -35,19 +35,19 @@ public class ApplicationDeliveryCatalogService {
     private static final int MAXIMUM_LIBRARY_RESULTS = 200;
     private final ChartCatalogPort catalog;
     private final ChartAcquisitionPort acquisition;
-    private final HelmChartArchiveInspector archiveInspector;
+    private final ChartArchiveInspectionPort archiveInspector;
     private final ApplicationDeliveryRepositoryPort repository;
     private final SecretCryptoPort secretCrypto;
     private final ObjectMapper objectMapper;
     private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
     private final Clock clock;
-    private final RemoteChartSourceValidator sourceValidator;
+    private final RemoteSourceValidationPort sourceValidator;
 
     public ApplicationDeliveryCatalogService(ChartCatalogPort catalog, ChartAcquisitionPort acquisition,
-                                             HelmChartArchiveInspector archiveInspector,
+                                             ChartArchiveInspectionPort archiveInspector,
                                              ApplicationDeliveryRepositoryPort repository,
                                              SecretCryptoPort secretCrypto, ObjectMapper objectMapper, Clock clock,
-                                             RemoteChartSourceValidator sourceValidator) {
+                                             RemoteSourceValidationPort sourceValidator) {
         this.catalog = catalog;
         this.acquisition = acquisition;
         this.archiveInspector = archiveInspector;
@@ -190,7 +190,7 @@ public class ApplicationDeliveryCatalogService {
         }
     }
 
-    private String metadata(HelmChartArchiveInspector.InspectedArchive inspected) {
+    private String metadata(ChartArchiveInspectionPort.InspectedArchive inspected) {
         try {
             return objectMapper.writeValueAsString(Map.of("name", inspected.name(), "version", inspected.version(),
                     "fileCount", inspected.fileCount(), "expandedBytes", inspected.expandedBytes()));

@@ -533,6 +533,9 @@ export interface ApplicationResponse {
   status?: string;
   clusterId?: string;
   createdAt?: string;
+  currentReleaseRevision?: number;
+  chartVersionId?: string;
+  valuesRevisionId?: string;
 }
 
 export interface ApplicationStatusResponse {
@@ -1552,6 +1555,164 @@ export interface AuditLogResponse {
   createdAt: string;
 }
 
+export interface CatalogPackageResponse {
+  packageId: string;
+  repository: string;
+  repositoryDisplayName: string;
+  repositoryUrl?: string;
+  name: string;
+  description?: string;
+  version: string;
+  appVersion?: string;
+  contentUrl?: string;
+  official: boolean;
+  verifiedPublisher: boolean;
+  availableVersions: string[];
+}
+
+export interface ChartVersionResponse {
+  id: string;
+  chartVersion: string;
+  appVersion?: string;
+  digestSha256: string;
+  provenanceStatus: string;
+  sourceReference: string;
+  importedAt: string;
+}
+
+export interface LibraryChartResponse {
+  id: string;
+  tenantId: string;
+  name: string;
+  description?: string;
+  sourceType: string;
+  sourceName?: string;
+  repositoryUrl?: string;
+  trustStatus: string;
+  versions: ChartVersionResponse[];
+}
+
+export interface ChartSourceResponse {
+  id: string;
+  tenantId: string;
+  sourceType: 'HELM_REPOSITORY' | 'OCI_REGISTRY';
+  name: string;
+  endpoint: string;
+  credentialConfigured: boolean;
+  tlsPolicy: string;
+  enabled: boolean;
+  updatedAt: string;
+}
+
+export interface ValuesProfileResponse {
+  id: string;
+  tenantId: string;
+  chartVersionId: string;
+  name: string;
+  description?: string;
+  updatedAt: string;
+}
+
+export interface ValuesRevisionResponse {
+  id: string;
+  revision: number;
+  valuesSha256: string;
+  parentRevision?: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface DeploymentPlanResponse {
+  id: string;
+  clusterId: string;
+  chartVersionId: string;
+  valuesRevisionId?: string;
+  namespace: string;
+  releaseName: string;
+  exposureType: 'NONE' | 'HTTP_ROUTE';
+  hostname?: string;
+  manifestSha256: string;
+  warnings: string[];
+  confirmationText: string;
+  renderedManifest: string;
+  expiresAt: string;
+}
+
+export interface DeploymentAcceptedResponse {
+  applicationId: string;
+  jobId: string;
+  operationId: string;
+}
+
+export interface ReleaseOperationResponse {
+  id: string;
+  jobId: string;
+  type: string;
+  status: string;
+  releaseRevision?: number;
+  outputSummary?: string;
+  errorMessage?: string;
+  requestedBy: string;
+  requestedAt: string;
+  completedAt?: string;
+}
+
+export interface AiProviderProfileResponse {
+  id: string;
+  name: string;
+  providerType: 'OLLAMA' | 'OPENAI' | 'GOOGLE_GENAI' | 'OPENAI_COMPATIBLE';
+  baseUrl: string;
+  credentialConfigured: boolean;
+  defaultModel: string;
+  allowedModels: string[];
+  enabled: boolean;
+  externalDataTransfer: boolean;
+  validationStatus: string;
+  lastValidatedAt?: string;
+}
+
+export interface AiRoutingResponse {
+  purpose: 'ANALYSIS' | 'CHAT' | 'HELM_VALUES';
+  primaryProfileId: string;
+  model: string;
+  fallbackProfileId?: string;
+  fallbackModel?: string;
+  externalTransferAllowed: boolean;
+  maximumContextChars: number;
+  maximumOutputTokens: number;
+  updatedAt: string;
+}
+
+export interface TenantMemberResponse {
+  id: string;
+  tenantId: string;
+  userId?: string;
+  username?: string;
+  displayName?: string;
+  email?: string;
+  role: 'TENANT_ADMIN' | 'CLUSTER_ADMIN' | 'OPERATOR' | 'VIEWER';
+  scopeType: 'TENANT' | 'WORKSPACE' | 'CLUSTER' | 'NAMESPACE';
+  workspaceId?: string;
+  clusterId?: string;
+  namespace?: string;
+  status: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'OFFBOARDED';
+  updatedAt: string;
+}
+
+export interface OidcGroupMappingResponse {
+  id: string;
+  issuer: string;
+  groupValue: string;
+  tenantId: string;
+  role: string;
+  scopeType: string;
+  workspaceId?: string;
+  clusterId?: string;
+  namespace?: string;
+  active: boolean;
+  updatedAt: string;
+}
+
 export const api = {
   getRuntimeReadiness: () => request<RuntimeReadinessResponse>('/api/operations/runtime-readiness'),
   listTenants: () => request<TenantResponse[]>('/api/tenants'),
@@ -1716,7 +1877,108 @@ export const api = {
   cancelJob: (jobId: string) => request<JobResponse>(`/api/jobs/${encodeURIComponent(jobId)}/cancel`, {
     method: 'POST'
   }),
+  searchChartCatalog: (tenantId: string, query: string, limit = 20) => request<CatalogPackageResponse[]>(
+    `/api/v2/application-delivery/catalog/search?${new URLSearchParams({ tenantId, query, limit: String(limit) })}`
+  ),
+  importChart: (body: { tenantId: string; repository: string; name: string; version: string }) =>
+    request<{ chart: LibraryChartResponse }>('/api/v2/application-delivery/charts/import', {
+      method: 'POST', body: JSON.stringify(body),
+    }, { timeoutMs: 120_000 }),
+  uploadChart: (tenantId: string, file: File, sourceName = 'manual-upload') => {
+    const body = new FormData();
+    body.set('tenantId', tenantId);
+    body.set('sourceName', sourceName);
+    body.set('file', file);
+    return request<{ chart: LibraryChartResponse }>('/api/v2/application-delivery/charts/upload',
+      { method: 'POST', body }, { timeoutMs: 120_000 });
+  },
+  listLibraryCharts: (tenantId: string) => request<LibraryChartResponse[]>(
+    `/api/v2/application-delivery/charts?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  listChartSources: (tenantId: string) => request<ChartSourceResponse[]>(
+    `/api/v2/application-delivery/sources?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  createChartSource: (body: { tenantId: string; sourceType: string; name: string; endpoint: string; credential?: string }) =>
+    request<ChartSourceResponse>('/api/v2/application-delivery/sources', { method: 'POST', body: JSON.stringify(body) }),
+  deleteChartSource: (tenantId: string, sourceId: string) => request<void>(
+    `/api/v2/application-delivery/sources/${encodeURIComponent(sourceId)}?tenantId=${encodeURIComponent(tenantId)}`,
+    { method: 'DELETE' }
+  ),
+  listValuesProfiles: (tenantId: string, chartVersionId: string) => request<ValuesProfileResponse[]>(
+    `/api/v2/application-delivery/values-profiles?${new URLSearchParams({ tenantId, chartVersionId })}`
+  ),
+  createValuesProfile: (body: { tenantId: string; chartVersionId: string; name: string; description?: string }) =>
+    request<ValuesProfileResponse>('/api/v2/application-delivery/values-profiles', { method: 'POST', body: JSON.stringify(body) }),
+  createValuesRevision: (tenantId: string, profileId: string, valuesYaml: string) => request<ValuesRevisionResponse>(
+    `/api/v2/application-delivery/values-profiles/${encodeURIComponent(profileId)}/revisions`,
+    { method: 'POST', body: JSON.stringify({ tenantId, valuesYaml }) }
+  ),
+  createDeploymentPlan: (body: {
+    tenantId: string; clusterId: string; chartVersionId: string; valuesRevisionId?: string;
+    namespace: string; releaseName: string; exposureType: string; hostname?: string;
+  }) => request<DeploymentPlanResponse>('/api/v2/application-delivery/deployment-plans', {
+    method: 'POST', body: JSON.stringify(body),
+  }, { timeoutMs: 60_000 }),
+  executeDeploymentPlan: (planId: string, tenantId: string, confirmationText: string) =>
+    request<DeploymentAcceptedResponse>(`/api/v2/application-delivery/deployment-plans/${encodeURIComponent(planId)}/execute`, {
+      method: 'POST', body: JSON.stringify({ tenantId, confirmationText }),
+    }),
+  listReleaseOperations: (tenantId: string, applicationId: string) => request<ReleaseOperationResponse[]>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/operations?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  getUninstallConfirmation: (tenantId: string, applicationId: string) => request<{ confirmationText: string; impactSummary: string }>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/uninstall-confirmation?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  uninstallHelmApplication: (tenantId: string, applicationId: string, confirmationText: string) => request<DeploymentAcceptedResponse>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/uninstall`,
+    { method: 'POST', body: JSON.stringify({ tenantId, confirmationText }) }
+  ),
   listApplications: () => request<ApplicationResponse[]>('/api/applications'),
+  listTenantApplications: (tenantId: string) => request<ApplicationResponse[]>(
+    `/api/v2/application-delivery/applications?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  listAiProviderProfiles: (tenantId: string) => request<AiProviderProfileResponse[]>(
+    `/api/v2/ai-configuration/providers?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  createAiProviderProfile: (body: {
+    tenantId: string; name: string; providerType: string; baseUrl?: string; apiKey?: string;
+    defaultModel: string; allowedModels: string[]; externalDataTransfer: boolean;
+  }) => request<AiProviderProfileResponse>('/api/v2/ai-configuration/providers', {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+  validateAiProviderProfile: (tenantId: string, profileId: string) => request<{ valid: boolean; message: string; checkedAt: string }>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/validate?tenantId=${encodeURIComponent(tenantId)}`,
+    { method: 'POST' }, { timeoutMs: 20_000 }
+  ),
+  listAiRouting: (tenantId: string) => request<AiRoutingResponse[]>(
+    `/api/v2/ai-configuration/routing?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  saveAiRouting: (purpose: string, body: {
+    tenantId: string; primaryProfileId: string; model: string; fallbackProfileId?: string;
+    fallbackModel?: string; externalTransferAllowed: boolean; maximumContextChars: number; maximumOutputTokens: number;
+  }) => request<AiRoutingResponse>(`/api/v2/ai-configuration/routing/${encodeURIComponent(purpose)}`, {
+    method: 'PUT', body: JSON.stringify(body),
+  }),
+  listTenantMembers: (tenantId: string) => request<TenantMemberResponse[]>(`/api/tenants/${encodeURIComponent(tenantId)}/members`),
+  inviteTenantMember: (tenantId: string, body: {
+    issuer: string; email?: string; subject?: string; role: string; scopeType: string;
+    workspaceId?: string; clusterId?: string; namespace?: string;
+  }) => request<TenantMemberResponse>(`/api/tenants/${encodeURIComponent(tenantId)}/members`, {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+  setTenantMemberStatus: (tenantId: string, membershipId: string, status: 'ACTIVE' | 'SUSPENDED') =>
+    request<TenantMemberResponse>(`/api/tenants/${encodeURIComponent(tenantId)}/members/${encodeURIComponent(membershipId)}`, {
+      method: 'PATCH', body: JSON.stringify({ status }),
+    }),
+  listOidcGroupMappings: (tenantId: string) => request<OidcGroupMappingResponse[]>(
+    `/api/tenants/${encodeURIComponent(tenantId)}/oidc-group-mappings`
+  ),
+  createOidcGroupMapping: (tenantId: string, body: {
+    issuer: string; groupValue: string; role: string; scopeType: string;
+    workspaceId?: string; clusterId?: string; namespace?: string;
+  }) => request<OidcGroupMappingResponse>(`/api/tenants/${encodeURIComponent(tenantId)}/oidc-group-mappings`, {
+    method: 'POST', body: JSON.stringify(body),
+  }),
   getApplication: (applicationId: string) => request<ApplicationResponse>(
     `/api/applications/${encodeURIComponent(applicationId)}`
   ),

@@ -40,7 +40,10 @@ export async function requestJson<T>(path: string, init?: RequestInit, options: 
   const controller = new AbortController();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const headers = new Headers(init?.headers);
-  headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
+  // FormData는 브라우저가 multipart boundary를 포함한 Content-Type을 생성해야 한다.
+  if (!(init?.body instanceof FormData)) {
+    headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
+  }
   headers.set('X-Request-Id', headers.get('X-Request-Id') ?? createRequestId());
   headers.set('Accept-Language', headers.get('Accept-Language') ?? getLocale());
   if (isMutation(init?.method)) {

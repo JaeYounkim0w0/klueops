@@ -10,10 +10,12 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Fallback;
 
 import java.util.Locale;
 
 @Component
+@Fallback
 public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
 
     private final ChatClient chatClient;

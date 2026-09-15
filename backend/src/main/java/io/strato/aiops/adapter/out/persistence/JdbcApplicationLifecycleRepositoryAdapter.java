@@ -1,0 +1,131 @@
+package io.strato.aiops.adapter.out.persistence;
+
+import io.strato.aiops.application.port.out.ApplicationLifecycleRepositoryPort;
+import io.strato.aiops.domain.applicationdelivery.DeploymentPlan;
+import io.strato.aiops.domain.applicationdelivery.ApplicationRelease;
+import io.strato.aiops.domain.applicationdelivery.ReleaseOperation;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public class JdbcApplicationLifecycleRepositoryAdapter implements ApplicationLifecycleRepositoryPort {
+    private final JdbcTemplate jdbc;
+
+    public JdbcApplicationLifecycleRepositoryAdapter(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    @Override
+    public DeploymentPlan savePlan(DeploymentPlan plan) {
+        jdbc.update("""
+                insert into deployment_plans(id,cluster_id,chart_version_id,values_revision_id,namespace,release_name,
+                  exposure_type,hostname,rendered_manifest,manifest_sha256,warnings_json,confirmation_text,
+                  created_by,created_at,expires_at,consumed_at) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, plan.id(), plan.clusterId(), plan.chartVersionId(), plan.valuesRevisionId(), plan.namespace(),
+                plan.releaseName(), plan.exposureType(), plan.hostname(), plan.renderedManifest(), plan.manifestSha256(),
+                plan.warningsJson(), plan.confirmationText(), plan.createdBy(), timestamp(plan.createdAt()),
+                timestamp(plan.expiresAt()), timestamp(plan.consumedAt()));
+        return plan;
+    }
+
+    @Override
+    public Optional<DeploymentPlan> findPlan(UUID tenantId, UUID planId) {
+        List<DeploymentPlan> values = jdbc.query("""
+                select p.* from deployment_plans p join clusters c on c.id=p.cluster_id
+                where c.tenant_id=? and p.id=?
+                """, this::plan, tenantId, planId);
+        return values.stream().findFirst();
+    }
+
+    @Override
+    public boolean consumePlan(UUID planId, Instant consumedAt) {
+        return jdbc.update("update deployment_plans set consumed_at=? where id=? and consumed_at is null and expires_at>?",
+                timestamp(consumedAt), planId, timestamp(consumedAt)) == 1;
+    }
+
+    @Override
+    public ReleaseOperation saveOperation(ReleaseOperation operation) {
+        int updated = jdbc.update("""
+                update release_operations set status=?,release_revision=?,output_summary=?,error_message=?,completed_at=?
+                where id=?
+                """, operation.status(), operation.releaseRevision(), operation.outputSummary(), operation.errorMessage(),
+                timestamp(operation.completedAt()), operation.id());
+        if (updated == 0) {
+            jdbc.update("""
+                    insert into release_operations(id,application_id,async_job_id,operation_type,status,release_revision,
+                      output_summary,error_message,requested_by,requested_at,completed_at) values (?,?,?,?,?,?,?,?,?,?,?)
+                    """, operation.id(), operation.applicationId(), operation.asyncJobId(), operation.operationType(),
+                    operation.status(), operation.releaseRevision(), operation.outputSummary(), operation.errorMessage(),
+                    operation.requestedBy(), timestamp(operation.requestedAt()), timestamp(operation.completedAt()));
+        }
+        return operation;
+    }
+
+    @Override
+    public List<ReleaseOperation> findOperations(UUID tenantId, UUID applicationId, int limit) {
+        return jdbc.query("""
+                select o.* from release_operations o join managed_applications a on a.id=o.application_id
+                  join clusters c on c.id=a.cluster_id
+                where c.tenant_id=? and a.id=? order by o.requested_at desc limit ?
+                """, this::operation, tenantId, applicationId, Math.max(1, Math.min(limit, 200)));
+    }
+
+    @Override
+    public ApplicationRelease saveRelease(ApplicationRelease release) {
+        jdbc.update("""
+                insert into application_releases(id,application_id,revision,chart_version_id,values_revision_id,
+                  manifest_sha256,status,created_by,created_at) values (?,?,?,?,?,?,?,?,?)
+                """, release.id(), release.applicationId(), release.revision(), release.chartVersionId(),
+                release.valuesRevisionId(), release.manifestSha256(), release.status(), release.createdBy(),
+                timestamp(release.createdAt()));
+        jdbc.update("update managed_applications set current_release_revision=?,chart_version_id=?,values_revision_id=? where id=?",
+                release.revision(), release.chartVersionId(), release.valuesRevisionId(), release.applicationId());
+        return release;
+    }
+
+    @Override
+    public List<ApplicationRelease> findReleases(UUID tenantId, UUID applicationId, int limit) {
+        return jdbc.query("""
+                select r.* from application_releases r join managed_applications a on a.id=r.application_id
+                  join clusters c on c.id=a.cluster_id where c.tenant_id=? and a.id=?
+                order by r.revision desc limit ?
+                """, this::release, tenantId, applicationId, Math.max(1, Math.min(limit, 100)));
+    }
+
+    private DeploymentPlan plan(ResultSet rs, int row) throws SQLException {
+        return new DeploymentPlan(rs.getObject("id", UUID.class), rs.getObject("cluster_id", UUID.class),
+                rs.getObject("chart_version_id", UUID.class), rs.getObject("values_revision_id", UUID.class),
+                rs.getString("namespace"), rs.getString("release_name"), rs.getString("exposure_type"),
+                rs.getString("hostname"), rs.getString("rendered_manifest"), rs.getString("manifest_sha256"),
+                rs.getString("warnings_json"), rs.getString("confirmation_text"), rs.getString("created_by"),
+                instant(rs, "created_at"), instant(rs, "expires_at"), instant(rs, "consumed_at"));
+    }
+
+    private ReleaseOperation operation(ResultSet rs, int row) throws SQLException {
+        return new ReleaseOperation(rs.getObject("id", UUID.class), rs.getObject("application_id", UUID.class),
+                rs.getObject("async_job_id", UUID.class), rs.getString("operation_type"), rs.getString("status"),
+                (Integer) rs.getObject("release_revision"), rs.getString("output_summary"), rs.getString("error_message"),
+                rs.getString("requested_by"), instant(rs, "requested_at"), instant(rs, "completed_at"));
+    }
+
+    private ApplicationRelease release(ResultSet rs, int row) throws SQLException {
+        return new ApplicationRelease(rs.getObject("id", UUID.class), rs.getObject("application_id", UUID.class),
+                rs.getInt("revision"), rs.getObject("chart_version_id", UUID.class),
+                rs.getObject("values_revision_id", UUID.class), rs.getString("manifest_sha256"),
+                rs.getString("status"), rs.getString("created_by"), instant(rs, "created_at"));
+    }
+
+    private Timestamp timestamp(Instant value) { return value == null ? null : Timestamp.from(value); }
+    private Instant instant(ResultSet rs, String column) throws SQLException {
+        Timestamp value = rs.getTimestamp(column);
+        return value == null ? null : value.toInstant();
+    }
+}

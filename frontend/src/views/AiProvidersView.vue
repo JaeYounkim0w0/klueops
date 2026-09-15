@@ -1,0 +1,78 @@
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref } from 'vue';
+import { api, type AiProviderProfileResponse, type AiRoutingResponse } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
+import { useTenancyStore } from '@/stores/tenancy';
+
+const auth = useAuthStore();
+const tenancy = useTenancyStore();
+const providers = ref<AiProviderProfileResponse[]>([]);
+const routing = ref<AiRoutingResponse[]>([]);
+const createOpen = ref(false);
+const saving = ref(false);
+const message = ref('');
+const form = reactive({ name: '', providerType: 'OLLAMA', baseUrl: 'http://ollama:11434', apiKey: '', defaultModel: 'qwen2.5-coder:7b', allowedModels: 'qwen2.5-coder:7b', externalDataTransfer: false });
+const purposes = [
+  { id: 'ANALYSIS', title: 'AI Analysis', description: 'Kubernetes 증거 기반 RCA와 structured result' },
+  { id: 'CHAT', title: 'AI Chat', description: '운영 대화와 후속 질의' },
+  { id: 'HELM_VALUES', title: 'Helm Values', description: '스키마 범위 안의 Values 제안' },
+] as const;
+const routeForms = reactive<Record<string, { profileId: string; model: string; external: boolean }>>({});
+const providerMap = computed(() => Object.fromEntries(providers.value.map((item) => [item.id, item])));
+
+onMounted(async () => { await tenancy.load(); await load(); });
+
+async function load(): Promise<void> {
+  [providers.value, routing.value] = await Promise.all([api.listAiProviderProfiles(tenancy.currentTenantId), api.listAiRouting(tenancy.currentTenantId)]);
+  for (const purpose of purposes) {
+    const current = routing.value.find((item) => item.purpose === purpose.id);
+    routeForms[purpose.id] = { profileId: current?.primaryProfileId || providers.value[0]?.id || '', model: current?.model || providers.value[0]?.defaultModel || '', external: current?.externalTransferAllowed || false };
+  }
+}
+
+function selectProfile(purpose: string): void {
+  const selected = providerMap.value[routeForms[purpose].profileId];
+  routeForms[purpose].model = selected?.defaultModel || '';
+  if (selected?.providerType === 'OLLAMA') routeForms[purpose].external = false;
+}
+
+async function saveRouting(purpose: string): Promise<void> {
+  const value = routeForms[purpose];
+  await api.saveAiRouting(purpose, { tenantId: tenancy.currentTenantId, primaryProfileId: value.profileId,
+    model: value.model, externalTransferAllowed: value.external, maximumContextChars: 60000, maximumOutputTokens: 4096 });
+  message.value = `${purpose} 라우팅을 저장했습니다.`;
+}
+
+async function validateProvider(provider: AiProviderProfileResponse): Promise<void> {
+  const result = await api.validateAiProviderProfile(tenancy.currentTenantId, provider.id);
+  message.value = result.message;
+  await load();
+}
+
+function providerChanged(): void {
+  if (form.providerType === 'OLLAMA') { form.baseUrl = 'http://ollama:11434'; form.externalDataTransfer = false; }
+  else if (form.providerType === 'OPENAI') { form.baseUrl = 'https://api.openai.com'; form.externalDataTransfer = true; }
+  else if (form.providerType === 'GOOGLE_GENAI') { form.baseUrl = 'https://generativelanguage.googleapis.com'; form.externalDataTransfer = true; }
+}
+
+async function createProvider(): Promise<void> {
+  saving.value = true;
+  try {
+    await api.createAiProviderProfile({ tenantId: tenancy.currentTenantId, name: form.name, providerType: form.providerType,
+      baseUrl: form.baseUrl, apiKey: form.apiKey || undefined, defaultModel: form.defaultModel,
+      allowedModels: form.allowedModels.split(',').map((item) => item.trim()).filter(Boolean), externalDataTransfer: form.externalDataTransfer });
+    createOpen.value = false; message.value = 'Provider Profile을 저장했습니다. 사용 전 연결 검증을 실행하세요.'; await load();
+  } catch (error) { message.value = error instanceof Error ? error.message : 'Provider를 저장하지 못했습니다.'; }
+  finally { saving.value = false; }
+}
+</script>
+
+<template>
+  <section class="page delivery-page ai-providers-page">
+    <header class="delivery-hero"><div><span class="delivery-eyebrow">AI CONTROL PLANE</span><h1>AI Providers</h1><p>Provider credential과 Tenant별 용도 라우팅을 분리해 데이터 반출을 명시적으로 제어합니다.</p></div><button v-if="auth.hasCapability('ai:provider:manage')" class="primary-button" type="button" @click="createOpen = true"><i class="pi pi-plus"></i> Provider Profile</button></header>
+    <div v-if="message" class="delivery-notice">{{ message }}</div>
+    <section><div class="section-heading-row"><div><span class="delivery-eyebrow">AVAILABLE PROFILES</span><h2>Provider Profiles</h2></div><span class="delivery-badge">API key는 재표시하지 않음</span></div><div class="provider-grid"><article v-for="provider in providers" :key="provider.id" class="provider-card"><header><span class="provider-icon"><i :class="provider.providerType === 'OLLAMA' ? 'pi pi-server' : 'pi pi-cloud'"></i></span><div><h3>{{ provider.name }}</h3><p>{{ provider.providerType }} · {{ provider.defaultModel }}</p></div><span class="status-dot" :class="provider.validationStatus === 'VALID' ? 'success' : 'neutral'">{{ provider.validationStatus }}</span></header><dl><div><dt>Endpoint</dt><dd>{{ provider.baseUrl }}</dd></div><div><dt>Data transfer</dt><dd>{{ provider.externalDataTransfer ? 'External' : 'Local only' }}</dd></div><div><dt>Credential</dt><dd>{{ provider.credentialConfigured ? 'Configured' : 'None' }}</dd></div></dl><button v-if="auth.hasCapability('ai:provider:manage')" class="secondary-button full" type="button" @click="validateProvider(provider)"><i class="pi pi-bolt"></i> 연결 검증</button></article></div></section>
+    <section><div class="section-heading-row"><div><span class="delivery-eyebrow">TENANT ROUTING</span><h2>용도별 모델 선택</h2></div><span class="delivery-badge trusted">{{ tenancy.currentTenant?.name }}</span></div><div class="routing-list"><article v-for="purpose in purposes" :key="purpose.id" class="routing-row"><div><strong>{{ purpose.title }}</strong><p>{{ purpose.description }}</p></div><label>Provider<select v-model="routeForms[purpose.id].profileId" @change="selectProfile(purpose.id)"><option v-for="provider in providers" :key="provider.id" :value="provider.id">{{ provider.name }}</option></select></label><label>Model<select v-model="routeForms[purpose.id].model"><option v-for="model in providerMap[routeForms[purpose.id].profileId]?.allowedModels || []" :key="model">{{ model }}</option></select></label><label class="transfer-toggle"><input v-model="routeForms[purpose.id].external" type="checkbox" :disabled="providerMap[routeForms[purpose.id].profileId]?.providerType === 'OLLAMA'" /> 외부 전송 허용</label><button class="primary-button" type="button" @click="saveRouting(purpose.id)">저장</button></article></div></section>
+    <div v-if="createOpen" class="delivery-modal-backdrop" @click.self="createOpen = false"><form class="delivery-modal" @submit.prevent="createProvider"><header><div><span class="delivery-eyebrow">PLATFORM PROVIDER</span><h2>Provider Profile 추가</h2><p>Profile은 Platform이 관리하고 Tenant는 허용된 Profile의 목적별 model을 선택합니다.</p></div><button class="icon-button" type="button" @click="createOpen = false"><i class="pi pi-times"></i></button></header><div class="delivery-form-grid"><label>Provider<select v-model="form.providerType" @change="providerChanged"><option value="OLLAMA">Ollama</option><option value="OPENAI">OpenAI</option><option value="GOOGLE_GENAI">Google Gemini</option><option value="OPENAI_COMPATIBLE">OpenAI Compatible</option></select></label><label>이름<input v-model="form.name" required /></label><label class="wide">Base URL<input v-model="form.baseUrl" required /></label><label>Default model<input v-model="form.defaultModel" required /></label><label>Allowed models<input v-model="form.allowedModels" placeholder="comma separated" /></label><label class="wide">API key (선택)<input v-model="form.apiKey" type="password" autocomplete="new-password" /></label><label v-if="form.providerType !== 'OLLAMA'" class="wide checkbox-field"><input v-model="form.externalDataTransfer" type="checkbox" /> Kubernetes evidence의 외부 전송이 가능한 Profile임을 표시</label></div><footer><button class="secondary-button" type="button" @click="createOpen = false">취소</button><button class="primary-button" :disabled="saving">{{ saving ? '저장 중…' : '암호화하여 저장' }}</button></footer></form></div>
+  </section>
+</template>

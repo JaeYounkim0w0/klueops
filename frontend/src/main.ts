@@ -15,6 +15,9 @@ import './styles/components/analysis-operations.css';
 import './styles/components/trust-center.css';
 import './styles/components/commercial-readiness.css';
 import './styles/components/operator-workspace.css';
+import './styles/components/application-delivery.css';
+import './styles/components/ai-providers.css';
+import './styles/components/access-control.css';
 import './styles/kubernetes-console.css';
 
 createApp(App)

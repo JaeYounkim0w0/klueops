@@ -891,7 +891,8 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .orElse(objectMapper.createObjectNode())
                 : objectMapper.createObjectNode();
 
-        CompletableFuture<AnalysisSectionExecutor.Result> rca = sectionExecutor.executeOrReuse(
+        UUID tenantId = clusterRepositoryPort.findById(clusterId).orElseThrow().tenantId();
+        CompletableFuture<AnalysisSectionExecutor.Result> rca = sectionExecutor.executeOrReuse(tenantId,
                 "root-cause",
                 """
                         Return JSON with fields: summary, severity, riskScore, findings, rootCauses.
@@ -903,7 +904,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 reusableResult,
                 locale
         );
-        CompletableFuture<AnalysisSectionExecutor.Result> logs = sectionExecutor.executeOrReuse(
+        CompletableFuture<AnalysisSectionExecutor.Result> logs = sectionExecutor.executeOrReuse(tenantId,
                 "log-analysis",
                 """
                         Return JSON with field: logAnalysis.
@@ -915,7 +916,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 reusableResult,
                 locale
         );
-        CompletableFuture<AnalysisSectionExecutor.Result> runbookOps = sectionExecutor.executeOrReuse(
+        CompletableFuture<AnalysisSectionExecutor.Result> runbookOps = sectionExecutor.executeOrReuse(tenantId,
                 "runbook-operations",
                 """
                         Return JSON with fields: runbookActions, recommendations, operationsGuide, nextActions, verificationCommands.
@@ -2924,7 +2925,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         String riskPostureContext = clusterSectionContext(cluster, analysisContext, "cluster-risk-posture");
         String runbookContext = clusterSectionContext(cluster, analysisContext, "cluster-runbook-operations");
 
-        CompletableFuture<AnalysisSectionExecutor.Result> rootCause = sectionExecutor.execute(
+        CompletableFuture<AnalysisSectionExecutor.Result> rootCause = sectionExecutor.execute(cluster.tenantId(),
                 "cluster-root-cause",
                 """
                         Return JSON with fields: summary, severity, riskScore, findings, rootCauses, evidence.
@@ -2934,7 +2935,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                         """.formatted(localePolicy.instruction(locale)),
                 rootCauseContext
         );
-        CompletableFuture<AnalysisSectionExecutor.Result> riskPosture = sectionExecutor.execute(
+        CompletableFuture<AnalysisSectionExecutor.Result> riskPosture = sectionExecutor.execute(cluster.tenantId(),
                 "cluster-risk-posture",
                 """
                         Return JSON with fields: performance, scaling, riskForecast, changeTimeline.
@@ -2945,7 +2946,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                         """.formatted(localePolicy.instruction(locale)),
                 riskPostureContext
         );
-        CompletableFuture<AnalysisSectionExecutor.Result> runbook = sectionExecutor.execute(
+        CompletableFuture<AnalysisSectionExecutor.Result> runbook = sectionExecutor.execute(cluster.tenantId(),
                 "cluster-runbook-operations",
                 """
                         Return JSON with fields: runbookActions, recommendations, operationsGuide, nextActions, verificationCommands.

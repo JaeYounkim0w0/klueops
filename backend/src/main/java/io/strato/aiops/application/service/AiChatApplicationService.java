@@ -211,7 +211,7 @@ public class AiChatApplicationService implements AiChatUseCase {
 
         try {
             AiChatCompletion completion = aiChatPort.complete(new AiChatPrompt(
-                    conversation.id(), userContent, context.promptContext(), PROMPT_VERSION));
+                    tenantId(conversation), conversation.id(), userContent, context.promptContext(), PROMPT_VERSION));
             long totalLatencyMs = elapsedMs(requestStartedAt);
             AiChatSendMessageResult result = persistCompletion(conversation, context, userContent, completion,
                     totalLatencyMs, actor, requestId);
@@ -244,7 +244,7 @@ public class AiChatApplicationService implements AiChatUseCase {
         AtomicBoolean firstTokenLogged = new AtomicBoolean();
         try {
             AiChatCompletion completion = aiChatPort.stream(new AiChatPrompt(
-                    conversation.id(), userContent, context.promptContext(), PROMPT_VERSION), delta -> {
+                    tenantId(conversation), conversation.id(), userContent, context.promptContext(), PROMPT_VERSION), delta -> {
                 if (firstTokenLogged.compareAndSet(false, true)) {
                     log.info("event=ai_chat_first_token requestId={} conversationId={} elapsedMs={}",
                             requestId, conversation.id(), elapsedMs(requestStartedAt));
@@ -265,6 +265,11 @@ public class AiChatApplicationService implements AiChatUseCase {
                     true, "completion", exception);
             throw exception;
         }
+    }
+
+    private UUID tenantId(AiChatConversation conversation) {
+        if (conversation.clusterId() == null) return null;
+        return clusterRepositoryPort.findById(conversation.clusterId()).map(cluster -> cluster.tenantId()).orElse(null);
     }
 
     private void persistInterruptedTurn(AiChatConversation conversation, AiChatContext context, String userContent,

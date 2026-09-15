@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import io.strato.aiops.application.port.out.ChartArchiveInspectionPort;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -13,7 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPInputStream;
 
 @Component
-public class HelmChartArchiveInspector {
+public class HelmChartArchiveInspector implements ChartArchiveInspectionPort {
     private static final int TAR_BLOCK = 512;
     private final long maximumCompressedBytes;
     private final long maximumExpandedBytes;
@@ -29,6 +30,7 @@ public class HelmChartArchiveInspector {
         this.maximumFiles = maximumFiles;
     }
 
+    @Override
     public InspectedArchive inspect(byte[] payload) {
         if (payload == null || payload.length == 0 || payload.length > maximumCompressedBytes) {
             throw new IllegalArgumentException("Chart archive size is outside the allowed range");
@@ -132,7 +134,4 @@ public class HelmChartArchiveInspector {
         return value;
     }
 
-    public record InspectedArchive(String name, String version, String appVersion, String description,
-                                   String chartYaml, int fileCount, long expandedBytes) {
-    }
 }
