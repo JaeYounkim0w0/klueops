@@ -2,10 +2,18 @@ package io.strato.aiops.application.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.strato.aiops.application.port.out.AiProviderConfigurationRepositoryPort;
 import io.strato.aiops.application.port.out.SecretCryptoPort;
 import io.strato.aiops.domain.ai.AiProviderProfile;
 import io.strato.aiops.domain.ai.TenantAiRoutingPolicy;
+import io.strato.aiops.domain.ai.LocalAiModel;
+import io.strato.aiops.application.port.out.AsyncJobRepositoryPort;
+import io.strato.aiops.domain.job.AsyncJob;
+import io.strato.aiops.domain.job.AsyncJobType;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,23 +27,31 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
+import java.net.http.HttpRequest.BodyPublishers;
 
 @Service
 public class AiProviderConfigurationService {
     private static final Set<String> PROVIDERS = Set.of("OLLAMA", "OPENAI", "GOOGLE_GENAI", "OPENAI_COMPATIBLE");
     private static final Set<String> PURPOSES = Set.of("ANALYSIS", "CHAT", "HELM_VALUES");
+    private static final Pattern PARAMETER_SIZE = Pattern.compile("(?i)(\\d+(?:\\.\\d+)?)\\s*b");
     private final AiProviderConfigurationRepositoryPort repository;
     private final SecretCryptoPort crypto;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final AsyncJobRepositoryPort jobs;
+    private final TaskExecutor modelExecutor;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     public AiProviderConfigurationService(AiProviderConfigurationRepositoryPort repository, SecretCryptoPort crypto,
-                                          ObjectMapper objectMapper, Clock clock) {
+                                          ObjectMapper objectMapper, Clock clock, AsyncJobRepositoryPort jobs,
+                                          @Qualifier("aiModelExecutor") TaskExecutor modelExecutor) {
         this.repository = repository;
         this.crypto = crypto;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.jobs = jobs;
+        this.modelExecutor = modelExecutor;
     }
 
     @Transactional
@@ -100,6 +116,124 @@ public class AiProviderConfigurationService {
 
     @Transactional(readOnly = true)
     public List<TenantAiRoutingPolicy> routing(UUID tenantId) { return repository.findRouting(tenantId); }
+
+    @Transactional(readOnly = true)
+    public List<LocalAiModel> localModels(UUID tenantId, UUID profileId) {
+        requireLocalProfile(tenantId, profileId);
+        return repository.findLocalModels(profileId);
+    }
+
+    @Transactional
+    public List<LocalAiModel> refreshLocalModels(UUID tenantId, UUID profileId) {
+        AiProviderProfile profile = requireLocalProfile(tenantId, profileId);
+        return synchronizeTags(profile);
+    }
+
+    @Transactional
+    public AsyncJob pullLocalModel(UUID tenantId, UUID profileId, String modelTag) {
+        AiProviderProfile profile = requireLocalProfile(tenantId, profileId);
+        double parameters = requireAllowedLocalModel(profile, modelTag);
+        LocalAiModel current = repository.findLocalModels(profileId).stream()
+                .filter(item -> item.modelTag().equals(modelTag)).findFirst().orElse(null);
+        UUID modelId = current == null ? UUID.randomUUID() : current.id();
+        repository.saveLocalModel(new LocalAiModel(modelId, profileId, modelTag, parameters, "PULLING",
+                current == null ? null : current.sizeBytes(), current == null ? null : current.digest(), clock.instant()));
+        AsyncJob job = jobs.save(AsyncJob.pending(AsyncJobType.AI_MODEL_PULL));
+        try {
+            modelExecutor.execute(() -> executePull(profile, modelId, modelTag, parameters, job.id()));
+        } catch (RuntimeException exception) {
+            job.markSubmissionFailed(clock.instant(), "AI model worker queue is full");
+            jobs.save(job);
+            throw exception;
+        }
+        return job;
+    }
+
+    private void executePull(AiProviderProfile profile, UUID modelId, String modelTag, double parameters, UUID jobId) {
+        AsyncJob job = jobs.findById(jobId).orElseThrow();
+        job.markRunning(clock.instant());
+        jobs.save(job);
+        try {
+            ObjectNode body = objectMapper.createObjectNode().put("name", modelTag).put("stream", false);
+            HttpRequest request = HttpRequest.newBuilder(URI.create(profile.baseUrl() + "/api/pull"))
+                    .timeout(Duration.ofMinutes(30)).header("Content-Type", "application/json")
+                    .POST(BodyPublishers.ofString(objectMapper.writeValueAsString(body))).build();
+            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300)
+                throw new IllegalStateException("Ollama model pull returned HTTP " + response.statusCode());
+            List<LocalAiModel> refreshed = synchronizeTags(profile);
+            if (refreshed.stream().noneMatch(item -> item.modelTag().equals(modelTag)))
+                repository.saveLocalModel(new LocalAiModel(modelId, profile.id(), modelTag, parameters, "READY",
+                        null, null, clock.instant()));
+            job.markSucceeded(clock.instant());
+            jobs.save(job);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            failPull(modelId, profile.id(), modelTag, parameters, job, "AI model pull was interrupted");
+        } catch (Exception exception) {
+            failPull(modelId, profile.id(), modelTag, parameters, job, "AI model pull failed");
+        }
+    }
+
+    private void failPull(UUID modelId, UUID profileId, String modelTag, double parameters, AsyncJob job, String message) {
+        repository.saveLocalModel(new LocalAiModel(modelId, profileId, modelTag, parameters, "FAILED", null, null,
+                clock.instant()));
+        job.markFailed(clock.instant(), "AI_MODEL_PULL_FAILED", message);
+        jobs.save(job);
+    }
+
+    private List<LocalAiModel> synchronizeTags(AiProviderProfile profile) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder(URI.create(profile.baseUrl() + "/api/tags"))
+                    .timeout(Duration.ofSeconds(15)).GET().build();
+            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300)
+                throw new IllegalStateException("Ollama model inventory returned HTTP " + response.statusCode());
+            JsonNode models = objectMapper.readTree(response.body()).path("models");
+            List<LocalAiModel> existing = repository.findLocalModels(profile.id());
+            if (models.isArray()) models.forEach(item -> {
+                String tag = item.path("name").asText(item.path("model").asText());
+                if (tag.isBlank()) return;
+                LocalAiModel previous = existing.stream().filter(value -> value.modelTag().equals(tag)).findFirst().orElse(null);
+                Double parameters = parseParameters(item.path("details").path("parameter_size").asText(tag));
+                repository.saveLocalModel(new LocalAiModel(previous == null ? UUID.randomUUID() : previous.id(),
+                        profile.id(), tag, parameters, parameters != null && parameters <= 9 ? "READY" : "UNSUPPORTED",
+                        item.path("size").isNumber() ? item.path("size").asLong() : null,
+                        item.path("digest").asText(null), clock.instant()));
+            });
+            return repository.findLocalModels(profile.id());
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Ollama model inventory was interrupted", exception);
+        } catch (Exception exception) {
+            if (exception instanceof RuntimeException runtimeException) throw runtimeException;
+            throw new IllegalStateException("Ollama model inventory failed", exception);
+        }
+    }
+
+    private AiProviderProfile requireLocalProfile(UUID tenantId, UUID profileId) {
+        AiProviderProfile profile = visibleProfile(tenantId, profileId);
+        if (!"OLLAMA".equals(profile.providerType())) throw new IllegalArgumentException("Local models require an Ollama profile");
+        return profile;
+    }
+
+    private double requireAllowedLocalModel(AiProviderProfile profile, String modelTag) {
+        try {
+            List<String> allowed = objectMapper.readValue(profile.allowedModelsJson(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+            if (!allowed.contains(modelTag)) throw new IllegalArgumentException("Model is not in the approved profile allowlist");
+            Double parameters = parseParameters(modelTag);
+            if (parameters == null || parameters > 9) throw new IllegalArgumentException("Only models up to 9B are allowed");
+            return parameters;
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Allowed model configuration is invalid", exception);
+        }
+    }
+
+    private Double parseParameters(String value) {
+        var matcher = PARAMETER_SIZE.matcher(value == null ? "" : value);
+        return matcher.find() ? Double.parseDouble(matcher.group(1)) : null;
+    }
 
     private AiProviderProfile visibleProfile(UUID tenantId, UUID profileId) {
         AiProviderProfile profile = repository.findProfile(profileId).orElseThrow();

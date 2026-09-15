@@ -4,6 +4,7 @@ import io.strato.aiops.application.port.out.ApplicationLifecycleRepositoryPort;
 import io.strato.aiops.domain.applicationdelivery.DeploymentPlan;
 import io.strato.aiops.domain.applicationdelivery.ApplicationRelease;
 import io.strato.aiops.domain.applicationdelivery.ReleaseOperation;
+import io.strato.aiops.domain.applicationdelivery.ApplicationEndpoint;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -26,11 +27,13 @@ public class JdbcApplicationLifecycleRepositoryAdapter implements ApplicationLif
     @Override
     public DeploymentPlan savePlan(DeploymentPlan plan) {
         jdbc.update("""
-                insert into deployment_plans(id,cluster_id,chart_version_id,values_revision_id,namespace,release_name,
-                  exposure_type,hostname,rendered_manifest,manifest_sha256,warnings_json,confirmation_text,
-                  created_by,created_at,expires_at,consumed_at) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                """, plan.id(), plan.clusterId(), plan.chartVersionId(), plan.valuesRevisionId(), plan.namespace(),
-                plan.releaseName(), plan.exposureType(), plan.hostname(), plan.renderedManifest(), plan.manifestSha256(),
+                insert into deployment_plans(id,application_id,cluster_id,chart_version_id,values_revision_id,namespace,release_name,create_namespace,
+                  exposure_type,hostname,exposure_path,backend_service_name,backend_service_port,gateway_name,
+                  gateway_namespace,rendered_manifest,manifest_sha256,warnings_json,confirmation_text,
+                  created_by,created_at,expires_at,consumed_at) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, plan.id(), plan.applicationId(), plan.clusterId(), plan.chartVersionId(), plan.valuesRevisionId(), plan.namespace(),
+                plan.releaseName(), plan.createNamespace(), plan.exposureType(), plan.hostname(), plan.exposurePath(), plan.backendServiceName(),
+                plan.backendServicePort(), plan.gatewayName(), plan.gatewayNamespace(), plan.renderedManifest(), plan.manifestSha256(),
                 plan.warningsJson(), plan.confirmationText(), plan.createdBy(), timestamp(plan.createdAt()),
                 timestamp(plan.expiresAt()), timestamp(plan.consumedAt()));
         return plan;
@@ -100,11 +103,40 @@ public class JdbcApplicationLifecycleRepositoryAdapter implements ApplicationLif
                 """, this::release, tenantId, applicationId, Math.max(1, Math.min(limit, 100)));
     }
 
+    @Override
+    public ApplicationEndpoint saveEndpoint(ApplicationEndpoint endpoint) {
+        jdbc.update("""
+                insert into application_endpoints(id,application_id,endpoint_type,url,hostname,status,created_at,updated_at)
+                values (?,?,?,?,?,?,?,?) on conflict(application_id,endpoint_type,hostname) do update set
+                  url=excluded.url,status=excluded.status,updated_at=excluded.updated_at
+                """, endpoint.id(), endpoint.applicationId(), endpoint.endpointType(), endpoint.url(), endpoint.hostname(),
+                endpoint.status(), timestamp(endpoint.createdAt()), timestamp(endpoint.updatedAt()));
+        return endpoint;
+    }
+
+    @Override
+    public List<ApplicationEndpoint> findEndpoints(UUID tenantId, UUID applicationId) {
+        return jdbc.query("""
+                select e.* from application_endpoints e join managed_applications a on a.id=e.application_id
+                  join clusters c on c.id=a.cluster_id where c.tenant_id=? and a.id=? order by e.created_at
+                """, (rs, row) -> new ApplicationEndpoint(rs.getObject("id", UUID.class),
+                rs.getObject("application_id", UUID.class), rs.getString("endpoint_type"), rs.getString("url"),
+                rs.getString("hostname"), rs.getString("status"), instant(rs, "created_at"),
+                instant(rs, "updated_at")), tenantId, applicationId);
+    }
+
+    @Override
+    public void deleteEndpoints(UUID applicationId) {
+        jdbc.update("delete from application_endpoints where application_id=?", applicationId);
+    }
+
     private DeploymentPlan plan(ResultSet rs, int row) throws SQLException {
-        return new DeploymentPlan(rs.getObject("id", UUID.class), rs.getObject("cluster_id", UUID.class),
+        return new DeploymentPlan(rs.getObject("id", UUID.class), rs.getObject("application_id", UUID.class), rs.getObject("cluster_id", UUID.class),
                 rs.getObject("chart_version_id", UUID.class), rs.getObject("values_revision_id", UUID.class),
-                rs.getString("namespace"), rs.getString("release_name"), rs.getString("exposure_type"),
-                rs.getString("hostname"), rs.getString("rendered_manifest"), rs.getString("manifest_sha256"),
+                rs.getString("namespace"), rs.getString("release_name"), rs.getBoolean("create_namespace"), rs.getString("exposure_type"),
+                rs.getString("hostname"), rs.getString("exposure_path"), rs.getString("backend_service_name"),
+                (Integer) rs.getObject("backend_service_port"), rs.getString("gateway_name"),
+                rs.getString("gateway_namespace"), rs.getString("rendered_manifest"), rs.getString("manifest_sha256"),
                 rs.getString("warnings_json"), rs.getString("confirmation_text"), rs.getString("created_by"),
                 instant(rs, "created_at"), instant(rs, "expires_at"), instant(rs, "consumed_at"));
     }

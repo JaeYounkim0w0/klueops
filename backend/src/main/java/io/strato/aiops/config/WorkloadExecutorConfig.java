@@ -68,6 +68,16 @@ public class WorkloadExecutorConfig {
         return executor("application-delivery-", coreSize, maxSize, queueCapacity);
     }
 
+    @Bean("aiModelExecutor")
+    public ThreadPoolTaskExecutor aiModelExecutor(
+            @Value("${aiops.executors.ai-model.core-size:1}") int coreSize,
+            @Value("${aiops.executors.ai-model.max-size:2}") int maxSize,
+            @Value("${aiops.executors.ai-model.queue-capacity:5}") int queueCapacity
+    ) {
+        // 대용량 모델 다운로드가 일반 API와 분석 worker를 고갈시키지 않도록 별도 제한 큐를 둔다.
+        return executor("ai-model-", coreSize, maxSize, queueCapacity);
+    }
+
     @Bean("aiChatHeartbeatScheduler")
     @Primary
     public ThreadPoolTaskScheduler aiChatHeartbeatScheduler() {

@@ -82,6 +82,30 @@ class TenantAccessApiTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void disabledTenantFeatureBlocksBothNavigationAndDirectApi() throws Exception {
+        RequestPostProcessor admin = login("feature-admin", List.of("aiops-platform-admins"));
+        setFeature(admin, false);
+        try {
+            mockMvc.perform(get("/api/me/access").param("tenantId", DEFAULT_TENANT).with(admin))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.navigation.applications").value(false));
+            mockMvc.perform(get("/api/v2/application-delivery/charts")
+                            .param("tenantId", DEFAULT_TENANT).with(admin))
+                    .andExpect(status().isForbidden());
+        } finally {
+            // 공유 Testcontainers DB를 사용하는 다른 테스트에 기능 OFF 상태를 남기지 않는다.
+            setFeature(admin, true);
+        }
+    }
+
+    private void setFeature(RequestPostProcessor admin, boolean enabled) throws Exception {
+        mockMvc.perform(patch("/api/tenants/{tenantId}/features", DEFAULT_TENANT)
+                        .with(admin).with(csrf()).contentType("application/json")
+                        .content("{\"featureKey\":\"APPLICATION_DELIVERY\",\"enabled\":" + enabled + "}"))
+                .andExpect(status().isOk());
+    }
+
     private RequestPostProcessor login(String subject, List<String> groups) {
         return oidcLogin().idToken(token -> token
                 .issuer("https://idp.example")

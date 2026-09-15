@@ -6,9 +6,12 @@ import io.strato.aiops.adapter.in.web.security.CurrentAccessResolver;
 import io.strato.aiops.application.service.AiProviderConfigurationService;
 import io.strato.aiops.application.service.IdentityAccessService;
 import io.strato.aiops.application.service.ResolvedAccess;
+import io.strato.aiops.application.service.TenantFeatureGuard;
 import io.strato.aiops.domain.ai.AiProviderProfile;
 import io.strato.aiops.domain.ai.TenantAiRoutingPolicy;
+import io.strato.aiops.domain.ai.LocalAiModel;
 import io.strato.aiops.domain.identity.Capability;
+import io.strato.aiops.domain.identity.FeatureKey;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -35,10 +38,16 @@ public class AiProviderConfigurationController {
     private final CurrentAccessResolver resolver;
     private final IdentityAccessService accessService;
     private final ObjectMapper objectMapper;
+    private final TenantFeatureGuard featureGuard;
 
     public AiProviderConfigurationController(AiProviderConfigurationService service, CurrentAccessResolver resolver,
-                                             IdentityAccessService accessService, ObjectMapper objectMapper) {
-        this.service = service; this.resolver = resolver; this.accessService = accessService; this.objectMapper = objectMapper;
+                                             IdentityAccessService accessService, ObjectMapper objectMapper,
+                                             TenantFeatureGuard featureGuard) {
+        this.service = service;
+        this.resolver = resolver;
+        this.accessService = accessService;
+        this.objectMapper = objectMapper;
+        this.featureGuard = featureGuard;
     }
 
     @GetMapping("/providers")
@@ -64,6 +73,29 @@ public class AiProviderConfigurationController {
         return new ValidationResponse(result.valid(), result.message(), result.checkedAt().toString());
     }
 
+    @GetMapping("/providers/{profileId}/models")
+    public List<LocalModelResponse> localModels(@PathVariable UUID profileId, @RequestParam UUID tenantId,
+                                                Authentication authentication) {
+        require(authentication, tenantId, Capability.AI_MODEL_MANAGE);
+        return service.localModels(tenantId, profileId).stream().map(LocalModelResponse::from).toList();
+    }
+
+    @PostMapping("/providers/{profileId}/models/refresh")
+    public List<LocalModelResponse> refreshLocalModels(@PathVariable UUID profileId, @RequestParam UUID tenantId,
+                                                       Authentication authentication) {
+        require(authentication, tenantId, Capability.AI_MODEL_MANAGE);
+        return service.refreshLocalModels(tenantId, profileId).stream().map(LocalModelResponse::from).toList();
+    }
+
+    @PostMapping("/providers/{profileId}/models/pull")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ModelPullResponse pullLocalModel(@PathVariable UUID profileId, @Valid @RequestBody ModelPullRequest request,
+                                            Authentication authentication) {
+        require(authentication, request.tenantId(), Capability.AI_MODEL_MANAGE);
+        var job = service.pullLocalModel(request.tenantId(), profileId, request.modelTag());
+        return new ModelPullResponse(job.id(), "PENDING");
+    }
+
     @GetMapping("/routing")
     public List<RoutingResponse> routing(@RequestParam UUID tenantId, Authentication authentication) {
         require(authentication, tenantId, Capability.AI_ROUTING_MANAGE);
@@ -80,6 +112,7 @@ public class AiProviderConfigurationController {
     }
 
     private ResolvedAccess require(Authentication authentication, UUID tenantId, Capability capability) {
+        featureGuard.requireEnabled(tenantId, FeatureKey.AI_PROVIDER_ROUTING);
         ResolvedAccess access = resolver.resolve(authentication);
         if (!accessService.allowsTenant(access, capability, tenantId)) throw new AccessDeniedException("Capability is not granted");
         return access;
@@ -92,6 +125,15 @@ public class AiProviderConfigurationController {
                                  UUID fallbackProfileId, String fallbackModel, boolean externalTransferAllowed,
                                  int maximumContextChars, int maximumOutputTokens) { }
     public record ValidationResponse(boolean valid, String message, String checkedAt) { }
+    public record ModelPullRequest(@NotNull UUID tenantId, @NotBlank String modelTag) { }
+    public record ModelPullResponse(UUID jobId, String status) { }
+    public record LocalModelResponse(UUID id, String modelTag, Double parameterBillions, String status,
+                                     Long sizeBytes, String digest, String updatedAt) {
+        static LocalModelResponse from(LocalAiModel value) {
+            return new LocalModelResponse(value.id(), value.modelTag(), value.parameterBillions(), value.status(),
+                    value.sizeBytes(), value.digest(), value.updatedAt().toString());
+        }
+    }
     public record ProviderResponse(UUID id, String name, String providerType, String baseUrl, boolean credentialConfigured,
                                    String defaultModel, List<String> allowedModels, boolean enabled,
                                    boolean externalDataTransfer, String validationStatus, String lastValidatedAt) {

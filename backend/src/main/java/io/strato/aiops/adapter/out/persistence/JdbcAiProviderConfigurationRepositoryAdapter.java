@@ -3,6 +3,7 @@ package io.strato.aiops.adapter.out.persistence;
 import io.strato.aiops.application.port.out.AiProviderConfigurationRepositoryPort;
 import io.strato.aiops.domain.ai.AiProviderProfile;
 import io.strato.aiops.domain.ai.TenantAiRoutingPolicy;
+import io.strato.aiops.domain.ai.LocalAiModel;
 import io.strato.aiops.domain.cluster.EncryptedSecret;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -83,6 +84,27 @@ public class JdbcAiProviderConfigurationRepositoryAdapter implements AiProviderC
     @Override
     public List<TenantAiRoutingPolicy> findRouting(UUID tenantId) {
         return jdbc.query("select * from tenant_ai_routing_policies where tenant_id=? order by purpose", this::routing, tenantId);
+    }
+
+    @Override
+    public LocalAiModel saveLocalModel(LocalAiModel model) {
+        jdbc.update("""
+                insert into local_ai_models(id,provider_profile_id,model_tag,parameter_billions,status,size_bytes,digest,updated_at)
+                values (?,?,?,?,?,?,?,?) on conflict(provider_profile_id,model_tag) do update set
+                  parameter_billions=excluded.parameter_billions,status=excluded.status,size_bytes=excluded.size_bytes,
+                  digest=excluded.digest,updated_at=excluded.updated_at
+                """, model.id(), model.providerProfileId(), model.modelTag(), model.parameterBillions(), model.status(),
+                model.sizeBytes(), model.digest(), timestamp(model.updatedAt()));
+        return model;
+    }
+
+    @Override
+    public List<LocalAiModel> findLocalModels(UUID profileId) {
+        return jdbc.query("select * from local_ai_models where provider_profile_id=? order by model_tag", (rs, row) ->
+                new LocalAiModel(rs.getObject("id", UUID.class), rs.getObject("provider_profile_id", UUID.class),
+                        rs.getString("model_tag"), rs.getObject("parameter_billions", Double.class),
+                        rs.getString("status"), rs.getObject("size_bytes", Long.class), rs.getString("digest"),
+                        instant(rs, "updated_at")), profileId);
     }
 
     private AiProviderProfile profile(ResultSet rs, int row) throws SQLException {

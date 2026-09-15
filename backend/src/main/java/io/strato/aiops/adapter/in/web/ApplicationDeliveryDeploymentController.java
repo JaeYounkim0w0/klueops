@@ -6,11 +6,14 @@ import io.strato.aiops.adapter.in.web.security.CurrentAccessResolver;
 import io.strato.aiops.application.service.ApplicationDeliveryDeploymentService;
 import io.strato.aiops.application.service.IdentityAccessService;
 import io.strato.aiops.application.service.ResolvedAccess;
+import io.strato.aiops.application.service.TenantFeatureGuard;
 import io.strato.aiops.domain.applicationdelivery.ApplicationRelease;
 import io.strato.aiops.adapter.in.web.dto.ApplicationResponse;
 import io.strato.aiops.domain.applicationdelivery.DeploymentPlan;
 import io.strato.aiops.domain.applicationdelivery.ReleaseOperation;
 import io.strato.aiops.domain.identity.Capability;
+import io.strato.aiops.domain.identity.FeatureKey;
+import io.strato.aiops.application.port.out.ApplicationRuntimeInspectionPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -39,14 +42,17 @@ public class ApplicationDeliveryDeploymentController {
     private final CurrentAccessResolver currentAccessResolver;
     private final IdentityAccessService accessService;
     private final ObjectMapper objectMapper;
+    private final TenantFeatureGuard featureGuard;
 
     public ApplicationDeliveryDeploymentController(ApplicationDeliveryDeploymentService service,
                                                    CurrentAccessResolver currentAccessResolver,
-                                                   IdentityAccessService accessService, ObjectMapper objectMapper) {
+                                                   IdentityAccessService accessService, ObjectMapper objectMapper,
+                                                   TenantFeatureGuard featureGuard) {
         this.service = service;
         this.currentAccessResolver = currentAccessResolver;
         this.accessService = accessService;
         this.objectMapper = objectMapper;
+        this.featureGuard = featureGuard;
     }
 
     @PostMapping("/deployment-plans")
@@ -54,9 +60,19 @@ public class ApplicationDeliveryDeploymentController {
     @ResponseStatus(HttpStatus.CREATED)
     public DeploymentPlanResponse preview(@Valid @RequestBody PreviewRequest request, Authentication authentication) {
         ResolvedAccess actor = require(authentication, request.tenantId(), Capability.APPLICATION_DEPLOY);
-        return DeploymentPlanResponse.from(service.preview(request.tenantId(), request.clusterId(),
-                request.chartVersionId(), request.valuesRevisionId(), request.namespace(), request.releaseName(),
-                request.exposureType(), request.hostname(), actor.user().id().toString()), objectMapper);
+        if ("HTTP_ROUTE".equals(request.exposureType())
+                && !accessService.allowsTenant(actor, Capability.APPLICATION_EXPOSURE, request.tenantId())) {
+            throw new AccessDeniedException("application:exposure capability is not granted for this tenant");
+        }
+        if (request.createNamespace()
+                && !accessService.allowsTenant(actor, Capability.NAMESPACE_CREATE, request.tenantId())) {
+            throw new AccessDeniedException("namespace:create capability is not granted for this tenant");
+        }
+        return DeploymentPlanResponse.from(service.preview(request.tenantId(), request.applicationId(), request.clusterId(),
+                request.chartVersionId(), request.valuesRevisionId(), request.namespace(), request.releaseName(), request.createNamespace(),
+                request.exposureType(), request.hostname(), request.exposurePath(), request.backendServiceName(),
+                request.backendServicePort(), request.gatewayName(), request.gatewayNamespace(),
+                actor.user().id().toString()), objectMapper);
     }
 
     @PostMapping("/deployment-plans/{planId}/execute")
@@ -82,6 +98,13 @@ public class ApplicationDeliveryDeploymentController {
     public List<ApplicationResponse> applications(@RequestParam UUID tenantId, Authentication authentication) {
         require(authentication, tenantId, Capability.APPLICATION_READ);
         return service.applications(tenantId).stream().map(ApplicationResponse::from).toList();
+    }
+
+    @GetMapping("/applications/{applicationId}/runtime")
+    public RuntimeOverviewResponse runtime(@PathVariable UUID applicationId, @RequestParam UUID tenantId,
+                                           Authentication authentication) {
+        require(authentication, tenantId, Capability.APPLICATION_READ);
+        return RuntimeOverviewResponse.from(service.runtime(tenantId, applicationId));
     }
 
     @GetMapping("/applications/{applicationId}/releases")
@@ -133,6 +156,7 @@ public class ApplicationDeliveryDeploymentController {
     }
 
     private ResolvedAccess require(Authentication authentication, UUID tenantId, Capability capability) {
+        featureGuard.requireEnabled(tenantId, FeatureKey.APPLICATION_DELIVERY);
         ResolvedAccess access = currentAccessResolver.resolve(authentication);
         if (!accessService.allowsTenant(access, capability, tenantId)) {
             throw new AccessDeniedException(capability.value() + " capability is not granted for this tenant");
@@ -140,24 +164,39 @@ public class ApplicationDeliveryDeploymentController {
         return access;
     }
 
-    public record PreviewRequest(@NotNull UUID tenantId, @NotNull UUID clusterId, @NotNull UUID chartVersionId,
+    public record PreviewRequest(@NotNull UUID tenantId, UUID applicationId, @NotNull UUID clusterId, @NotNull UUID chartVersionId,
                                  UUID valuesRevisionId, @NotBlank String namespace, @NotBlank String releaseName,
-                                 String exposureType, String hostname) { }
+                                 boolean createNamespace,
+                                 String exposureType, String hostname, String exposurePath,
+                                 String backendServiceName, Integer backendServicePort,
+                                 String gatewayName, String gatewayNamespace) { }
     public record ExecuteRequest(@NotNull UUID tenantId, @NotBlank String confirmationText) { }
     public record RollbackRequest(@NotNull UUID tenantId, int revision, @NotBlank String confirmationText) { }
     public record DeploymentAcceptedResponse(UUID applicationId, UUID jobId, UUID operationId) { }
     public record LifecycleConfirmationResponse(String confirmationText, String impactSummary) { }
+    public record RuntimeOverviewResponse(int readyPods, int totalPods, int restarts,
+                                          List<ApplicationRuntimeInspectionPort.Workload> workloads,
+                                          List<ApplicationRuntimeInspectionPort.Endpoint> endpoints) {
+        static RuntimeOverviewResponse from(ApplicationRuntimeInspectionPort.RuntimeOverview value) {
+            return new RuntimeOverviewResponse(value.readyPods(), value.totalPods(), value.restarts(),
+                    value.workloads(), value.endpoints());
+        }
+    }
 
-    public record DeploymentPlanResponse(UUID id, UUID clusterId, UUID chartVersionId, UUID valuesRevisionId,
-                                         String namespace, String releaseName, String exposureType, String hostname,
+    public record DeploymentPlanResponse(UUID id, UUID applicationId, UUID clusterId, UUID chartVersionId, UUID valuesRevisionId,
+                                         String namespace, String releaseName, boolean createNamespace, String exposureType, String hostname,
+                                         String exposurePath, String backendServiceName, Integer backendServicePort,
+                                         String gatewayName, String gatewayNamespace,
                                          String manifestSha256, List<String> warnings, String confirmationText,
                                          String renderedManifest, String expiresAt) {
         static DeploymentPlanResponse from(DeploymentPlan plan, ObjectMapper mapper) {
             try {
                 List<String> warnings = mapper.readValue(plan.warningsJson(),
                         mapper.getTypeFactory().constructCollectionType(List.class, String.class));
-                return new DeploymentPlanResponse(plan.id(), plan.clusterId(), plan.chartVersionId(),
-                        plan.valuesRevisionId(), plan.namespace(), plan.releaseName(), plan.exposureType(), plan.hostname(),
+                return new DeploymentPlanResponse(plan.id(), plan.applicationId(), plan.clusterId(), plan.chartVersionId(),
+                        plan.valuesRevisionId(), plan.namespace(), plan.releaseName(), plan.createNamespace(), plan.exposureType(), plan.hostname(),
+                        plan.exposurePath(), plan.backendServiceName(), plan.backendServicePort(), plan.gatewayName(),
+                        plan.gatewayNamespace(),
                         plan.manifestSha256(), warnings, plan.confirmationText(), plan.renderedManifest(),
                         plan.expiresAt().toString());
             } catch (JsonProcessingException exception) {

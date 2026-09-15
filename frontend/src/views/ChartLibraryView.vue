@@ -40,7 +40,12 @@ function selectedVersion(chart: LibraryChartResponse): string {
 }
 
 function deliveryTarget(path: 'values' | 'deploy', chart: LibraryChartResponse): string {
-  return `/applications/${path}/${selectedVersion(chart)}?chart=${encodeURIComponent(chart.name)}`;
+  const query = new URLSearchParams({ chart: chart.name });
+  if (typeof route.query.upgradeApplicationId === 'string') query.set('upgradeApplicationId', route.query.upgradeApplicationId);
+  if (typeof route.query.clusterId === 'string') query.set('clusterId', route.query.clusterId);
+  if (typeof route.query.namespace === 'string') query.set('namespace', route.query.namespace);
+  if (typeof route.query.releaseName === 'string') query.set('releaseName', route.query.releaseName);
+  return `/applications/${path}/${selectedVersion(chart)}?${query}`;
 }
 
 function chooseFile(event: Event): void {

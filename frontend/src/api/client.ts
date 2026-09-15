@@ -530,12 +530,21 @@ export interface ApplicationResponse {
   name: string;
   namespace?: string;
   deploymentType?: string;
+  helmReleaseName?: string;
   status?: string;
   clusterId?: string;
   createdAt?: string;
   currentReleaseRevision?: number;
   chartVersionId?: string;
   valuesRevisionId?: string;
+}
+
+export interface ApplicationRuntimeResponse {
+  readyPods: number;
+  totalPods: number;
+  restarts: number;
+  workloads: Array<{ kind: string; name: string; ready: number; desired: number; status: string }>;
+  endpoints: Array<{ type: string; name: string; url: string; status: string }>;
 }
 
 export interface ApplicationStatusResponse {
@@ -1428,6 +1437,7 @@ export interface AiTrustSnapshotResponse {
 export interface ProductionEvidenceRunResponse {
   id: string;
   releaseName: string;
+  createNamespace: boolean;
   environment: string;
   state: 'NOT_RUN' | 'RUNNING' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'EXPIRED';
   triggeredBy: string;
@@ -1624,6 +1634,7 @@ export interface ValuesRevisionResponse {
 
 export interface DeploymentPlanResponse {
   id: string;
+  applicationId?: string;
   clusterId: string;
   chartVersionId: string;
   valuesRevisionId?: string;
@@ -1631,6 +1642,11 @@ export interface DeploymentPlanResponse {
   releaseName: string;
   exposureType: 'NONE' | 'HTTP_ROUTE';
   hostname?: string;
+  exposurePath?: string;
+  backendServiceName?: string;
+  backendServicePort?: number;
+  gatewayName?: string;
+  gatewayNamespace?: string;
   manifestSha256: string;
   warnings: string[];
   confirmationText: string;
@@ -1657,6 +1673,17 @@ export interface ReleaseOperationResponse {
   completedAt?: string;
 }
 
+export interface ApplicationReleaseResponse {
+  id: string;
+  revision: number;
+  chartVersionId: string;
+  valuesRevisionId?: string;
+  manifestSha256: string;
+  status: string;
+  createdBy: string;
+  createdAt: string;
+}
+
 export interface AiProviderProfileResponse {
   id: string;
   name: string;
@@ -1680,6 +1707,16 @@ export interface AiRoutingResponse {
   externalTransferAllowed: boolean;
   maximumContextChars: number;
   maximumOutputTokens: number;
+  updatedAt: string;
+}
+
+export interface LocalAiModelResponse {
+  id: string;
+  modelTag: string;
+  parameterBillions?: number;
+  status: 'PULLING' | 'READY' | 'FAILED' | 'UNSUPPORTED';
+  sizeBytes?: number;
+  digest?: string;
   updatedAt: string;
 }
 
@@ -1712,6 +1749,20 @@ export interface OidcGroupMappingResponse {
   active: boolean;
   updatedAt: string;
 }
+
+export interface TenantMemberOffboardPlanResponse {
+  membershipId: string;
+  username: string;
+  status: string;
+  roleBindingsToRemove: number;
+  sessionsRevoked: boolean;
+  confirmationText: string;
+}
+
+export type TenantFeatureKey =
+  | 'CORE_OVERVIEW' | 'CLUSTER_OPERATIONS' | 'KUBERNETES_CONSOLE' | 'AI_OPERATIONS'
+  | 'APPLICATION_DELIVERY' | 'AI_PROVIDER_ROUTING' | 'AI_PROVIDER_PLATFORM'
+  | 'ACCESS_CONTROL' | 'AUDIT' | 'PLATFORM_ADMINISTRATION';
 
 export const api = {
   getRuntimeReadiness: () => request<RuntimeReadinessResponse>('/api/operations/runtime-readiness'),
@@ -1913,9 +1964,15 @@ export const api = {
     `/api/v2/application-delivery/values-profiles/${encodeURIComponent(profileId)}/revisions`,
     { method: 'POST', body: JSON.stringify({ tenantId, valuesYaml }) }
   ),
+  suggestValues: (body: { tenantId: string; chartVersionId: string; currentValuesYaml: string; instruction: string }) =>
+    request<{ valuesYaml: string }>('/api/v2/application-delivery/values-suggestions', {
+      method: 'POST', body: JSON.stringify(body),
+    }, { timeoutMs: 180_000 }),
   createDeploymentPlan: (body: {
-    tenantId: string; clusterId: string; chartVersionId: string; valuesRevisionId?: string;
-    namespace: string; releaseName: string; exposureType: string; hostname?: string;
+    tenantId: string; applicationId?: string; clusterId: string; chartVersionId: string; valuesRevisionId?: string;
+    namespace: string; releaseName: string; createNamespace: boolean; exposureType: string; hostname?: string;
+    exposurePath?: string; backendServiceName?: string; backendServicePort?: number;
+    gatewayName?: string; gatewayNamespace?: string;
   }) => request<DeploymentPlanResponse>('/api/v2/application-delivery/deployment-plans', {
     method: 'POST', body: JSON.stringify(body),
   }, { timeoutMs: 60_000 }),
@@ -1925,6 +1982,20 @@ export const api = {
     }),
   listReleaseOperations: (tenantId: string, applicationId: string) => request<ReleaseOperationResponse[]>(
     `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/operations?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  listApplicationReleases: (tenantId: string, applicationId: string) => request<ApplicationReleaseResponse[]>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/releases?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  getRollbackConfirmation: (tenantId: string, applicationId: string, revision: number) => request<{ confirmationText: string; impactSummary: string }>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/rollback-confirmation?${new URLSearchParams({ tenantId, revision: String(revision) })}`
+  ),
+  rollbackHelmApplication: (tenantId: string, applicationId: string, revision: number, confirmationText: string) =>
+    request<DeploymentAcceptedResponse>(`/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/rollback`, {
+      method: 'POST', body: JSON.stringify({ tenantId, revision, confirmationText }),
+    }),
+  getApplicationRuntime: (tenantId: string, applicationId: string) => request<ApplicationRuntimeResponse>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/runtime?tenantId=${encodeURIComponent(tenantId)}`,
+    undefined, { timeoutMs: 20_000 }
   ),
   getUninstallConfirmation: (tenantId: string, applicationId: string) => request<{ confirmationText: string; impactSummary: string }>(
     `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/uninstall-confirmation?tenantId=${encodeURIComponent(tenantId)}`
@@ -1950,6 +2021,17 @@ export const api = {
     `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/validate?tenantId=${encodeURIComponent(tenantId)}`,
     { method: 'POST' }, { timeoutMs: 20_000 }
   ),
+  listLocalAiModels: (tenantId: string, profileId: string) => request<LocalAiModelResponse[]>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/models?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  refreshLocalAiModels: (tenantId: string, profileId: string) => request<LocalAiModelResponse[]>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/models/refresh?tenantId=${encodeURIComponent(tenantId)}`,
+    { method: 'POST' }, { timeoutMs: 20_000 }
+  ),
+  pullLocalAiModel: (tenantId: string, profileId: string, modelTag: string) => request<{ jobId: string; status: string }>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/models/pull`,
+    { method: 'POST', body: JSON.stringify({ tenantId, modelTag }) }
+  ),
   listAiRouting: (tenantId: string) => request<AiRoutingResponse[]>(
     `/api/v2/ai-configuration/routing?tenantId=${encodeURIComponent(tenantId)}`
   ),
@@ -1970,6 +2052,21 @@ export const api = {
     request<TenantMemberResponse>(`/api/tenants/${encodeURIComponent(tenantId)}/members/${encodeURIComponent(membershipId)}`, {
       method: 'PATCH', body: JSON.stringify({ status }),
     }),
+  getTenantMemberOffboardPlan: (tenantId: string, membershipId: string) => request<TenantMemberOffboardPlanResponse>(
+    `/api/tenants/${encodeURIComponent(tenantId)}/members/${encodeURIComponent(membershipId)}/offboard-plan`,
+    { method: 'POST' }
+  ),
+  offboardTenantMember: (tenantId: string, membershipId: string, confirmationText: string) => request<TenantMemberResponse>(
+    `/api/tenants/${encodeURIComponent(tenantId)}/members/${encodeURIComponent(membershipId)}/offboard`,
+    { method: 'POST', body: JSON.stringify({ confirmationText }) }
+  ),
+  getTenantFeatures: (tenantId: string) => request<Record<TenantFeatureKey, boolean>>(
+    `/api/tenants/${encodeURIComponent(tenantId)}/features`
+  ),
+  updateTenantFeature: (tenantId: string, featureKey: TenantFeatureKey, enabled: boolean) =>
+    request<Record<TenantFeatureKey, boolean>>(`/api/tenants/${encodeURIComponent(tenantId)}/features`, {
+      method: 'PATCH', body: JSON.stringify({ featureKey, enabled }),
+    }),
   listOidcGroupMappings: (tenantId: string) => request<OidcGroupMappingResponse[]>(
     `/api/tenants/${encodeURIComponent(tenantId)}/oidc-group-mappings`
   ),
@@ -1979,6 +2076,15 @@ export const api = {
   }) => request<OidcGroupMappingResponse>(`/api/tenants/${encodeURIComponent(tenantId)}/oidc-group-mappings`, {
     method: 'POST', body: JSON.stringify(body),
   }),
+  setOidcGroupMappingActive: (tenantId: string, mappingId: string, active: boolean) =>
+    request<OidcGroupMappingResponse>(
+      `/api/tenants/${encodeURIComponent(tenantId)}/oidc-group-mappings/${encodeURIComponent(mappingId)}`,
+      { method: 'PATCH', body: JSON.stringify({ active }) }
+    ),
+  deleteOidcGroupMapping: (tenantId: string, mappingId: string) => request<void>(
+    `/api/tenants/${encodeURIComponent(tenantId)}/oidc-group-mappings/${encodeURIComponent(mappingId)}`,
+    { method: 'DELETE' }
+  ),
   getApplication: (applicationId: string) => request<ApplicationResponse>(
     `/api/applications/${encodeURIComponent(applicationId)}`
   ),

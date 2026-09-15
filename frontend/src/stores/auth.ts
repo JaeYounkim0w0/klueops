@@ -83,6 +83,11 @@ export const useAuthStore = defineStore('auth', () => {
     return capabilities.includes(capability);
   }
 
+  function canNavigate(area: string): boolean {
+    // Tenant 정책이 로드되기 전에는 기존 capability 판정을 유지하고, 로드 후에는 서버 결정을 따른다.
+    return effectiveAccess.value?.navigation[area] ?? true;
+  }
+
   async function loadEffectiveAccess(tenantId: string, workspaceId?: string): Promise<void> {
     if (!tenantId) { effectiveAccess.value = null; return; }
     const query = new URLSearchParams({ tenantId });
@@ -147,6 +152,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     load,
     hasCapability,
+    canNavigate,
     loadEffectiveAccess,
     beginLogin,
     authenticatedReturnTo,

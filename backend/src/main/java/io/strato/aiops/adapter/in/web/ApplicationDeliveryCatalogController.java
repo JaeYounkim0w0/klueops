@@ -5,12 +5,14 @@ import io.strato.aiops.application.port.out.ChartCatalogPort;
 import io.strato.aiops.application.service.ApplicationDeliveryCatalogService;
 import io.strato.aiops.application.service.IdentityAccessService;
 import io.strato.aiops.application.service.ResolvedAccess;
+import io.strato.aiops.application.service.TenantFeatureGuard;
 import io.strato.aiops.domain.applicationdelivery.ChartVersion;
 import io.strato.aiops.domain.applicationdelivery.ChartSource;
 import io.strato.aiops.domain.applicationdelivery.ChartSourceType;
 import io.strato.aiops.domain.applicationdelivery.TenantChart;
 import io.strato.aiops.domain.applicationdelivery.ValuesProfile;
 import io.strato.aiops.domain.identity.Capability;
+import io.strato.aiops.domain.identity.FeatureKey;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -42,13 +44,16 @@ public class ApplicationDeliveryCatalogController {
     private final ApplicationDeliveryCatalogService catalogService;
     private final CurrentAccessResolver currentAccessResolver;
     private final IdentityAccessService identityAccessService;
+    private final TenantFeatureGuard featureGuard;
 
     public ApplicationDeliveryCatalogController(ApplicationDeliveryCatalogService catalogService,
                                                 CurrentAccessResolver currentAccessResolver,
-                                                IdentityAccessService identityAccessService) {
+                                                IdentityAccessService identityAccessService,
+                                                TenantFeatureGuard featureGuard) {
         this.catalogService = catalogService;
         this.currentAccessResolver = currentAccessResolver;
         this.identityAccessService = identityAccessService;
+        this.featureGuard = featureGuard;
     }
 
     @Operation(summary = "Search Helm charts in Artifact Hub")
@@ -177,7 +182,16 @@ public class ApplicationDeliveryCatalogController {
         return new ValuesPayloadResponse(catalogService.values(tenantId, revisionId));
     }
 
+    @PostMapping("/values-suggestions")
+    public ValuesPayloadResponse suggestValues(@Valid @RequestBody ValuesSuggestionRequest request,
+                                                Authentication authentication) {
+        require(authentication, request.tenantId(), Capability.VALUES_EDIT);
+        return new ValuesPayloadResponse(catalogService.suggestValues(request.tenantId(), request.chartVersionId(),
+                request.currentValuesYaml(), request.instruction()));
+    }
+
     private ResolvedAccess require(Authentication authentication, UUID tenantId, Capability capability) {
+        featureGuard.requireEnabled(tenantId, FeatureKey.APPLICATION_DELIVERY);
         ResolvedAccess access = currentAccessResolver.resolve(authentication);
         if (!identityAccessService.allowsTenant(access, capability, tenantId)) {
             throw new AccessDeniedException(capability.value() + " capability is not granted for this tenant");
@@ -201,6 +215,8 @@ public class ApplicationDeliveryCatalogController {
     }
     public record ValuesPayloadResponse(String valuesYaml) {
     }
+    public record ValuesSuggestionRequest(@NotNull UUID tenantId, @NotNull UUID chartVersionId,
+                                          @NotBlank String currentValuesYaml, @NotBlank String instruction) { }
 
     public record CatalogPackageResponse(String packageId, String repository, String repositoryDisplayName,
                                          String repositoryUrl, String name, String description, String version,

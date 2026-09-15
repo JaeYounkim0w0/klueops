@@ -165,34 +165,34 @@ watch(
       </button>
       <nav id="primary-navigation" class="nav">
         <NotificationCenter />
-        <RouterLink v-if="auth.hasCapability('cluster:read')" to="/" class="nav-item">
+        <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('overview')" to="/" class="nav-item">
           <i class="pi pi-home"></i>
           <span>{{ t('shell.dashboard') }}</span>
         </RouterLink>
 
         <div class="nav-group">
           <div class="nav-group-title">{{ t('shell.operations') }}</div>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/triage" class="nav-item nav-child">
+          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/triage" class="nav-item nav-child">
             <i class="pi pi-filter"></i>
             <span>{{ t('shell.triage') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read')" to="/operations/fleet" class="nav-item nav-child">
+          <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('clusters')" to="/operations/fleet" class="nav-item nav-child">
             <i class="pi pi-sitemap"></i>
             <span>{{ t('shell.fleet') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/incidents" class="nav-item nav-child">
+          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/incidents" class="nav-item nav-child">
             <i class="pi pi-exclamation-circle"></i>
             <span>{{ t('shell.incidents') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read')" to="/clusters" class="nav-item nav-child">
+          <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('clusters')" to="/clusters" class="nav-item nav-child">
             <i class="pi pi-cloud"></i>
             <span>{{ t('shell.clusters') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('application:read')" to="/applications" class="nav-item nav-child">
+          <RouterLink v-if="auth.hasCapability('application:read') && auth.canNavigate('applications')" to="/applications" class="nav-item nav-child">
             <i class="pi pi-box"></i>
             <span>{{ t('shell.applications') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read')" to="/policies" class="nav-item nav-child">
+          <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('clusters')" to="/policies" class="nav-item nav-child">
             <i class="pi pi-shield"></i>
             <span>{{ t('shell.policies') }}</span>
           </RouterLink>
@@ -204,19 +204,19 @@ watch(
 
         <div class="nav-group">
           <div class="nav-group-title">{{ t('shell.ai') }}</div>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/analysis" class="nav-item">
+          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/analysis" class="nav-item">
             <i class="pi pi-chart-line"></i>
             <span>{{ t('shell.analysis') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/ai-chat" class="nav-item">
+          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/ai-chat" class="nav-item">
             <i class="pi pi-comments"></i>
             <span>{{ t('shell.chat') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/runbooks" class="nav-item">
+          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/runbooks" class="nav-item">
             <i class="pi pi-book"></i>
             <span>{{ t('shell.runbooks') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/ai/trust" class="nav-item">
+          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/ai/trust" class="nav-item">
             <i class="pi pi-verified"></i>
             <span>{{ t('shell.trustCenter') }}</span>
           </RouterLink>
@@ -232,7 +232,7 @@ watch(
             <i class="pi pi-cog"></i>
             <span>{{ t('shell.dataRuntime') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('ai:routing:manage')" to="/settings/ai-providers" class="nav-item">
+          <RouterLink v-if="auth.hasCapability('ai-routing:manage') && auth.canNavigate('aiProviders')" to="/settings/ai-providers" class="nav-item">
             <i class="pi pi-sparkles"></i>
             <span>AI Providers</span>
           </RouterLink>
@@ -244,7 +244,7 @@ watch(
             <i class="pi pi-users"></i>
             <span>{{ t('shell.access') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('tenant:member:manage')" to="/settings/users-access" class="nav-item">
+          <RouterLink v-if="auth.hasCapability('tenant:member:manage') && auth.canNavigate('access')" to="/settings/users-access" class="nav-item">
             <i class="pi pi-user-edit"></i>
             <span>Users &amp; Access</span>
           </RouterLink>

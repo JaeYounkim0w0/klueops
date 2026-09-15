@@ -9,6 +9,7 @@ import io.strato.aiops.application.port.out.ChartAcquisitionPort;
 import io.strato.aiops.application.port.out.ChartCatalogPort;
 import io.strato.aiops.application.port.out.SecretCryptoPort;
 import io.strato.aiops.application.port.out.RemoteSourceValidationPort;
+import io.strato.aiops.application.port.out.HelmValuesSuggestionPort;
 import io.strato.aiops.domain.applicationdelivery.ChartSourceType;
 import io.strato.aiops.domain.applicationdelivery.ChartSource;
 import io.strato.aiops.domain.applicationdelivery.ChartTrustStatus;
@@ -42,12 +43,14 @@ public class ApplicationDeliveryCatalogService {
     private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
     private final Clock clock;
     private final RemoteSourceValidationPort sourceValidator;
+    private final HelmValuesSuggestionPort valuesSuggestion;
 
     public ApplicationDeliveryCatalogService(ChartCatalogPort catalog, ChartAcquisitionPort acquisition,
                                              ChartArchiveInspectionPort archiveInspector,
                                              ApplicationDeliveryRepositoryPort repository,
                                              SecretCryptoPort secretCrypto, ObjectMapper objectMapper, Clock clock,
-                                             RemoteSourceValidationPort sourceValidator) {
+                                             RemoteSourceValidationPort sourceValidator,
+                                             HelmValuesSuggestionPort valuesSuggestion) {
         this.catalog = catalog;
         this.acquisition = acquisition;
         this.archiveInspector = archiveInspector;
@@ -56,6 +59,7 @@ public class ApplicationDeliveryCatalogService {
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.sourceValidator = sourceValidator;
+        this.valuesSuggestion = valuesSuggestion;
     }
 
     @Transactional
@@ -177,6 +181,51 @@ public class ApplicationDeliveryCatalogService {
     public String values(UUID tenantId, UUID revisionId) {
         ValuesRevision revision = repository.findRevision(tenantId, revisionId).orElseThrow();
         return secretCrypto.decrypt(revision.encryptedValues());
+    }
+
+    public String suggestValues(UUID tenantId, UUID chartVersionId, String currentValues, String instruction) {
+        repository.findVersion(tenantId, chartVersionId).orElseThrow();
+        validateValues(currentValues);
+        if (instruction == null || instruction.isBlank() || instruction.length() > 2000)
+            throw new IllegalArgumentException("A Values instruction of up to 2000 characters is required");
+        String suggestion = stripMarkdown(valuesSuggestion.suggest(tenantId, maskSensitiveValues(currentValues),
+                instruction.trim()));
+        validateValues(suggestion);
+        return suggestion;
+    }
+
+    private String maskSensitiveValues(String valuesYaml) {
+        try {
+            Object value = yamlMapper.readValue(valuesYaml, Object.class);
+            maskSensitiveNode(value);
+            return yamlMapper.writeValueAsString(value);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("Values YAML is invalid", exception);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void maskSensitiveNode(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            ((Map<Object, Object>) map).replaceAll((key, child) -> {
+                if (String.valueOf(key).matches("(?i).*(password|secret|token|api[-_]?key|credential).*") )
+                    return "***REDACTED***";
+                maskSensitiveNode(child);
+                return child;
+            });
+        } else if (value instanceof List<?> list) {
+            list.forEach(this::maskSensitiveNode);
+        }
+    }
+
+    private String stripMarkdown(String value) {
+        String result = value == null ? "" : value.trim();
+        if (result.startsWith("```")) {
+            int firstBreak = result.indexOf('\n');
+            int end = result.lastIndexOf("```");
+            if (firstBreak >= 0 && end > firstBreak) result = result.substring(firstBreak + 1, end).trim();
+        }
+        return result;
     }
 
     private void validateValues(String valuesYaml) {

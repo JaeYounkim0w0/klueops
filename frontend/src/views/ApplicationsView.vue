@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import ApplicationDeliveryNav from '@/components/application/ApplicationDeliveryNav.vue';
 import DeploymentStartDialog from '@/components/application/DeploymentStartDialog.vue';
-import { api, type ApplicationResponse, type ClusterResponse, type ReleaseOperationResponse } from '@/api/client';
+import { api, type ApplicationResponse, type ApplicationReleaseResponse, type ApplicationRuntimeResponse, type ClusterResponse, type ReleaseOperationResponse } from '@/api/client';
 import { useJobCenterStore } from '@/stores/jobCenter';
 import { useTenancyStore } from '@/stores/tenancy';
 
@@ -14,9 +14,13 @@ const applications = ref<ApplicationResponse[]>([]);
 const clusters = ref<ClusterResponse[]>([]);
 const selectedId = ref('');
 const operations = ref<ReleaseOperationResponse[]>([]);
+const runtime = ref<ApplicationRuntimeResponse | null>(null);
+const releases = ref<ApplicationReleaseResponse[]>([]);
 const loading = ref(true);
 const startOpen = ref(false);
 const uninstallOpen = ref(false);
+const rollbackOpen = ref(false);
+const rollbackRevision = ref(0);
 const confirmationText = ref('');
 const confirmationInput = ref('');
 const impactSummary = ref('');
@@ -49,7 +53,34 @@ async function selectApplication(application: ApplicationResponse): Promise<void
 }
 
 async function loadOperations(): Promise<void> {
-  operations.value = selectedId.value ? await api.listReleaseOperations(tenancy.currentTenantId, selectedId.value).catch(() => []) : [];
+  if (!selectedId.value) { operations.value = []; releases.value = []; runtime.value = null; return; }
+  [operations.value, releases.value, runtime.value] = await Promise.all([
+    api.listReleaseOperations(tenancy.currentTenantId, selectedId.value).catch(() => []),
+    api.listApplicationReleases(tenancy.currentTenantId, selectedId.value).catch(() => []),
+    api.getApplicationRuntime(tenancy.currentTenantId, selectedId.value).catch(() => null),
+  ]);
+}
+
+async function openRollback(): Promise<void> {
+  if (!selected.value || !releases.value.length) return;
+  rollbackRevision.value = releases.value.find((item) => item.revision !== selected.value?.currentReleaseRevision)?.revision
+    || releases.value[releases.value.length - 1].revision;
+  await refreshRollbackConfirmation();
+  rollbackOpen.value = true;
+}
+
+async function refreshRollbackConfirmation(): Promise<void> {
+  if (!selected.value) return;
+  const preview = await api.getRollbackConfirmation(tenancy.currentTenantId, selected.value.id, rollbackRevision.value);
+  confirmationText.value = preview.confirmationText; impactSummary.value = preview.impactSummary;
+  confirmationInput.value = '';
+}
+
+async function rollback(): Promise<void> {
+  if (!selected.value || confirmationInput.value.trim() !== confirmationText.value) return;
+  const accepted = await api.rollbackHelmApplication(tenancy.currentTenantId, selected.value.id, rollbackRevision.value, confirmationInput.value);
+  jobs.registerJob({ jobId: accepted.jobId, title: 'Helm Application Rollback', detail: `revision ${rollbackRevision.value}`, type: 'HELM_ROLLBACK' });
+  rollbackOpen.value = false; message.value = 'Rollback 작업을 시작했습니다.'; await load();
 }
 
 function statusTone(status?: string): string {
@@ -76,6 +107,14 @@ async function uninstall(): Promise<void> {
   message.value = 'Uninstall 작업을 시작했습니다. Job Center에서 진행 상태를 확인할 수 있습니다.';
   await load();
 }
+
+function startUpgrade(): void {
+  if (!selected.value) return;
+  router.push({ path: '/applications/library', query: {
+    upgradeApplicationId: selected.value.id, clusterId: selected.value.clusterId,
+    namespace: selected.value.namespace, releaseName: selected.value.helmReleaseName || selected.value.name,
+  } });
+}
 </script>
 
 <template>
@@ -96,10 +135,11 @@ async function uninstall(): Promise<void> {
           <dl><div><dt>배포 방식</dt><dd>{{ application.deploymentType }}</dd></div><div><dt>생성</dt><dd>{{ application.createdAt ? new Date(application.createdAt).toLocaleDateString() : '-' }}</dd></div></dl>
         </button>
       </div>
-      <aside v-if="selected" class="application-inspector"><header><div><span class="delivery-eyebrow">SELECTED APPLICATION</span><h2>{{ selected.name }}</h2><p>{{ selected.namespace }} · {{ clusterNames[selected.clusterId || ''] }}</p></div><span class="status-dot" :class="statusTone(selected.status)">{{ selected.status }}</span></header><div class="inspector-actions"><button class="secondary-button" type="button" @click="router.push({ path: '/analysis', query: { mode: 'application', applicationId: selected.id, clusterId: selected.clusterId } })"><i class="pi pi-sparkles"></i> AI Analysis</button><button class="danger-ghost-button" type="button" @click="openUninstall"><i class="pi pi-trash"></i> Uninstall</button></div><section><h3>최근 작업</h3><div v-if="operations.length" class="operation-timeline"><article v-for="operation in operations" :key="operation.id"><span class="timeline-dot" :class="statusTone(operation.status)"></span><div><strong>{{ operation.type }} · {{ operation.status }}</strong><p>{{ operation.outputSummary || operation.errorMessage || 'Job Center에서 실행 중' }}</p><small>{{ new Date(operation.requestedAt).toLocaleString() }} · {{ operation.requestedBy }}</small></div></article></div><div v-else class="mini-empty">기록된 Helm 작업이 없습니다.</div></section></aside>
+      <aside v-if="selected" class="application-inspector"><header><div><span class="delivery-eyebrow">SELECTED APPLICATION</span><h2>{{ selected.name }}</h2><p>{{ selected.namespace }} · {{ clusterNames[selected.clusterId || ''] }}</p></div><span class="status-dot" :class="statusTone(selected.status)">{{ selected.status }}</span></header><div class="inspector-actions"><button class="secondary-button" type="button" @click="router.push({ path: '/analysis', query: { mode: 'application', applicationId: selected.id, clusterId: selected.clusterId } })"><i class="pi pi-sparkles"></i> AI Analysis</button><button class="secondary-button" type="button" @click="startUpgrade"><i class="pi pi-arrow-up-right"></i> Upgrade</button><button class="secondary-button" type="button" :disabled="releases.filter(item => item.revision !== selected?.currentReleaseRevision).length === 0" @click="openRollback"><i class="pi pi-history"></i> Rollback</button><button class="danger-ghost-button" type="button" @click="openUninstall"><i class="pi pi-trash"></i> Uninstall</button></div><section v-if="runtime"><h3>Runtime</h3><div class="runtime-summary"><span><b>{{ runtime.readyPods }} / {{ runtime.totalPods }}</b> Ready Pods</span><span><b>{{ runtime.restarts }}</b> Restarts</span></div><div class="runtime-list"><article v-for="workload in runtime.workloads" :key="`${workload.kind}/${workload.name}`"><strong>{{ workload.kind }}/{{ workload.name }}</strong><span class="status-dot" :class="statusTone(workload.status)">{{ workload.ready }}/{{ workload.desired }} · {{ workload.status }}</span></article><article v-for="endpoint in runtime.endpoints" :key="endpoint.url"><strong>{{ endpoint.type }} · {{ endpoint.name }}</strong><a :href="endpoint.url" target="_blank" rel="noreferrer">{{ endpoint.url }} <i class="pi pi-external-link"></i></a></article></div></section><section><h3>최근 작업</h3><div v-if="operations.length" class="operation-timeline"><article v-for="operation in operations" :key="operation.id"><span class="timeline-dot" :class="statusTone(operation.status)"></span><div><strong>{{ operation.type }} · {{ operation.status }}</strong><p>{{ operation.outputSummary || operation.errorMessage || 'Job Center에서 실행 중' }}</p><small>{{ new Date(operation.requestedAt).toLocaleString() }} · {{ operation.requestedBy }}</small></div></article></div><div v-else class="mini-empty">기록된 Helm 작업이 없습니다.</div></section></aside>
     </div>
     <div v-else class="delivery-empty"><i class="pi pi-box"></i><h2>배포된 Application이 없습니다</h2><p>보유한 Chart Library에서 시작하거나 Artifact Hub에서 Chart를 찾아보세요.</p><button class="primary-button" type="button" @click="startOpen = true">첫 Application 배포</button></div>
     <DeploymentStartDialog :open="startOpen" @close="startOpen = false" />
     <div v-if="uninstallOpen" class="delivery-modal-backdrop" @click.self="uninstallOpen = false"><section class="delivery-modal narrow"><header><div><span class="delivery-eyebrow danger">DESTRUCTIVE ACTION</span><h2>{{ selected?.name }} Uninstall</h2><p>{{ impactSummary }}</p></div><button class="icon-button" type="button" @click="uninstallOpen = false"><i class="pi pi-times"></i></button></header><label class="exact-confirm-field">정확 확인 문구<code>{{ confirmationText }}</code><input v-model="confirmationInput" autocomplete="off" /></label><footer><button class="secondary-button" type="button" @click="uninstallOpen = false">취소</button><button class="danger-button" type="button" :disabled="confirmationInput.trim() !== confirmationText" @click="uninstall">Uninstall 시작</button></footer></section></div>
+    <div v-if="rollbackOpen" class="delivery-modal-backdrop" @click.self="rollbackOpen = false"><section class="delivery-modal narrow"><header><div><span class="delivery-eyebrow">CONTROLLED ROLLBACK</span><h2>{{ selected?.name }} Rollback</h2><p>{{ impactSummary }}</p></div><button class="icon-button" type="button" @click="rollbackOpen = false"><i class="pi pi-times"></i></button></header><label class="delivery-field">Target revision<select v-model.number="rollbackRevision" @change="refreshRollbackConfirmation"><option v-for="release in releases" :key="release.id" :value="release.revision">Revision {{ release.revision }} · {{ release.status }}</option></select></label><label class="exact-confirm-field">정확 확인 문구<code>{{ confirmationText }}</code><input v-model="confirmationInput" autocomplete="off" /></label><footer><button class="secondary-button" type="button" @click="rollbackOpen = false">취소</button><button class="danger-button" type="button" :disabled="confirmationInput.trim() !== confirmationText" @click="rollback">Rollback 시작</button></footer></section></div>
   </section>
 </template>

@@ -13,5 +13,9 @@
 .routing-row:first-child { border-top: 0; }.routing-row strong, .routing-row p { margin: 0; }.routing-row p { margin-top: 4px; color: #7b899b; font-size: 10px; }
 .routing-row label { display: grid; gap: 5px; color: #65758a; font-size: 9px; font-weight: 800; }.routing-row select { min-width: 0; border: 1px solid #cdd8e5; border-radius: 7px; background: #fff; padding: 8px; font-size: 10px; }
 .routing-row .transfer-toggle { display: flex; align-items: center; align-self: center; gap: 6px; }.checkbox-field { display: flex !important; grid-column: 1 / -1; align-items: center; gap: 7px !important; }
+.local-model-tools { display: grid; gap: 8px; margin-top: 4px; border-top: 1px solid #edf1f5; padding-top: 12px; }
+.local-model-tools > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.local-model-tools select { min-width: 0; flex: 1; border: 1px solid #cdd8e5; border-radius: 7px; padding: 8px; }
+.local-model-tools small { color: #748397; line-height: 1.5; overflow-wrap: anywhere; }
 @media (max-width: 1100px) { .provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.routing-row { grid-template-columns: 1fr 1fr 1fr; }.routing-row > div { grid-column: 1 / -1; } }
 @media (max-width: 700px) { .provider-grid { grid-template-columns: 1fr; }.routing-row { grid-template-columns: 1fr; align-items: stretch; }.routing-row > div { grid-column: auto; } }
