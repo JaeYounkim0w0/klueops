@@ -383,14 +383,14 @@ flowchart TD
 
 ### 8.1 Exposure 실행 순서
 
-1. `helm template` 결과에서 Service와 chart-managed Ingress/HTTPRoute를 식별한다.
+1. Target option 조회 API가 고정된 Chart/Values를 `helm template`로 렌더링해 Service namespace/name/type과 `spec.ports[].port`, `targetPort`, `nodePort`를 추출하고, 별도 Kubernetes 조회로 Gateway와 HTTP/HTTPS listener, `Accepted/Programmed` 상태를 반환한다. 원격 조회 중 DB transaction은 유지하지 않는다.
 2. `CHART_MANAGED`는 렌더 결과에 top-level Ingress 또는 HTTPRoute가 없으면 preview를 거부한다.
-3. `HTTP_ROUTE`는 Gateway API CRD와 parent Gateway, HTTP/HTTPS listener, backend Service/Port를 검사한다.
+3. `HTTP_ROUTE`는 Preview와 비동기 Helm 실행 직전에 Gateway API CRD와 parent Gateway, HTTP/HTTPS listener, Gateway 준비 상태, backend Service와 `spec.ports[].port`를 재검사한다. 조회와 실행 사이에 Gateway가 삭제되거나 준비 해제된 경우 Helm 변경 전에 실패시킨다.
 4. Helm install/upgrade 성공 후 승인된 companion HTTPRoute를 server-side apply한다.
 5. Helm 소유 label 또는 release annotation으로 chart-managed Ingress를 찾고 TLS 유무에 맞춰 URL을 만든다.
 6. HTTPRoute `Accepted`와 `ResolvedRefs`를 수집하고 두 조건이 모두 참이면 `READY`, 거부 조건이면 `DEGRADED`, 아직 판정 전이면 `APPLIED`로 표시한다.
 7. companion 적용 실패는 생성 시도한 Route를 best-effort 정리하고 추정 URL을 저장하지 않는다.
-8. 자동 DNS/TLS, `allowedRoutes`, cross-namespace `ReferenceGrant`, Gateway address 기반 도달성 판단과 companion Ingress는 후속 adapter 범위다.
+8. Gateway API와 Controller 설치는 Tenant Cluster Admin 책임이며 KlueOps가 자동 설치하지 않는다. 자동 DNS/TLS, `allowedRoutes`, cross-namespace `ReferenceGrant`, Gateway address 기반 도달성 판단과 companion Ingress는 후속 adapter 범위다.
 
 Wildcard DNS가 Gateway를 가리키는 경우 hostname만 등록한다. 그렇지 않으면 선택형 DNS Provider/ExternalDNS adapter가 있을 때만 자동화를 제공하고, 없는 경우 필요한 record와 `MANUAL_ACTION_REQUIRED`를 표시한다.
 

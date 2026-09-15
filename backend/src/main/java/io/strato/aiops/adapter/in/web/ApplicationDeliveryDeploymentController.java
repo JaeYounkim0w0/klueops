@@ -79,6 +79,19 @@ public class ApplicationDeliveryDeploymentController {
                 actor.user().id().toString()), objectMapper);
     }
 
+    @PostMapping("/deployment-target-options")
+    @Operation(summary = "Render Service ports and discover HTTP Gateways for a deployment target")
+    public DeploymentTargetOptionsResponse targetOptions(@Valid @RequestBody TargetOptionsRequest request,
+                                                         Authentication authentication) {
+        ResolvedAccess actor = requireTarget(authentication, request.tenantId(), Capability.APPLICATION_DEPLOY,
+                request.clusterId(), request.namespace());
+        if (!accessService.allows(actor, Capability.APPLICATION_EXPOSURE, request.clusterId(), request.namespace())) {
+            throw new AccessDeniedException("application:exposure capability is not granted for this tenant");
+        }
+        return DeploymentTargetOptionsResponse.from(service.targetOptions(request.tenantId(), request.clusterId(),
+                request.chartVersionId(), request.valuesRevisionId(), request.namespace(), request.releaseName()));
+    }
+
     @PostMapping("/deployment-plans/{planId}/execute")
     @Operation(summary = "Execute an unexpired plan after exact text confirmation")
     @ResponseStatus(HttpStatus.ACCEPTED)
@@ -196,10 +209,42 @@ public class ApplicationDeliveryDeploymentController {
                                  String exposureType, String hostname, String exposurePath,
                                  String backendServiceName, Integer backendServicePort,
                                  String gatewayName, String gatewayNamespace) { }
+    public record TargetOptionsRequest(@NotNull UUID tenantId, @NotNull UUID clusterId, @NotNull UUID chartVersionId,
+                                       UUID valuesRevisionId, @NotBlank String namespace, @NotBlank String releaseName) { }
     public record ExecuteRequest(@NotNull UUID tenantId, @NotBlank String confirmationText) { }
     public record RollbackRequest(@NotNull UUID tenantId, int revision, @NotBlank String confirmationText) { }
     public record DeploymentAcceptedResponse(UUID applicationId, UUID jobId, UUID operationId) { }
     public record LifecycleConfirmationResponse(String confirmationText, String impactSummary) { }
+    public record DeploymentTargetOptionsResponse(List<RenderedServiceResponse> services,
+                                                   List<GatewayResponse> gateways,
+                                                   String gatewayDiscoveryStatus,
+                                                   String gatewayDiscoveryMessage) {
+        static DeploymentTargetOptionsResponse from(ApplicationDeliveryDeploymentService.DeploymentTargetOptions value) {
+            var discovery = value.gatewayDiscovery();
+            return new DeploymentTargetOptionsResponse(
+                    value.services().stream().map(RenderedServiceResponse::from).toList(),
+                    discovery.gateways().stream().map(GatewayResponse::from).toList(),
+                    discovery.status(), discovery.message());
+        }
+    }
+    public record RenderedServiceResponse(String namespace, String name, String type, String portName, int port,
+                                          String targetPort, Integer nodePort) {
+        static RenderedServiceResponse from(ApplicationDeliveryDeploymentService.RenderedServiceOption value) {
+            return new RenderedServiceResponse(value.namespace(), value.name(), value.type(), value.portName(),
+                    value.port(), value.targetPort(), value.nodePort());
+        }
+    }
+    public record GatewayResponse(String namespace, String name, String readiness, List<GatewayListenerResponse> listeners) {
+        static GatewayResponse from(io.strato.aiops.application.port.out.ApplicationExposurePort.GatewayOption value) {
+            return new GatewayResponse(value.namespace(), value.name(), value.readiness(),
+                    value.listeners().stream().map(GatewayListenerResponse::from).toList());
+        }
+    }
+    public record GatewayListenerResponse(String name, String protocol, Integer port, String hostname) {
+        static GatewayListenerResponse from(io.strato.aiops.application.port.out.ApplicationExposurePort.GatewayListener value) {
+            return new GatewayListenerResponse(value.name(), value.protocol(), value.port(), value.hostname());
+        }
+    }
     public record RuntimeOverviewResponse(int readyPods, int totalPods, int restarts,
                                           List<ApplicationRuntimeInspectionPort.Workload> workloads,
                                           List<ApplicationRuntimeInspectionPort.Endpoint> endpoints) {

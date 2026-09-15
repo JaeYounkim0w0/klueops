@@ -176,9 +176,9 @@ Release 이름은 `Cluster + Namespace` 안에서 유일해야 한다.
 | `CHART_MANAGED` | Chart Values로 Ingress/HTTPRoute/LoadBalancer를 생성 | Chart가 명시적으로 지원할 때 |
 | `HTTP_ROUTE` | 렌더링된 Service/Port에 KlueOps companion HTTPRoute 연결 | 사용자가 선택할 때 |
 
-KlueOps HTTPRoute Exposure 입력은 Gateway/Listener, hostname, path, backend Service/Port, TLS와 DNS mode다. 예를 들어 `nginx.cluster.co.kr`은 wildcard DNS가 Gateway를 가리키면 별도 DNS 변경 없이 hostname으로 사용한다. 그렇지 않으면 ExternalDNS/DNS Provider 연동을 사용하거나 `DNS 설정 필요` 상태와 필요한 record를 사용자에게 안내한다.
+KlueOps HTTPRoute Exposure 입력은 Gateway, hostname, path와 backend Service/Port다. Service와 Port는 현재 Chart/Values를 `helm template`로 렌더링한 결과에서, Gateway는 선택한 Cluster의 실제 `Gateway` 중 HTTP/HTTPS listener가 있는 항목에서 고른다. HTTPRoute backend가 참조하는 포트는 Service의 `spec.ports[].port`이며 Pod 연결용 `targetPort`나 Node 외부 노출용 `nodePort`를 대신 사용하지 않는다. 예를 들어 `nginx.cluster.co.kr`은 wildcard DNS가 Gateway를 가리키면 별도 DNS 변경 없이 hostname으로 사용한다. 그렇지 않으면 ExternalDNS/DNS Provider 연동을 사용하거나 `DNS 설정 필요` 상태와 필요한 record를 사용자에게 안내한다.
 
-현재 구현은 `CHART_MANAGED` preview에서 렌더 결과에 실제 Ingress 또는 HTTPRoute가 없으면 배포를 차단한다. `HTTP_ROUTE`는 대상 Service/Port와 parent Gateway의 존재, HTTP/HTTPS listener를 적용 전에 검사하고, 적용 뒤 `Accepted`와 `ResolvedRefs`를 수집해 `READY`, `APPLIED`, `DEGRADED`로 표시한다. Gateway API가 없거나 사전 조건이 맞지 않으면 HTTPRoute 생성 없이 실패한다. `allowedRoutes`, cross-namespace `ReferenceGrant`, DNS와 TLS 자동화까지 포함한 전체 preflight는 후속 확장이다.
+현재 구현은 `CHART_MANAGED` preview에서 렌더 결과에 실제 Ingress 또는 HTTPRoute가 없으면 배포를 차단한다. `HTTP_ROUTE`는 Target 화면 조회, Preview와 실제 실행 직전에 대상 Service/Port, parent Gateway, HTTP/HTTPS listener와 Gateway `Accepted/Programmed` 준비 상태를 다시 검사한다. 적용 뒤에는 HTTPRoute `Accepted`와 `ResolvedRefs`를 수집해 `READY`, `APPLIED`, `DEGRADED`로 표시한다. Gateway API CRD, Controller 또는 준비된 Gateway가 없으면 선택과 배포를 차단하고 필요한 확인 명령을 안내한다. Gateway 자동 선택에는 등록 Cluster credential의 Gateway `get/list` 읽기 권한이 필요하며, 조회 권한 부족은 설치되지 않은 상태와 구분해 표시한다. KlueOps는 Tenant 소유 Cluster에 Gateway API/Controller를 자동 설치하지 않는다. Cluster Admin이 나중에 설치한 경우 Target의 `다시 조회`로 이어서 배포하거나, 이미 내부용으로 배포한 Application은 Upgrade에서 HTTPRoute 노출을 추가한다. `allowedRoutes`, cross-namespace `ReferenceGrant`, DNS와 TLS 자동화까지 포함한 전체 preflight는 후속 확장이다.
 
 TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-manager 연동만 사용한다. Certificate와 DNS를 자동 생성하는 것처럼 표시하지 않고 실제 연동 상태를 구분한다.
 

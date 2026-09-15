@@ -2,6 +2,8 @@
 .provider-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
 .provider-card { display: grid; gap: 14px; border: 1px solid #dbe4ee; border-radius: 13px; background: #fff; padding: 16px; }
 .provider-card > header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.provider-card > header > div { min-width: 0; }
+.provider-card > header .status-dot { justify-self: end; min-width: max-content; }
 .provider-card h3, .provider-card p { margin: 0; }.provider-card h3 { font-size: 14px; }.provider-card p { margin-top: 3px; color: #748397; font-size: 10px; }
 .provider-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #e9f2fe; color: #2769b9; }
 .provider-card dl { display: grid; margin: 0; border-block: 1px solid #edf1f5; padding-block: 7px; }

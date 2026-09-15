@@ -18,7 +18,7 @@ ingress-nginx와 Envoy Gateway는 수용시험용으로 별도 namespace에 설�
 
 ## 보안 경계
 
-테스트 대상 Cluster 등록에는 전용 ServiceAccount를 사용했다. Cluster 범위는 Namespace와 Node 조회만 허용하고, Application namespace에서는 built-in `admin` RoleBinding을 사용했다. Gateway와 HTTPRoute 권한은 테스트 namespace의 별도 Role로 제한했다. 임시 kubeconfig token은 2시간 유효시간으로 발급했으며 검증 후 로컬 임시 파일을 폐기한다.
+테스트 대상 Cluster 등록에는 전용 ServiceAccount를 사용했다. Cluster 범위는 Namespace·Node와 Gateway 선택 목록 조회만 허용하고, Application namespace에서는 built-in `admin` RoleBinding을 사용했다. Gateway와 HTTPRoute 권한은 테스트 namespace의 별도 Role로 제한했다. 반복 수용시험은 fixture가 값 없이 선언한 `kubernetes.io/service-account-token` Secret에서 토큰과 CA를 읽으며, Secret 자체는 저장소에 민감값을 포함하지 않는다. 시험 종료 시 fixture를 삭제해 발급된 토큰도 폐기한다.
 
 ## Chart managed Ingress
 
@@ -57,6 +57,6 @@ ingress-nginx와 Envoy Gateway는 수용시험용으로 별도 namespace에 설�
 
 ## 재현과 정리
 
-테스트 전용 Namespace, ServiceAccount, RBAC, GatewayClass와 Gateway는 `scripts/acceptance/fixtures/application-exposure.yaml`에 정의한다. 먼저 ingress-nginx와 Envoy Gateway를 설치한 뒤 이 fixture를 적용하고, KlueOps에서 대상 Cluster를 등록해 두 Wizard 흐름을 실행한다.
+테스트 전용 Namespace, ServiceAccount, 토큰 Secret, RBAC, GatewayClass와 Gateway는 `scripts/acceptance/fixtures/application-exposure.yaml`에 정의한다. 먼저 ingress-nginx와 Envoy Gateway를 설치한 뒤 이 fixture를 적용하고, 생성된 Secret의 token과 `ca.crt`로 KlueOps에 대상 Cluster를 등록해 두 Wizard 흐름을 실행한다. `kubectl create token`의 단기 토큰을 사용하면 만료 뒤 401이 발생하므로 장시간 반복 시험에는 사용하지 않는다.
 
 검증 후에는 KlueOps Application에서 Uninstall preview와 exact confirmation으로 Release 및 companion resource를 정리한다. Controller를 다른 테스트가 사용하지 않는 경우에만 각 Helm Release를 제거하고, 마지막으로 fixture를 삭제한다. 공유 Cluster에서는 Namespace나 GatewayClass를 일괄 삭제하기 전에 실제 소유자와 사용 중인 Route를 반드시 확인한다.

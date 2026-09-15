@@ -200,8 +200,11 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 
 - `Cluster 내부`: Chart가 만든 Service만 사용하고 KlueOps가 외부 경로를 추가하지 않음
 - `Chart에서 관리`: Chart Values가 만드는 Ingress/HTTPRoute 사용. Preview에서 실제 Route 리소스가 없으면 다음 단계로 진행하지 않는다.
-- `KlueOps HTTPRoute`: 렌더링된 Service/Port에 companion HTTPRoute 연결. hostname, path, Service/Port와 parent Gateway를 입력한다.
-- Gateway/Listener, hostname, path, backend Service/Port, TLS와 DNS mode 입력
+- `KlueOps HTTPRoute`: 렌더링된 Service/Port에 companion HTTPRoute 연결. hostname/path를 입력하고, Service/Port와 parent Gateway는 조회 결과에서 선택한다.
+- Service 선택기는 현재 Chart/Values의 렌더 결과만 표시하고 `spec.ports[].port`, `targetPort`, `nodePort`를 구분해 안내한다. HTTPRoute에는 `spec.ports[].port`를 사용한다.
+- Gateway 선택기는 대상 Cluster의 실제 Gateway namespace/name, HTTP/HTTPS listener와 `READY/NOT_READY/UNKNOWN` 상태를 표시하며 READY만 선택할 수 있다.
+- Gateway API CRD·Controller·Gateway가 없거나 조회 권한이 없으면 Preview를 비활성화하고 `kubectl get gatewayclass`, `kubectl get gateway -A`, listener `allowedRoutes` 점검 가이드를 표시한다.
+- Cluster Admin이 사전 조건을 나중에 구성한 경우 `다시 조회`로 선택지를 갱신한다. 내부 배포가 끝난 Application은 Upgrade의 접근 설정에서 노출 방식을 추가한다.
 - wildcard DNS/Gateway certificate 재사용 여부와 예상 URL 표시
 - Gateway API가 없거나 Chart Route와 중복되면 안전한 대안과 차단 사유 표시
 
@@ -396,7 +399,9 @@ Import는 Cluster 상태를 변경하지 않으므로 exact phrase까지 요구�
 | --- | --- | --- |
 | Cluster/Namespace | 권한 있는 대상 선택, 새 Namespace는 별도 plan | capability/Quota/NetworkPolicy 재검사 |
 | Exposure mode | Cluster 내부/Chart에서 관리/KlueOps HTTPRoute 단일 선택 | 입력 field와 capability 결과 갱신 |
-| Gateway/Listener | allowedRoutes를 통과한 Gateway만 선택 | HTTPRoute preflight 갱신 |
+| Gateway 다시 조회 | 실제 Cluster의 HTTP/HTTPS Gateway와 준비 상태 조회 | READY Gateway 선택지를 갱신하고 없음/권한 오류별 가이드 표시 |
+| Backend Service/Port | 렌더링된 Service의 `spec.ports[].port`만 선택 | targetPort/nodePort 설명과 선택한 포트 상세 표시 |
+| Gateway | namespace/name과 listener를 목록에서 선택, READY만 허용 | HTTPRoute preflight 갱신 |
 | Hostname/Path | DNS/TLS coverage와 충돌 검사 | 예상 URL 표시 |
 | Backend Service/Port | render 결과의 Service만 선택 | ResolvedRefs 사전 검사 |
 | `배포 미리보기` | Target/Exposure plan 저장 후 Preview 이동 | plan 만료시간 시작 |

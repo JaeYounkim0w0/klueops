@@ -1654,6 +1654,37 @@ export interface DeploymentPlanResponse {
   expiresAt: string;
 }
 
+export interface RenderedServiceOptionResponse {
+  namespace: string;
+  name: string;
+  type: string;
+  portName?: string;
+  port: number;
+  targetPort?: string;
+  nodePort?: number;
+}
+
+export interface GatewayListenerOptionResponse {
+  name: string;
+  protocol: string;
+  port?: number;
+  hostname?: string;
+}
+
+export interface GatewayOptionResponse {
+  namespace: string;
+  name: string;
+  readiness: 'READY' | 'NOT_READY' | 'UNKNOWN';
+  listeners: GatewayListenerOptionResponse[];
+}
+
+export interface DeploymentTargetOptionsResponse {
+  services: RenderedServiceOptionResponse[];
+  gateways: GatewayOptionResponse[];
+  gatewayDiscoveryStatus: 'AVAILABLE' | 'EMPTY' | 'UNAVAILABLE';
+  gatewayDiscoveryMessage?: string;
+}
+
 export interface DeploymentAcceptedResponse {
   applicationId: string;
   jobId: string;
@@ -1974,6 +2005,12 @@ export const api = {
     request<{ valuesYaml: string }>('/api/v2/application-delivery/values-suggestions', {
       method: 'POST', body: JSON.stringify(body),
     }, { timeoutMs: 180_000 }),
+  getDeploymentTargetOptions: (body: {
+    tenantId: string; clusterId: string; chartVersionId: string; valuesRevisionId?: string;
+    namespace: string; releaseName: string;
+  }) => request<DeploymentTargetOptionsResponse>('/api/v2/application-delivery/deployment-target-options', {
+    method: 'POST', body: JSON.stringify(body),
+  }, { timeoutMs: 60_000 }),
   createDeploymentPlan: (body: {
     tenantId: string; applicationId?: string; clusterId: string; chartVersionId: string; valuesRevisionId?: string;
     namespace: string; releaseName: string; createNamespace: boolean; exposureType: string; hostname?: string;

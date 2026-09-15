@@ -214,12 +214,12 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 
 2026-09-15 기준 최신 통합 증빙은 다음과 같다.
 
-- Backend: PostgreSQL 17 Testcontainers, Flyway V1~V32 포함 272 tests 통과
+- Backend: PostgreSQL 17 Testcontainers, Flyway V1~V32 포함 273 tests 통과
 - Command Runner: 5 tests 통과
-- Frontend: 28 files, 96 tests, typecheck와 production build 통과
+- Frontend: 28 files, 97 tests, typecheck와 production build 통과
 - OpenAPI runtime snapshot과 Orval generated client drift 통과
 - architecture, security, packaging, docs와 maintainability gate 통과
-- Docker Desktop Kubernetes Helm revision 86에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
+- Docker Desktop Kubernetes Helm revision 90에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
 - OIDC 관리자 사용자로 `dev-master/default`의 격리 Runner `kubectl get pods --field-selector=status.phase!=Running,status.phase!=Succeeded -o wide` 실행 성공, exit code `0`, 130ms
 - 로컬 Keycloak 네 역할과 두 Tenant object scope 격리 검증 통과
 - read API 30회/동시성 10 기준 p95 14ms, Backend/Keycloak 순차 재시작, 앱 DB Flyway migration 28건·Keycloak `aiops` Realm sentinel 격리 복원과 AI timeout fallback 증빙

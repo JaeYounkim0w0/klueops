@@ -98,6 +98,21 @@
 .exposure-guidance { display: flex; gap: 9px; margin: 8px 20px 20px; border: 1px solid #cbdff5; border-radius: 9px; background: #f2f7fd; padding: 11px; color: #285f9f; }
 .exposure-guidance p { display: grid; gap: 3px; margin: 0; font-size: 10px; line-height: 1.5; }
 .exposure-guidance span { color: #64778d; }
+.http-route-target-fields { border-top: 1px solid #e4eaf1; }
+.route-discovery-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 20px 0; }
+.route-discovery-head > div { display: grid; min-width: 0; gap: 3px; }
+.route-discovery-head strong { color: #24344a; font-size: 12px; }
+.route-discovery-head small { color: #748397; font-size: 10px; }
+.route-discovery-message { margin: 12px 20px 0; border: 1px solid #e7cb91; border-radius: 8px; background: #fff9eb; padding: 9px 11px; color: #765216; font-size: 10px; }
+.route-port-guide, .route-prerequisite-guide { display: flex; gap: 9px; margin: 0 20px 16px; border-radius: 9px; padding: 11px 12px; }
+.route-port-guide { border: 1px solid #cbdff5; background: #f2f7fd; color: #285f9f; }
+.route-port-guide p { display: grid; gap: 4px; margin: 0; color: #64778d; font-size: 10px; line-height: 1.5; }
+.route-port-guide strong { color: #285f9f; }
+.route-port-guide code, .route-prerequisite-guide code { border-radius: 4px; background: rgb(23 104 229 / 8%); padding: 1px 4px; color: #244f83; }
+.route-prerequisite-guide { border: 1px solid #e7cb91; background: #fff9eb; color: #815d19; }
+.route-prerequisite-guide > div { display: grid; gap: 5px; min-width: 0; }
+.route-prerequisite-guide p, .route-prerequisite-guide small { margin: 0; color: #76684c; font-size: 10px; line-height: 1.5; }
+.route-prerequisite-guide code { width: fit-content; max-width: 100%; overflow-wrap: anywhere; background: #f5ead3; color: #694c16; }
 .delivery-field { margin: 10px 20px 20px; }
 .delivery-field textarea { min-height: 90px; resize: vertical; border: 1px solid #cdd8e5; border-radius: 8px; padding: 10px; color: #223043; font-size: 11px; line-height: 1.5; }
 .delivery-field .suggestion-preview { min-height: 240px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -127,8 +142,8 @@
 .application-inspector > header .status-dot { flex: 0 0 auto; }
 .application-inspector > header h2 { overflow-wrap: anywhere; }
 .application-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: #e9f2fd; color: #286bbd; }
-.status-dot { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; background: #edf1f5; padding: 4px 8px; color: #69788a; font-size: 9px; font-weight: 850; }
-.status-dot::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ''; }
+.status-dot { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; min-width: max-content; border-radius: 999px; background: #edf1f5; padding: 4px 8px; color: #69788a; font-size: 9px; font-weight: 850; white-space: nowrap; }
+.status-dot::before { flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ''; }
 .status-dot.success { background: #eaf8f1; color: #17744b; }.status-dot.danger { background: #ffedeb; color: #b42318; }.status-dot.progress { background: #eaf2fd; color: #2769ba; }
 .application-card h2, .application-card p { margin: 0; }.application-card h2 { font-size: 16px; }.application-card p { color: #6e7d91; font-size: 11px; }
 .application-card dl { display: grid; grid-template-columns: 1fr 1fr; margin: 0; border-top: 1px solid #edf1f5; padding-top: 10px; }
@@ -373,6 +388,11 @@
   padding: 17px 19px;
 }
 
+.application-inspector > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+
 .application-inspector h2 {
   font-size: 19px;
 }
@@ -394,6 +414,15 @@
 
 .runtime-list article {
   align-items: flex-start;
+}
+
+.runtime-list article > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.runtime-list article > .status-dot {
+  justify-self: end;
 }
 
 .runtime-list .runtime-endpoint {

@@ -49,4 +49,30 @@ class RenderedExposureInspectorTest {
 
         assertThat(RenderedExposureInspector.detect(manifest).present()).isFalse();
     }
+
+    @Test
+    void extractsServicePortWithoutConfusingTargetPortOrNodePort() {
+        String manifest = """
+                apiVersion: v1
+                kind: Service
+                metadata:
+                  name: redis
+                spec:
+                  type: NodePort
+                  ports:
+                    - name: redis
+                      port: 80
+                      targetPort: 6379
+                      nodePort: 30007
+                """;
+
+        var services = RenderedExposureInspector.services(manifest, "apps");
+
+        assertThat(services).containsExactly(new RenderedExposureInspector.ServiceOption(
+                "apps", "redis", "NodePort", "redis", 80, "6379", 30007));
+        RenderedExposureInspector.requireService(manifest, "apps", "redis", 80);
+        assertThatThrownBy(() -> RenderedExposureInspector.requireService(manifest, "apps", "redis", 30007))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("rendered Chart");
+    }
 }

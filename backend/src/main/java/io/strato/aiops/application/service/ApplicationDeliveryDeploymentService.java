@@ -93,7 +93,6 @@ public class ApplicationDeliveryDeploymentService {
         this.clock = clock;
     }
 
-    @Transactional
     public DeploymentPlan preview(UUID tenantId, UUID applicationId, UUID clusterId, UUID chartVersionId, UUID valuesRevisionId,
                                   String namespace, String releaseName, boolean createNamespace, String exposureType, String hostname,
                                   String exposurePath, String backendServiceName, Integer backendServicePort,
@@ -113,6 +112,9 @@ public class ApplicationDeliveryDeploymentService {
         String manifest = helmRunner.render(releaseName, namespace, catalog.loadArtifact(tenantId, chartVersionId), values);
         if (exposureMode == ApplicationExposureMode.CHART_MANAGED) {
             RenderedExposureInspector.requireChartManagedExposure(manifest);
+        } else if (exposureMode == ApplicationExposureMode.HTTP_ROUTE) {
+            RenderedExposureInspector.requireService(manifest, namespace, backendServiceName, backendServicePort);
+            requireGateway(exposure.discoverHttpGateways(connectionCredential(clusterId)), gatewayNamespace, gatewayName);
         }
         List<String> warnings = scanRisks(manifest);
         Instant now = clock.instant();
@@ -125,6 +127,22 @@ public class ApplicationDeliveryDeploymentService {
                 operation + " " + releaseName + " TO " + cluster.name() + "/" + namespace,
                 actor, now, now.plus(Duration.ofMinutes(15)), null);
         return lifecycle.savePlan(plan);
+    }
+
+    public DeploymentTargetOptions targetOptions(UUID tenantId, UUID clusterId, UUID chartVersionId,
+                                                 UUID valuesRevisionId, String namespace, String releaseName) {
+        var cluster = clusters.findById(clusterId).orElseThrow();
+        if (!cluster.tenantId().equals(tenantId)) throw new NoSuchElementException("Cluster not found");
+        catalog.findVersion(tenantId, chartVersionId).orElseThrow();
+        String values = valuesRevisionId == null ? null : decryptedValues(tenantId, valuesRevisionId);
+        String manifest = helmRunner.render(releaseName, namespace, catalog.loadArtifact(tenantId, chartVersionId), values);
+        List<RenderedServiceOption> serviceOptions = RenderedExposureInspector.services(manifest, namespace).stream()
+                .map(item -> new RenderedServiceOption(item.namespace(), item.name(), item.type(), item.portName(),
+                        item.port(), item.targetPort(), item.nodePort()))
+                .toList();
+        ApplicationExposurePort.GatewayDiscovery gatewayDiscovery =
+                exposure.discoverHttpGateways(connectionCredential(clusterId));
+        return new DeploymentTargetOptions(serviceOptions, gatewayDiscovery);
     }
 
     @Transactional
@@ -172,6 +190,11 @@ public class ApplicationDeliveryDeploymentService {
         lifecycle.saveOperation(new ReleaseOperation(operationId, applicationId, jobId, operationType, "RUNNING",
                 null, null, null, plan.createdBy(), started, null));
         try {
+            if (ApplicationExposureMode.fromNullable(plan.exposureType()) == ApplicationExposureMode.HTTP_ROUTE) {
+                // Preview 이후 Gateway가 삭제되거나 준비 상태가 바뀐 경우 Helm 변경 전에 중단한다.
+                requireGateway(exposure.discoverHttpGateways(connectionCredential(plan.clusterId())),
+                        plan.gatewayNamespace(), plan.gatewayName());
+            }
             helmRunner.install(plan, catalog.loadArtifact(tenantId, plan.chartVersionId()),
                     plan.valuesRevisionId() == null ? null : decryptedValues(tenantId, plan.valuesRevisionId()),
                     kubeconfig(plan.clusterId()));
@@ -426,6 +449,20 @@ public class ApplicationDeliveryDeploymentService {
 
     private String routeName(String releaseName) { return releaseName + "-klueops"; }
 
+    private void requireGateway(ApplicationExposurePort.GatewayDiscovery discovery, String namespace, String name) {
+        if (!"AVAILABLE".equals(discovery.status())) {
+            throw new IllegalArgumentException(discovery.message() == null
+                    ? "HTTPRoute Gateway discovery is unavailable" : discovery.message());
+        }
+        ApplicationExposurePort.GatewayOption gateway = discovery.gateways().stream()
+                .filter(item -> item.namespace().equals(namespace) && item.name().equals(name))
+                .findFirst().orElseThrow(() -> new IllegalArgumentException(
+                        "Selected HTTPRoute Gateway does not exist or has no HTTP/HTTPS listener"));
+        if (!"READY".equals(gateway.readiness())) {
+            throw new IllegalArgumentException("Selected HTTPRoute Gateway is not ready");
+        }
+    }
+
     private String endpointKey(ApplicationRuntimeInspectionPort.Endpoint endpoint) {
         return endpoint.type() + "|" + endpoint.url();
     }
@@ -468,4 +505,8 @@ public class ApplicationDeliveryDeploymentService {
 
     public record DeploymentAccepted(UUID applicationId, UUID jobId, UUID operationId) { }
     public record LifecycleConfirmation(String confirmationText, String impactSummary) { }
+    public record DeploymentTargetOptions(List<RenderedServiceOption> services,
+                                          ApplicationExposurePort.GatewayDiscovery gatewayDiscovery) { }
+    public record RenderedServiceOption(String namespace, String name, String type, String portName, int port,
+                                        String targetPort, Integer nodePort) { }
 }

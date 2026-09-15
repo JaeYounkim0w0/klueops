@@ -19,8 +19,8 @@ COLLECTION_GUIDANCE = (
     "source별 성공, 실패, 건너뜀, 지연을 확인합니다. PARTIAL이면 실패 source를 "
     "확인하고 credential, API 연결 또는 권한을 복구한 뒤 같은 범위를 재분석합니다."
 )
-# macOS Word에서 한글 글리프를 안정적으로 표시하는 글꼴을 명시한다.
-GUIDE_FONT = "Arial Unicode MS"
+# macOS Word와 headless PDF 렌더러 모두에서 한글 글리프가 유지되는 시스템 글꼴을 명시한다.
+GUIDE_FONT = "Apple SD Gothic Neo"
 CONSOLE_HEADING = "Kubernetes 콘솔"
 CONSOLE_VERIFICATION_GUIDANCE = (
     "변경 또는 삭제 명령이 끝나면 운영 결과 검증에서 Kubernetes 상태의 전후 비교 판정과 "
@@ -102,6 +102,20 @@ def update_phase_two_sections(document: Document) -> None:
     for paragraph in document.paragraphs:
         if paragraph.text in replacements:
             paragraph.text = replacements[paragraph.text]
+
+    service_port_guidance = (
+        "KlueOps HTTPRoute에서는 현재 Values로 렌더링된 Service와 대상 Cluster의 READY Gateway를 목록에서 선택합니다. "
+        "Service Port는 spec.ports[].port이며 Pod의 targetPort나 Node 외부 노출용 nodePort가 아닙니다."
+    )
+    gateway_prerequisite_guidance = (
+        "Gateway 목록이 비어 있으면 Cluster Admin이 Gateway API CRD, Controller와 HTTP/HTTPS Gateway를 준비하고, "
+        "등록 Cluster credential에 Gateway get/list 읽기 권한을 부여합니다. KlueOps는 이를 자동 설치하지 않으며, "
+        "나중에 준비한 경우 다시 조회하거나 기존 내부 Application의 Upgrade에서 노출을 추가할 수 있습니다."
+    )
+    if not any(paragraph.text == service_port_guidance for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("Values Profile과 대상 Cluster/Namespace를 정한 뒤"))
+        current = insert_after(anchor, service_port_guidance, "List Bullet")
+        insert_after(current, gateway_prerequisite_guidance, "List Bullet")
 
     # 더 이상 제품 방향과 맞지 않는 Argo CD 중심 도식과 참고 링크를 제거한다.
     obsolete_caption = next(
@@ -329,7 +343,7 @@ def compact_console_section(document: Document) -> None:
             break
         if not in_console_section:
             continue
-        paragraph.paragraph_format.space_before = Pt(0)
+        paragraph.paragraph_format.space_before = Pt(3) if paragraph.text.startswith(("처음 사용할 때", "주의")) else Pt(0)
         paragraph.paragraph_format.space_after = Pt(1)
         paragraph.paragraph_format.line_spacing = 1
         for run in paragraph.runs:

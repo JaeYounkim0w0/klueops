@@ -42,4 +42,16 @@ describe('Phase 2 product UI contract', () => {
     expect(delivery).toContain('color: #17212f');
     expect(delivery).toContain('.delivery-search input::placeholder');
   });
+
+  it('discovers rendered Service ports and ready Gateways for HTTPRoute targets', () => {
+    const wizard = readFileSync(new URL('../views/DeploymentWizardView.vue', import.meta.url), 'utf8');
+    const fields = readFileSync(new URL('../components/application/HttpRouteTargetFields.vue', import.meta.url), 'utf8');
+
+    expect(wizard).toContain('api.getDeploymentTargetOptions');
+    expect(wizard).toContain('<HttpRouteTargetFields');
+    expect(fields).toContain('Gateway (Namespace / Name)');
+    expect(fields).toContain('spec.ports[].port');
+    expect(fields).toContain('nodePort');
+    expect(fields).toContain('kubectl get gateway -A');
+  });
 });

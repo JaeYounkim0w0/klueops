@@ -7,6 +7,7 @@ import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.strato.aiops.application.port.out.ApplicationExposurePort;
 import io.strato.aiops.application.port.out.KubernetesConnectionCredential;
 import io.strato.aiops.domain.cluster.ClusterCredentialType;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -51,6 +53,34 @@ public class Fabric8ApplicationExposureAdapter implements ApplicationExposurePor
         route.setMetadata(new ObjectMetaBuilder().withName(routeName).withNamespace(namespace).build());
         try (KubernetesClient client = client(credential)) {
             client.resource(route).inNamespace(namespace).delete();
+        }
+    }
+
+    @Override
+    public GatewayDiscovery discoverHttpGateways(KubernetesConnectionCredential credential) {
+        try (KubernetesClient client = client(credential)) {
+            List<GatewayOption> gateways = client.genericKubernetesResources(
+                            "gateway.networking.k8s.io/v1", "Gateway")
+                    .inAnyNamespace().list().getItems().stream()
+                    .map(this::gatewayOption)
+                    .filter(option -> !option.listeners().isEmpty())
+                    .sorted(java.util.Comparator.comparing(GatewayOption::namespace)
+                            .thenComparing(GatewayOption::name))
+                    .toList();
+            String status = gateways.isEmpty() ? "EMPTY" : "AVAILABLE";
+            return new GatewayDiscovery(status, gateways.isEmpty()
+                    ? "No Gateway with an HTTP or HTTPS listener was found" : null, gateways);
+        } catch (KubernetesClientException exception) {
+            // Gateway API 미설치와 조회 권한 부족을 사용자 선택 화면의 부분 결과로 전달한다.
+            String message = switch (exception.getCode()) {
+                case 401 -> "클러스터 자격증명이 만료되었거나 유효하지 않습니다";
+                case 403 -> "등록한 클러스터 자격증명에 Gateway get/list 권한이 없습니다";
+                case 404 -> "대상 클러스터에 Gateway API가 설치되어 있지 않습니다";
+                default -> "대상 클러스터의 Gateway API를 조회할 수 없습니다";
+            };
+            return new GatewayDiscovery("UNAVAILABLE", message, List.of());
+        } catch (RuntimeException exception) {
+            return new GatewayDiscovery("UNAVAILABLE", "Gateway discovery failed", List.of());
         }
     }
 
@@ -105,6 +135,40 @@ public class Fabric8ApplicationExposureAdapter implements ApplicationExposurePor
         }
         if (http) return "http";
         throw new IllegalArgumentException("Gateway has no HTTP or HTTPS listener");
+    }
+
+    private GatewayOption gatewayOption(GenericKubernetesResource gateway) {
+        List<GatewayListener> listeners = new ArrayList<>();
+        Object listenerValue = gateway.get("spec", "listeners");
+        if (listenerValue instanceof List<?> values) {
+            for (Object value : values) {
+                if (!(value instanceof Map<?, ?> listener)) continue;
+                String protocol = String.valueOf(listener.get("protocol"));
+                if (!"HTTP".equalsIgnoreCase(protocol) && !"HTTPS".equalsIgnoreCase(protocol)) continue;
+                Object port = listener.get("port");
+                Object listenerName = listener.get("name");
+                listeners.add(new GatewayListener(listenerName == null ? "listener" : String.valueOf(listenerName),
+                        protocol.toUpperCase(), port instanceof Number number ? number.intValue() : null,
+                        listener.get("hostname") == null ? null : String.valueOf(listener.get("hostname"))));
+            }
+        }
+        String namespace = gateway.getMetadata().getNamespace() == null ? "default" : gateway.getMetadata().getNamespace();
+        return new GatewayOption(namespace, gateway.getMetadata().getName(), gatewayReadiness(gateway), listeners);
+    }
+
+    private String gatewayReadiness(GenericKubernetesResource gateway) {
+        Object conditionsValue = gateway.get("status", "conditions");
+        if (!(conditionsValue instanceof List<?> conditions)) return "UNKNOWN";
+        boolean accepted = false;
+        boolean programmed = false;
+        for (Object conditionValue : conditions) {
+            if (!(conditionValue instanceof Map<?, ?> condition)) continue;
+            if (!"True".equals(condition.get("status"))) continue;
+            accepted |= "Accepted".equals(condition.get("type"));
+            programmed |= "Programmed".equals(condition.get("type"));
+        }
+        // Accepted만 참인 Gateway는 아직 dataplane에 반영되지 않았으므로 배포 대상으로 노출하지 않는다.
+        return accepted && programmed ? "READY" : "NOT_READY";
     }
 
     private String normalizedPath(String path) { return path == null || path.isBlank() ? "/" : path; }
