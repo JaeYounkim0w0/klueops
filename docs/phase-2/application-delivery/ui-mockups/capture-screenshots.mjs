@@ -20,7 +20,11 @@ await capture("03-values-studio.png", "values");
 await capture("04-deployment-preview.png", "preview");
 await capture("05-applications.png", "applications");
 await capture("06-ai-provider-settings.png", "ai-settings");
-await capture("07-import-confirmation.png", "discover", (p) => p.getByRole("button", { name: "Tenant Library로 가져오기" }).click());
+await capture("07-import-confirmation.png", "discover", async (p) => {
+  await p.getByLabel("Helm Chart 검색").fill("nginx");
+  await p.getByRole("button", { name: "Artifact Hub 검색" }).click();
+  await p.getByRole("button", { name: "Tenant Library로 가져오기" }).click();
+});
 await capture("08-deploy-exact-confirmation.png", "preview", (p) => p.getByRole("button", { name: "확정 단계로" }).click());
 await capture("09-rollback-confirmation.png", "applications", (p) => p.getByRole("button", { name: "Rollback" }).click());
 await capture("10-provider-profile-modal.png", "ai-settings", (p) => p.getByRole("button", { name: "＋ Provider Profile" }).click());

@@ -45,6 +45,8 @@
 
 Application Delivery는 Argo CD/Flux를 설치하거나 Git 저장소를 지속 동기화하는 GitOps Controller가 아니다. KlueOps가 관리하는 Helm Release의 명시적 install, upgrade, rollback과 uninstall을 제공한다.
 
+Application 제거는 exact confirmation 후 비동기 Job으로 실행된다. Job Center가 서버 상태를 자동 갱신하며 성공하면 배포 목록과 상세 정보가 함께 사라진다. 공유 Namespace와 Tenant Chart Library는 유지되고, 실패한 경우에만 Application이 남아 원인을 확인하고 다시 처리할 수 있다. Phase 2 적용 전에 이미 `UNINSTALLED`로 남아 있던 Application metadata도 database migration에서 한 번 정리한다.
+
 ## 화면의 공통 상태
 
 - `Loading`: 최신 데이터를 조회하는 중이다.

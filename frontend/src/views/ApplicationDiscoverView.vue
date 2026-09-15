@@ -6,23 +6,30 @@ import { ApiError } from '@/api/http';
 import { useTenancyStore } from '@/stores/tenancy';
 
 const tenancy = useTenancyStore();
-const query = ref('nginx');
+const query = ref('');
 const results = ref<CatalogPackageResponse[]>([]);
 const loading = ref(false);
+const searched = ref(false);
 const importing = ref('');
 const message = ref('');
 
 onMounted(async () => {
   await tenancy.load();
-  await search();
 });
 
 async function search(): Promise<void> {
-  if (!tenancy.currentTenantId) return;
+  const normalizedQuery = query.value.trim();
+  if (!tenancy.currentTenantId || !normalizedQuery) {
+    results.value = [];
+    searched.value = false;
+    message.value = '';
+    return;
+  }
   loading.value = true;
+  searched.value = true;
   message.value = '';
   try {
-    results.value = await api.searchChartCatalog(tenancy.currentTenantId, query.value.trim(), 24);
+    results.value = await api.searchChartCatalog(tenancy.currentTenantId, normalizedQuery, 24);
   } catch (error) {
     message.value = error instanceof ApiError && error.status >= 500
       ? 'Chart 검색 서비스에 일시적으로 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'
@@ -69,6 +76,7 @@ async function importPackage(item: CatalogPackageResponse): Promise<void> {
         </button>
       </article>
     </div>
-    <div v-else class="delivery-empty"><i class="pi pi-search"></i><h2>검색 결과가 없습니다</h2><p>다른 제품명이나 기능 키워드로 검색해 보세요.</p></div>
+    <div v-else-if="searched" class="delivery-empty"><i class="pi pi-search"></i><h2>검색 결과가 없습니다</h2><p>다른 제품명이나 기능 키워드로 검색해 보세요.</p></div>
+    <div v-else class="delivery-empty"><i class="pi pi-search"></i><h2>찾을 Chart를 검색하세요</h2><p>제품명이나 기능 키워드를 입력하면 Artifact Hub 결과를 보여줍니다.</p></div>
   </section>
 </template>

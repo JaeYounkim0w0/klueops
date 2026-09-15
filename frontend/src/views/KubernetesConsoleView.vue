@@ -490,7 +490,7 @@ function message(cause: unknown, fallback: string) {
         <p>{{ t('console.description') }}</p>
       </div>
       <div class="console-header-tools">
-        <div class="console-runtime-status"><span class="status-dot" :class="capability?.runnerAvailable ? 'ready' : 'failed'"></span><div><strong>{{ capability?.runnerAvailable ? t('console.runnerReady') : t('console.runnerUnavailable') }}</strong><small>{{ capability?.kubectlVersion || '-' }}<template v-if="capability"> · {{ capability.executionBoundary === 'ISOLATED_RUNNER' ? t('console.isolatedRunner') : t('console.localRunner') }} · {{ t('console.executionLimits', { commands: capability.maximumUserCommands, terminals: capability.maximumUserTerminals }) }}</template></small></div></div>
+        <div class="console-runtime-status"><span class="console-status-dot" :class="capability?.runnerAvailable ? 'ready' : 'failed'"></span><div><strong>{{ capability?.runnerAvailable ? t('console.runnerReady') : t('console.runnerUnavailable') }}</strong><small>{{ capability?.kubectlVersion || '-' }}<template v-if="capability"> · {{ capability.executionBoundary === 'ISOLATED_RUNNER' ? t('console.isolatedRunner') : t('console.localRunner') }} · {{ t('console.executionLimits', { commands: capability.maximumUserCommands, terminals: capability.maximumUserTerminals }) }}</template></small></div></div>
       </div>
     </header>
 

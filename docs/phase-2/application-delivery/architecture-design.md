@@ -239,7 +239,7 @@ ReleaseOperation
 - outputHash, errorCode, maskedError
 ```
 
-Install 실행이 `202 Accepted`되면 같은 transaction에서 `Application(DEPLOYING)`, `ReleaseOperation`과 Async Job 연결을 만든다. 따라서 Helm 완료 전에도 Deployed Applications에서 대상과 상태를 찾을 수 있다. 성공 시 `ACTIVE`와 current Release를 확정하고 실패 시 `FAILED`와 안전한 retry/cleanup action을 제공한다. Uninstall 완료 후에는 기본 목록에서 제외하되 History/Audit 보존 정책에 따라 tombstone을 유지한다.
+Install 실행이 `202 Accepted`되면 같은 transaction에서 `Application(DEPLOYING)`, `ReleaseOperation`과 Async Job 연결을 만든다. 따라서 Helm 완료 전에도 Deployed Applications에서 대상과 상태를 찾을 수 있다. 성공 시 `ACTIVE`와 current Release를 확정하고 실패 시 `FAILED`와 안전한 retry/cleanup action을 제공한다. Uninstall 성공 시 Endpoint → Release → ReleaseOperation → 소비된 Plan → ManagedApplication 순서로 하나의 짧은 DB transaction에서 삭제하며 tombstone은 유지하지 않는다. Helm Release 생성 전에 설치가 실패한 Application도 `helm uninstall --ignore-not-found`로 cleanup을 완료할 수 있다. Phase 2 전환 시 이전 버전에서 남은 `UNINSTALLED` 수명주기 데이터도 같은 순서로 한 번 정리한다. Async Job 결과는 Application FK와 독립된 최소 실행 증거로 보존한다.
 
 Job Center는 Async Job의 queue, progress, cancel과 일시적 실행 출력을 보여주는 전역 read model이다. Application Detail의 History는 `ReleaseOperation`을 기준으로 해당 대상의 install/upgrade/rollback/uninstall 결과와 Audit을 보여준다. 두 화면은 같은 `asyncJobId`로 연결하며 별도 Application Operations aggregate나 중복 API를 만들지 않는다.
 

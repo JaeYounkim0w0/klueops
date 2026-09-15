@@ -66,7 +66,9 @@ async function pullModel(provider: AiProviderProfileResponse): Promise<void> {
   if (!model) return;
   try {
     const accepted = await api.pullLocalAiModel(tenancy.currentTenantId, provider.id, model);
-    jobs.registerJob({ jobId: accepted.jobId, title: 'Local LLM 다운로드', detail: model, type: 'AI_MODEL_PULL' });
+    void jobs.trackJob({ jobId: accepted.jobId, title: 'Local LLM 다운로드', detail: model, type: 'AI_MODEL_PULL' })
+      .then(() => refreshModels(provider))
+      .catch(() => undefined);
     message.value = `${model} 다운로드를 시작했습니다. Job Center에서 상태를 확인하세요.`;
     localModels.value[provider.id] = await api.listLocalAiModels(tenancy.currentTenantId, provider.id);
   } catch (error) { message.value = error instanceof Error ? error.message : '모델 다운로드를 시작하지 못했습니다.'; }

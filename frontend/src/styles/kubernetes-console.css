@@ -5,8 +5,8 @@
 .console-runtime-status > div { display: grid; gap: 2px; }
 .console-runtime-status strong { color: #182230; font-size: 13px; }
 .console-runtime-status small { color: #667085; font-size: 11px; }
-.status-dot { width: 9px; height: 9px; border-radius: 50%; background: #b42318; }
-.status-dot.ready { background: #16845b; box-shadow: 0 0 0 4px #e7f7ef; }
+.console-status-dot { width: 9px; height: 9px; border-radius: 50%; background: #b42318; }
+.console-status-dot.ready { background: #16845b; }
 .console-analysis-context { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid #bfd4ec; border-left: 4px solid #2d6fc2; background: #f3f8fe; padding: 11px 14px; }
 .console-analysis-context > div:first-child { display: flex; align-items: center; gap: 10px; min-width: 0; color: #1f5fbf; }
 .console-analysis-context > div:first-child > div { display: grid; gap: 2px; min-width: 0; }

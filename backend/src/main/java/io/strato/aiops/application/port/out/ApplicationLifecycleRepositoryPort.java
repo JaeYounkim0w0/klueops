@@ -20,7 +20,7 @@ public interface ApplicationLifecycleRepositoryPort {
     List<ApplicationRelease> findReleases(UUID tenantId, UUID applicationId, int limit);
     ApplicationEndpoint saveEndpoint(ApplicationEndpoint endpoint);
     List<ApplicationEndpoint> findEndpoints(UUID tenantId, UUID applicationId);
-    void deleteEndpoints(UUID applicationId);
+    void deleteApplicationGraph(UUID applicationId);
 
     default void recoverTimedOutOperation(UUID jobId, Instant completedAt, String errorMessage) {
         // Phase 1 저장소 구현과 테스트 대역은 Application Delivery 이력이 없을 수 있다.

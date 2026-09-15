@@ -94,6 +94,16 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
     return item;
   }
 
+  function trackJob(options: RegisterJobOptions) {
+    // 등록과 폴링을 한 진입점으로 묶어 Job Center가 PENDING에 멈추는 호출 누락을 방지한다.
+    registerJob(options);
+    return waitForJob(options.jobId, options).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : '작업 상태를 확인하지 못했습니다.';
+      markJobError(options.jobId, message);
+      throw error;
+    });
+  }
+
   function updateJob(job: JobResponse, fallback?: Partial<JobCenterItem>) {
     const now = new Date().toISOString();
     const existing = jobs.value.find((item) => item.jobId === job.id);
@@ -225,6 +235,7 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
     diagnostics,
     collapsed,
     registerJob,
+    trackJob,
     updateJob,
     cancelJob,
     retryAnalysisJob,

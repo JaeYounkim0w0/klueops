@@ -35,8 +35,12 @@ describe('Phase 2 product UI contract', () => {
   });
 
   it('keeps the Discover search field readable in OS dark form themes', () => {
+    const discover = readFileSync(new URL('../views/ApplicationDiscoverView.vue', import.meta.url), 'utf8');
     const delivery = readFileSync(new URL('../styles/components/application-delivery.css', import.meta.url), 'utf8');
 
+    expect(discover).toContain("const query = ref('');");
+    expect(discover).not.toContain("const query = ref('nginx');");
+    expect(discover).toContain('찾을 Chart를 검색하세요');
     expect(delivery).toContain('.delivery-search input {');
     expect(delivery).toContain('background: #fff');
     expect(delivery).toContain('color: #17212f');
@@ -53,5 +57,17 @@ describe('Phase 2 product UI contract', () => {
     expect(fields).toContain('spec.ports[].port');
     expect(fields).toContain('nodePort');
     expect(fields).toContain('kubectl get gateway -A');
+  });
+
+  it('tracks lifecycle jobs and removes stale application detail after uninstall', () => {
+    const applications = readFileSync(new URL('../views/ApplicationsView.vue', import.meta.url), 'utf8');
+    const jobCenter = readFileSync(new URL('../stores/jobCenter.ts', import.meta.url), 'utf8');
+    const consoleStyle = readFileSync(new URL('../styles/kubernetes-console.css', import.meta.url), 'utf8');
+
+    expect(applications).toContain('jobs.trackJob(job)');
+    expect(applications).toContain('Application을 제거했습니다.');
+    expect(jobCenter).toContain('function trackJob(options: RegisterJobOptions)');
+    expect(consoleStyle).toContain('.console-status-dot');
+    expect(consoleStyle).not.toContain('\n.status-dot {');
   });
 });

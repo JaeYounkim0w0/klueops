@@ -343,17 +343,23 @@ public class ApplicationDeliveryDeploymentService {
             helmRunner.lifecycle(application, operationType, revision, kubeconfig(application.clusterId()));
             if ("UNINSTALL".equals(operationType)) {
                 deleteExposure(application);
-                lifecycle.deleteEndpoints(application.id());
             }
             Instant completed = clock.instant();
-            ApplicationStatus status = "UNINSTALL".equals(operationType) ? ApplicationStatus.UNINSTALLED : ApplicationStatus.RUNNING;
+            if ("UNINSTALL".equals(operationType)) {
+                // 성공 Job은 감사 가능한 최소 실행 증거로 남기고 Application 상세 데이터는 함께 제거한다.
+                lifecycle.deleteApplicationGraph(application.id());
+                job.markSucceeded(completed);
+                jobs.save(job);
+                return;
+            }
             ManagedApplication completedApplication = application;
             if ("ROLLBACK".equals(operationType)) {
                 ApplicationRelease target = lifecycle.findReleases(tenantId, applicationId, 100).stream()
                         .filter(item -> item.revision() == revision).findFirst().orElseThrow();
                 completedApplication = application.withReleaseMetadata(revision, target.chartVersionId(), target.valuesRevisionId());
             }
-            applications.save(completedApplication.withStatus(status, "HELM_" + operationType + "_SUCCEEDED", null));
+            applications.save(completedApplication.withStatus(ApplicationStatus.RUNNING,
+                    "HELM_" + operationType + "_SUCCEEDED", null));
             job.markSucceeded(completed);
             jobs.save(job);
             lifecycle.saveOperation(new ReleaseOperation(operationId, applicationId, jobId, operationType, "SUCCEEDED",

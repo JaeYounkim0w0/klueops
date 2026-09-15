@@ -142,7 +142,9 @@ async function deploy(): Promise<void> {
   executing.value = true;
   try {
     const accepted = await api.executeDeploymentPlan(plan.value.id, tenancy.currentTenantId, confirmation.value);
-    jobs.registerJob({ jobId: accepted.jobId, title: 'Helm Application 배포', detail: `${target.namespace}/${target.releaseName}`, type: 'HELM_INSTALL' });
+    // 화면 이동 뒤에도 전역 Job Center가 실제 서버 상태를 계속 추적한다.
+    void jobs.trackJob({ jobId: accepted.jobId, title: 'Helm Application 배포', detail: `${target.namespace}/${target.releaseName}`, type: 'HELM_INSTALL' })
+      .catch(() => undefined);
     await router.push({ path: '/applications', query: { applicationId: accepted.applicationId } });
   } catch (error) { message.value = error instanceof Error ? error.message : '배포를 시작하지 못했습니다.'; }
   finally { executing.value = false; }

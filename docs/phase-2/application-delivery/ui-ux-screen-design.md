@@ -128,6 +128,7 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 ### 구성
 
 - 검색어, category, official/verified, repository filter
+- 초기 검색어는 비워 두며 제품명이나 기능 키워드를 직접 입력한 뒤 검색한다. 특정 Chart를 기본값으로 자동 조회하지 않는다.
 - 결과 card의 publisher, version, license, update 시각과 security summary
 - 우측 detail drawer에 README 요약, versions, default Values/Schema 제공 여부
 - `Tenant Library에 가져오기` 전 source URL, exact version과 trust 상태 확인
@@ -262,7 +263,7 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 - Resources: Helm resource와 KlueOps companion resource의 ownership 구분
 - Uninstall 계획: Helm/companion/PVC/DNS/TLS/Namespace/Library의 삭제·보존 범위 확인
 
-Application uninstall은 Chart Library artifact와 공유 Namespace를 삭제하지 않는다. PVC, DNS와 TLS는 plan에서 명시한 보존 정책만 적용하며 exact confirmation을 요구한다.
+Application uninstall은 Chart Library artifact와 공유 Namespace를 삭제하지 않는다. PVC, DNS와 TLS는 plan에서 명시한 보존 정책만 적용하며 exact confirmation을 요구한다. 성공한 Application은 `UNINSTALLED` 카드나 상세 화면으로 남기지 않고 목록에서 즉시 제거하며, 완료 여부와 실패 원인은 전역 Job Center에서 확인한다. 진행 상태 아이콘과 취소 action은 배경 장식 없이 같은 행에 정렬한다.
 
 ![Application Uninstall 계획 Modal](ui-mockups/screenshots/15-uninstall-plan.png)
 

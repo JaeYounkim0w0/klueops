@@ -45,9 +45,10 @@
 
       <section class="screen" data-screen-panel="discover">
         <div class="page-head"><div><p class="eyebrow">APPLICATION DELIVERY</p><h1>Helm Chart 탐색</h1><p>공개 카탈로그에서 검증된 Chart를 찾아 Tenant 보관함으로 가져옵니다.</p></div><button class="secondary">↗ URL로 직접 가져오기</button></div>
-        <div class="search-row"><span>⌕</span><input value="nginx" aria-label="Helm Chart 검색" /><button class="primary">Artifact Hub 검색</button></div>
-        <div class="filter-row"><button class="chip active">Helm</button><button class="chip">Verified publisher</button><button class="chip">Official</button><button class="chip">Security report</button><span class="result-count">1,284 results</span></div>
-        <div class="split-layout">
+        <div class="search-row"><span>⌕</span><input placeholder="nginx, postgresql, prometheus…" aria-label="Helm Chart 검색" /><button class="primary">Artifact Hub 검색</button></div>
+        <div class="state-card discover-empty" data-discover-empty><h2>찾을 Chart를 검색하세요</h2><p>제품명이나 기능 키워드를 입력하면 Artifact Hub 결과를 보여줍니다.</p></div>
+        <div class="filter-row" data-discover-results hidden><button class="chip active">Helm</button><button class="chip">Verified publisher</button><button class="chip">Official</button><button class="chip">Security report</button><span class="result-count">1,284 results</span></div>
+        <div class="split-layout" data-discover-results hidden>
           <div class="result-list">
             <article class="result-card selected"><div class="package-logo blue">NG</div><div class="grow"><div class="title-line"><h3>nginx</h3><span class="verified">✓ Verified</span></div><p>NGINX Open Source packaged by Bitnami</p><div class="meta"><span>bitnami</span><span>v18.2.4</span><span>7.2M downloads</span><span>Updated 2d ago</span></div></div><span class="risk safe">Low risk</span></article>
             <article class="result-card"><div class="package-logo orange">IN</div><div class="grow"><div class="title-line"><h3>ingress-nginx</h3><span class="verified">✓ Official</span></div><p>Ingress controller for Kubernetes using NGINX</p><div class="meta"><span>kubernetes</span><span>v4.12.1</span><span>56.8M downloads</span></div></div><span class="risk safe">Low risk</span></article>

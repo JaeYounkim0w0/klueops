@@ -112,8 +112,16 @@ async function refreshRollbackConfirmation(): Promise<void> {
 async function rollback(): Promise<void> {
   if (!selected.value || confirmationInput.value.trim() !== confirmationText.value) return;
   const accepted = await api.rollbackHelmApplication(tenancy.currentTenantId, selected.value.id, rollbackRevision.value, confirmationInput.value);
-  jobs.registerJob({ jobId: accepted.jobId, title: 'Helm Application Rollback', detail: `revision ${rollbackRevision.value}`, type: 'HELM_ROLLBACK' });
-  rollbackOpen.value = false; message.value = 'Rollback 작업을 시작했습니다.'; await load();
+  const job = { jobId: accepted.jobId, title: 'Helm Application Rollback', detail: `revision ${rollbackRevision.value}`, type: 'HELM_ROLLBACK' };
+  rollbackOpen.value = false;
+  message.value = 'Rollback 작업을 시작했습니다.';
+  void jobs.trackJob(job).then(async (result) => {
+    message.value = result.status === 'SUCCEEDED'
+      ? 'Rollback 작업이 완료되었습니다.'
+      : 'Rollback 작업이 실패했습니다. Job Center에서 원인을 확인하세요.';
+    await load();
+  }).catch(() => { message.value = 'Rollback 작업이 실패했습니다. Job Center에서 원인을 확인하세요.'; });
+  await load();
 }
 
 function statusTone(status?: string): string {
@@ -136,9 +144,17 @@ async function openUninstall(): Promise<void> {
 async function uninstall(): Promise<void> {
   if (!selected.value || confirmationInput.value.trim() !== confirmationText.value) return;
   const accepted = await api.uninstallHelmApplication(tenancy.currentTenantId, selected.value.id, confirmationInput.value);
-  jobs.registerJob({ jobId: accepted.jobId, title: 'Helm Application 제거', detail: `${selected.value.namespace}/${selected.value.name}`, type: 'HELM_UNINSTALL' });
+  const removedName = selected.value.name;
+  const job = { jobId: accepted.jobId, title: 'Helm Application 제거', detail: `${selected.value.namespace}/${removedName}`, type: 'HELM_UNINSTALL' };
   uninstallOpen.value = false;
   message.value = 'Uninstall 작업을 시작했습니다. Job Center에서 진행 상태를 확인할 수 있습니다.';
+  void jobs.trackJob(job).then(async (result) => {
+    // 삭제 성공 시 서버에서 Application graph가 사라지므로 목록과 선택 상세를 즉시 동기화한다.
+    message.value = result.status === 'SUCCEEDED'
+      ? `${removedName} Application을 제거했습니다.`
+      : 'Uninstall 작업이 실패했습니다. Job Center에서 원인을 확인하세요.';
+    await load();
+  }).catch(() => { message.value = 'Uninstall 작업이 실패했습니다. Job Center에서 원인을 확인하세요.'; });
   await load();
 }
 

@@ -162,7 +162,7 @@ Import 상태는 `IMPORTING → VALIDATING → READY | REJECTED`로 노출하며
 2. 기본적으로 접근 가능한 기존 Namespace만 선택한다.
 3. `namespace:create` capability와 Cluster 정책이 모두 허용할 때만 새 Namespace 생성을 제공한다.
 4. 새 Namespace 계획에는 ResourceQuota, LimitRange, 기본 NetworkPolicy와 소유 정책을 Preview한다.
-5. Application uninstall은 공유 Namespace를 삭제하지 않는다. KlueOps 전용 Namespace 삭제는 별도 plan과 exact confirmation을 요구한다.
+5. Application uninstall은 공유 Namespace를 삭제하지 않는다. Helm Release와 KlueOps companion resource 제거가 성공하면 `managed_applications` 및 해당 Application의 Endpoint, Release, Operation, 소비된 Plan metadata를 함께 삭제해 `UNINSTALLED` 잔여 행을 노출하지 않는다. 비동기 Job 결과는 최소 실행 증거로 보존한다. KlueOps 전용 Namespace 삭제는 별도 plan과 exact confirmation을 요구한다.
 
 Release 이름은 `Cluster + Namespace` 안에서 유일해야 한다.
 
@@ -208,7 +208,7 @@ TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-m
 
 Deployed Applications에는 `DEPLOYING`, `UPGRADING`, `ROLLING_BACK`, `UNINSTALLING` 같은 진행 상태와 `FAILED`도 포함한다. 전역 Job Center는 실행 단위의 queue/progress/cancel/retry를 담당하고, Application Detail의 History는 해당 Application에 귀속된 완료·실패 operation과 Audit을 영구 조회한다. 동일한 operation을 별도 화면에 중복 저장하지 않는다.
 
-Application은 KlueOps가 배포한 Helm Release만 대상으로 하며 Cluster의 기존 workload 자동 발견과 소유권 편입은 하지 않는다. Uninstall은 Application Release와 연결된 companion resource만 정리하고 Tenant Library Chart는 삭제하지 않는다. Chart artifact 삭제는 별도의 `chart:manage` 작업이다.
+Application은 KlueOps가 배포한 Helm Release만 대상으로 하며 Cluster의 기존 workload 자동 발견과 소유권 편입은 하지 않는다. Uninstall은 Application Release와 연결된 companion resource와 KlueOps의 Application 상세 metadata를 정리하되 Tenant Library Chart와 공유 Namespace는 삭제하지 않는다. Chart artifact 삭제는 별도의 `chart:manage` 작업이다.
 
 ## 7. Custom Values와 AI Assistant
 

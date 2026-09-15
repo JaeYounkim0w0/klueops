@@ -92,6 +92,7 @@
 .state-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
 .state-card h2, .state-card h3 { margin: 0 0 8px; }
 .state-card p { color: var(--muted); line-height: 1.6; }
+.discover-empty { margin-top: 16px; min-height: 220px; display: grid; place-content: center; text-align: center; }
 .state-card.error { border-color: #efc5c7; background: #fffafa; }
 .state-card.warning { border-color: #efd8aa; background: #fffdf8; }
 .state-icon { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 15px; border-radius: 50%; background: var(--blue-50); color: var(--blue); font-weight: 800; }

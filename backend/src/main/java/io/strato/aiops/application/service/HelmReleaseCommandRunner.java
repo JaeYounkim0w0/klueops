@@ -59,8 +59,9 @@ public class HelmReleaseCommandRunner {
                 arguments.addAll(List.of("rollback", application.helmReleaseName(), String.valueOf(revision),
                         "--namespace", application.namespace(), "--wait", "--timeout", "5m"));
             } else {
+                // 설치가 중간에 실패해 Release가 없어도 KlueOps 메타데이터 정리를 완료한다.
                 arguments.addAll(List.of("uninstall", application.helmReleaseName(), "--namespace", application.namespace(),
-                        "--wait", "--timeout", "5m"));
+                        "--ignore-not-found", "--wait", "--timeout", "5m"));
             }
             arguments.addAll(List.of("--kubeconfig", kubeconfigFile.toString()));
             var result = helm.execute(arguments, Duration.ofMinutes(6));

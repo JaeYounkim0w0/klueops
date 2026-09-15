@@ -2282,7 +2282,7 @@
 
 .job-dock-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   min-width: 0;
@@ -2294,6 +2294,12 @@
 
 .job-dock-item > i {
   color: #315f9f;
+}
+
+.job-dock-item > .table-icon-button {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 .job-dock-item.success {

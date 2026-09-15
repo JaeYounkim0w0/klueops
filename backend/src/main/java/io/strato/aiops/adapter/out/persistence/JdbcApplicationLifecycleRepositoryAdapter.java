@@ -7,6 +7,7 @@ import io.strato.aiops.domain.applicationdelivery.ReleaseOperation;
 import io.strato.aiops.domain.applicationdelivery.ApplicationEndpoint;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -126,8 +127,14 @@ public class JdbcApplicationLifecycleRepositoryAdapter implements ApplicationLif
     }
 
     @Override
-    public void deleteEndpoints(UUID applicationId) {
+    @Transactional
+    public void deleteApplicationGraph(UUID applicationId) {
+        // Uninstall 성공 후 화면에 유령 Application이 남지 않도록 종속 데이터를 FK 순서로 원자적으로 정리한다.
         jdbc.update("delete from application_endpoints where application_id=?", applicationId);
+        jdbc.update("delete from application_releases where application_id=?", applicationId);
+        jdbc.update("delete from release_operations where application_id=?", applicationId);
+        jdbc.update("delete from deployment_plans where application_id=?", applicationId);
+        jdbc.update("delete from managed_applications where id=?", applicationId);
     }
 
     @Override
