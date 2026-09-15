@@ -116,6 +116,8 @@
 .delivery-field { margin: 10px 20px 20px; }
 .delivery-field textarea { min-height: 90px; resize: vertical; border: 1px solid #cdd8e5; border-radius: 8px; padding: 10px; color: #223043; font-size: 11px; line-height: 1.5; }
 .delivery-field .suggestion-preview { min-height: 240px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+/* 입력 다음 동작은 시선 흐름의 끝인 우측에 배치한다. */
+.delivery-assistant-actions { display: flex; justify-content: flex-end; margin: -8px 20px 20px; }
 .wizard-footer { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; border: 1px solid #dbe4ee; border-radius: 11px; background: #fff; padding: 12px 16px; color: #66778b; font-size: 11px; }
 .preview-summary dl { display: grid; margin: 0; padding: 8px 18px; }
 .preview-summary dl div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 10px; border-bottom: 1px solid #edf1f5; padding: 10px 0; }

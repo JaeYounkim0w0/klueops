@@ -70,4 +70,12 @@ describe('Phase 2 product UI contract', () => {
     expect(consoleStyle).toContain('.console-status-dot');
     expect(consoleStyle).not.toContain('\n.status-dot {');
   });
+
+  it('right-aligns the Custom Values suggestion action', () => {
+    const valuesStudio = readFileSync(new URL('../views/ValuesStudioView.vue', import.meta.url), 'utf8');
+    const deliveryStyle = readFileSync(new URL('../styles/components/application-delivery.css', import.meta.url), 'utf8');
+
+    expect(valuesStudio).toContain('class="delivery-assistant-actions"');
+    expect(deliveryStyle).toContain('.delivery-assistant-actions { display: flex; justify-content: flex-end;');
+  });
 });

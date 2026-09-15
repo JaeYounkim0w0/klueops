@@ -386,7 +386,7 @@ Import는 Cluster 상태를 변경하지 않으므로 exact phrase까지 요구�
 | --- | --- | --- |
 | Form/YAML/Diff | editor mode 변경 | 미저장 draft 유지 |
 | 좌측 Values category | category active state와 field group 변경 | validation 상태 유지 |
-| AI 전송 `↑` | 생성 중 상태, 중복 요청 방지 | Patch card 또는 masking된 오류 표시 |
+| 우측 정렬 `제안 생성`/AI 전송 `↑` | 생성 중 상태, 중복 요청 방지 | Patch card 또는 masking된 오류 표시 |
 | `검증 후 적용` | schema/type/unknown key 검증 결과 Toast | 유효한 patch만 Form draft에 반영 |
 | `초기화` | 사라질 변경 수와 복귀 revision 경고 Modal | 위험 색상의 `변경 초기화` 후 Toast |
 | `Values 저장` | profile 이름/revision note 입력 Modal | 새 immutable revision 저장 후 Toast |
