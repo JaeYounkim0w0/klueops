@@ -35,6 +35,7 @@ public class OperationsScorecardQueryService {
     private final AnalysisSessionRepositoryPort analysisRepository;
     private final AnalysisAssuranceRepositoryPort assuranceRepository;
 
+    /** OperationsScorecardQueryService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationsScorecardQueryService(OperationsRepositoryPort operationsRepository,
                                            AnalysisSessionRepositoryPort analysisRepository,
                                            AnalysisAssuranceRepositoryPort assuranceRepository) {
@@ -43,6 +44,7 @@ public class OperationsScorecardQueryService {
         this.assuranceRepository = assuranceRepository;
     }
 
+    /** OperationsScorecardQueryService의 getScorecard 처리 결과를 조회해 반환한다. */
     public OperationsScorecard getScorecard() {
         List<Incident> incidents = operationsRepository.findIncidents(null, null, null, null, SAMPLE_LIMIT);
         List<AnalysisSession> analyses = analysisRepository.findRecent(null, null, null, SAMPLE_LIMIT);
@@ -105,22 +107,27 @@ public class OperationsScorecardQueryService {
                                 : currentIncidents > previousIncidents ? "DEGRADING" : "STABLE"), hotspots);
     }
 
+    /** OperationsScorecardQueryService의 count 처리에 필요한 업무 로직을 수행한다. */
     private static <T> int count(List<T> values, Predicate<T> predicate) {
         return (int) values.stream().filter(predicate).count();
     }
 
+    /** OperationsScorecardQueryService의 average 처리에 필요한 업무 로직을 수행한다. */
     private static long average(List<Long> values) {
         return values.isEmpty() ? 0L : Math.round(values.stream().mapToLong(Long::longValue).average().orElse(0));
     }
 
+    /** OperationsScorecardQueryService의 percentage 처리에 필요한 업무 로직을 수행한다. */
     private static double percentage(long numerator, long denominator) {
         return denominator <= 0 ? 0.0 : Math.round((numerator * 1000.0) / denominator) / 10.0;
     }
 
+    /** OperationsScorecardQueryService의 containsIgnoreCase 처리에 필요한 업무 로직을 수행한다. */
     private static boolean containsIgnoreCase(String value, String fragment) {
         return value != null && value.toLowerCase(Locale.ROOT).contains(fragment.toLowerCase(Locale.ROOT));
     }
 
+    /** OperationsScorecardQueryService의 defaultText 처리에 필요한 업무 로직을 수행한다. */
     private static String defaultText(String value) {
         return value == null ? "" : value;
     }

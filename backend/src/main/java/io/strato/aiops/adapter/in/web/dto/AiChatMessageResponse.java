@@ -25,6 +25,7 @@ public record AiChatMessageResponse(
         String createdBy,
         Instant createdAt
 ) {
+    /** AiChatMessageResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static AiChatMessageResponse from(AiChatMessage message) {
         return new AiChatMessageResponse(message.id(), message.conversationId(), message.role(), message.content(),
                 message.model(), message.promptVersion(), message.finishReason(), message.latencyMs(),

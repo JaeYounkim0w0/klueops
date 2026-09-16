@@ -12,6 +12,7 @@ import { clearRouteFailure, routeFailure } from '@/router/routeFailure';
 import { sessionExpiredRedirect, useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 import { onUnauthorized } from '@/api/http';
+import { useDialogAccessibility } from '@/composables/useDialogAccessibility';
 
 const route = useRoute();
 const router = useRouter();
@@ -22,10 +23,31 @@ const sessionWarningOpen = ref(false);
 const sessionSecondsRemaining = ref(0);
 const extendingSession = ref(false);
 const operatorSearchOpen = ref(false);
+useDialogAccessibility();
 let stopUnauthorizedListener: (() => void) | undefined;
 let sessionTimer: number | undefined;
+let sessionCountdownTimer: number | undefined;
 let lastOperatorActivityAt = Date.now();
 let lastExtensionAttemptAt = 0;
+const sessionExtensionError = ref('');
+
+const canOpenIncidentResponse = computed(() =>
+  (auth.hasCapability('analysis:read') && auth.canNavigate('ai'))
+  || (auth.hasCapability('cluster:read') && auth.canNavigate('clusters')),
+);
+const canOpenInfrastructure = computed(() => auth.hasCapability('cluster:read') && auth.canNavigate('clusters'));
+const canOpenApplicationDelivery = computed(() => auth.hasCapability('application:read') && auth.canNavigate('applications'));
+const canOpenAiOperations = computed(() => auth.hasCapability('analysis:read') && auth.canNavigate('ai'));
+const canOpenGovernance = computed(() => canOpenInfrastructure.value || auth.hasCapability('audit:read'));
+const canOpenTenantAccess = computed(() => auth.hasCapability('tenant:member:manage') && auth.canNavigate('access'));
+const canOpenPlatformAccess = computed(() => !auth.session.localDevelopment && auth.hasCapability('identity:manage'));
+const canOpenAccess = computed(() => canOpenTenantAccess.value || canOpenPlatformAccess.value);
+const accessDestination = computed(() => canOpenTenantAccess.value ? '/settings/users-access' : '/settings/access');
+const canOpenPlatformSettings = computed(() =>
+  auth.hasCapability('platform:admin')
+  || (auth.hasCapability('ai-routing:manage') && auth.canNavigate('aiProviders'))
+  || canOpenAccess.value,
+);
 
 const sessionRemainingLabel = computed(() => {
   const minutes = Math.floor(sessionSecondsRemaining.value / 60);
@@ -42,6 +64,8 @@ onMounted(() => {
   window.addEventListener('keydown', openOperatorSearchShortcut);
   document.addEventListener('visibilitychange', evaluateSession);
   sessionTimer = window.setInterval(evaluateSession, 30_000);
+  // 정책 재평가는 30초 주기로 유지하되 사용자에게 보이는 잔여 시간은 매초 갱신한다.
+  sessionCountdownTimer = window.setInterval(refreshSessionCountdown, 1_000);
   void evaluateSession();
 });
 onUnmounted(() => {
@@ -51,21 +75,26 @@ onUnmounted(() => {
   window.removeEventListener('keydown', openOperatorSearchShortcut);
   document.removeEventListener('visibilitychange', evaluateSession);
   if (sessionTimer !== undefined) window.clearInterval(sessionTimer);
+  if (sessionCountdownTimer !== undefined) window.clearInterval(sessionCountdownTimer);
 });
 
+/** reloadApplication 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function reloadApplication(): void {
   clearRouteFailure();
   window.location.reload();
 }
 
+/** logout 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function logout(): void {
   auth.logout();
 }
 
+/** markOperatorActivity 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function markOperatorActivity(): void {
   lastOperatorActivityAt = Date.now();
 }
 
+/** openOperatorSearchShortcut 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openOperatorSearchShortcut(event: KeyboardEvent): void {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault();
@@ -73,6 +102,7 @@ function openOperatorSearchShortcut(event: KeyboardEvent): void {
   }
 }
 
+/** evaluateSession 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function evaluateSession(): Promise<void> {
   const policy = auth.session.session;
   if (!auth.authenticated || !policy) {
@@ -110,18 +140,36 @@ async function evaluateSession(): Promise<void> {
   sessionWarningOpen.value = remaining <= 5 * 60_000;
 }
 
+/** 서버 호출 없이 현재 만료시각을 기준으로 팝업의 초 단위 잔여 시간을 갱신한다. */
+function refreshSessionCountdown(): void {
+  const policy = auth.session.session;
+  if (!auth.authenticated || !policy) return;
+  const remaining = Math.max(0, Math.min(
+    Date.parse(policy.expiresAt) - Date.now(),
+    Date.parse(policy.absoluteExpiresAt) - Date.now(),
+  ));
+  sessionSecondsRemaining.value = Math.ceil(remaining / 1000);
+  if (remaining <= 0) void redirectToExpiredSession();
+}
+
+/** redirectToExpiredSession 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function redirectToExpiredSession(): Promise<void> {
   const target = sessionExpiredRedirect(route.fullPath, route.meta.public === true);
   if (target) await router.replace(target);
 }
 
+/** extendSession 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function extendSession(): Promise<void> {
   extendingSession.value = true;
+  sessionExtensionError.value = '';
   try {
     await auth.extendSession();
     markOperatorActivity();
+    refreshSessionCountdown();
     sessionWarningOpen.value = false;
     await evaluateSession();
+  } catch (error) {
+    sessionExtensionError.value = error instanceof Error ? error.message : t('auth.sessionExtendFailed');
   } finally {
     extendingSession.value = false;
   }
@@ -147,102 +195,117 @@ watch(
             <small>{{ t('shell.console') }}</small>
           </div>
         </div>
-        <button
-          type="button"
-          class="mobile-nav-toggle"
-          :aria-expanded="mobileNavOpen"
-          aria-controls="primary-navigation"
-          :aria-label="mobileNavOpen ? t('shell.closeMenu') : t('shell.openMenu')"
-          :title="mobileNavOpen ? t('shell.closeMenu') : t('shell.openMenu')"
-          @click="mobileNavOpen = !mobileNavOpen"
-        >
-          <i :class="mobileNavOpen ? 'pi pi-times' : 'pi pi-bars'"></i>
-        </button>
       </div>
-      <TenantWorkspaceSelector />
       <button v-if="auth.hasCapability('cluster:read')" type="button" class="sidebar-search-button" @click="operatorSearchOpen = true">
         <i class="pi pi-search"></i><span>{{ t('operatorSearch.title') }}</span><kbd>⌘K</kbd>
       </button>
       <nav id="primary-navigation" class="nav">
-        <NotificationCenter />
-        <RouterLink v-if="auth.hasCapability('cluster:read')" to="/" class="nav-item">
-          <i class="pi pi-home"></i>
-          <span>{{ t('shell.dashboard') }}</span>
-        </RouterLink>
-
-        <div class="nav-group">
-          <div class="nav-group-title">{{ t('shell.operations') }}</div>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/triage" class="nav-item nav-child">
-            <i class="pi pi-filter"></i>
-            <span>{{ t('shell.triage') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read')" to="/operations/fleet" class="nav-item nav-child">
-            <i class="pi pi-sitemap"></i>
-            <span>{{ t('shell.fleet') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/incidents" class="nav-item nav-child">
-            <i class="pi pi-exclamation-circle"></i>
-            <span>{{ t('shell.incidents') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read')" to="/clusters" class="nav-item nav-child">
-            <i class="pi pi-cloud"></i>
-            <span>{{ t('shell.clusters') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read')" to="/applications" class="nav-item nav-child">
-            <i class="pi pi-box"></i>
-            <span>{{ t('shell.applications') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('cluster:read')" to="/policies" class="nav-item nav-child">
-            <i class="pi pi-shield"></i>
-            <span>{{ t('shell.policies') }}</span>
-          </RouterLink>
-          <RouterLink v-if="auth.hasCapability('audit:read')" to="/audit" class="nav-item nav-child">
-            <i class="pi pi-history"></i>
-            <span>{{ t('shell.audit') }}</span>
+        <div v-if="auth.hasCapability('cluster:read') && auth.canNavigate('overview')" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.overviewGroup') }}</div>
+          <RouterLink to="/" class="nav-item">
+            <i class="pi pi-home"></i>
+            <span>{{ t('shell.dashboard') }}</span>
           </RouterLink>
         </div>
 
-        <div class="nav-group">
-          <div class="nav-group-title">{{ t('shell.ai') }}</div>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/analysis" class="nav-item">
+        <div v-if="canOpenIncidentResponse" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.incidentResponse') }}</div>
+          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/triage" class="nav-item">
+            <i class="pi pi-filter"></i>
+            <span>{{ t('shell.triage') }}</span>
+          </RouterLink>
+          <RouterLink v-if="auth.hasCapability('cluster:read') && auth.canNavigate('clusters')" to="/operations/fleet" class="nav-item">
+            <i class="pi pi-sitemap"></i>
+            <span>{{ t('shell.fleet') }}</span>
+          </RouterLink>
+          <RouterLink v-if="auth.hasCapability('analysis:read') && auth.canNavigate('ai')" to="/incidents" class="nav-item">
+            <i class="pi pi-exclamation-circle"></i>
+            <span>{{ t('shell.incidents') }}</span>
+          </RouterLink>
+        </div>
+
+        <div v-if="canOpenInfrastructure" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.infrastructure') }}</div>
+          <RouterLink to="/clusters" class="nav-item">
+            <i class="pi pi-cloud"></i>
+            <span>{{ t('shell.clusters') }}</span>
+          </RouterLink>
+        </div>
+
+        <div v-if="canOpenApplicationDelivery" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.applicationDelivery') }}</div>
+          <RouterLink to="/applications" class="nav-item">
+            <i class="pi pi-box"></i>
+            <span>{{ t('shell.applications') }}</span>
+          </RouterLink>
+        </div>
+
+        <div v-if="canOpenAiOperations" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.aiOperations') }}</div>
+          <RouterLink to="/analysis" class="nav-item">
             <i class="pi pi-chart-line"></i>
             <span>{{ t('shell.analysis') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/ai-chat" class="nav-item">
+          <RouterLink to="/ai-chat" class="nav-item">
             <i class="pi pi-comments"></i>
             <span>{{ t('shell.chat') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/runbooks" class="nav-item">
+          <RouterLink to="/runbooks" class="nav-item">
             <i class="pi pi-book"></i>
             <span>{{ t('shell.runbooks') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('analysis:read')" to="/ai/trust" class="nav-item">
+          <RouterLink to="/ai/trust" class="nav-item">
             <i class="pi pi-verified"></i>
             <span>{{ t('shell.trustCenter') }}</span>
           </RouterLink>
         </div>
 
-        <div class="nav-group">
-          <div class="nav-group-title">{{ t('shell.settings') }}</div>
-          <RouterLink to="/settings/preferences" class="nav-item">
-            <i class="pi pi-language"></i>
-            <span>{{ t('shell.preferences') }}</span>
+        <div v-if="canOpenGovernance" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.governance') }}</div>
+          <RouterLink v-if="canOpenInfrastructure" to="/policies" class="nav-item">
+            <i class="pi pi-shield"></i>
+            <span>{{ t('shell.policies') }}</span>
           </RouterLink>
-          <RouterLink v-if="auth.hasCapability('platform:admin')" to="/settings/operations" class="nav-item">
-            <i class="pi pi-cog"></i>
-            <span>{{ t('shell.dataRuntime') }}</span>
+          <RouterLink v-if="auth.hasCapability('audit:read')" to="/audit" class="nav-item">
+            <i class="pi pi-history"></i>
+            <span>{{ t('shell.audit') }}</span>
           </RouterLink>
           <RouterLink v-if="auth.hasCapability('audit:read')" to="/settings/reliability" class="nav-item">
             <i class="pi pi-verified"></i>
             <span>{{ t('shell.reliability') }}</span>
           </RouterLink>
-          <RouterLink v-if="!auth.session.localDevelopment && auth.hasCapability('identity:manage')" to="/settings/access" class="nav-item">
-            <i class="pi pi-users"></i>
-            <span>{{ t('shell.access') }}</span>
+        </div>
+
+        <div v-if="canOpenPlatformSettings" class="nav-group">
+          <div class="nav-group-title">{{ t('shell.platformSettings') }}</div>
+          <RouterLink v-if="auth.hasCapability('platform:admin')" to="/settings/operations" class="nav-item">
+            <i class="pi pi-cog"></i>
+            <span>{{ t('shell.dataRuntime') }}</span>
+          </RouterLink>
+          <RouterLink v-if="auth.hasCapability('ai-routing:manage') && auth.canNavigate('aiProviders')" to="/settings/ai-providers" class="nav-item">
+            <i class="pi pi-sparkles"></i>
+            <span>AI Providers</span>
+          </RouterLink>
+          <RouterLink
+            v-if="canOpenAccess"
+            :to="accessDestination"
+            class="nav-item"
+            :class="{ 'router-link-active': ['/settings/access', '/settings/users-access'].includes(route.path) }"
+          >
+            <i class="pi pi-user-edit"></i>
+            <span>{{ t('shell.userAccess') }}</span>
           </RouterLink>
           <RouterLink v-if="auth.hasCapability('platform:admin')" to="/settings/tenancy" class="nav-item">
             <i class="pi pi-building"></i>
             <span>{{ t('tenancy.manage') }}</span>
+          </RouterLink>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-title">{{ t('shell.personal') }}</div>
+          <RouterLink to="/settings/preferences" class="nav-item">
+            <i class="pi pi-language"></i>
+            <span>{{ t('shell.preferences') }}</span>
           </RouterLink>
         </div>
       </nav>
@@ -265,24 +328,46 @@ watch(
       :aria-label="t('shell.closeMenu')"
       @click="mobileNavOpen = false"
     ></button>
-    <main class="content">
-      <RuntimeReadinessBanner />
-      <section v-if="routeFailure" class="route-failure-banner" role="alert">
-        <i class="pi pi-exclamation-triangle"></i>
-        <div>
-          <strong>{{ t('shell.routeFailureTitle') }}</strong>
-          <span>{{ routeFailure.message }}</span>
+    <div class="workspace-shell">
+      <header class="workspace-topbar">
+        <button
+          type="button"
+          class="mobile-nav-toggle"
+          :aria-expanded="mobileNavOpen"
+          aria-controls="primary-navigation"
+          :aria-label="mobileNavOpen ? t('shell.closeMenu') : t('shell.openMenu')"
+          :title="mobileNavOpen ? t('shell.closeMenu') : t('shell.openMenu')"
+          @click="mobileNavOpen = !mobileNavOpen"
+        >
+          <i :class="mobileNavOpen ? 'pi pi-times' : 'pi pi-bars'"></i>
+        </button>
+        <TenantWorkspaceSelector />
+        <div class="workspace-actions">
+          <button v-if="auth.hasCapability('cluster:read')" type="button" class="workspace-action-button workspace-search-trigger" :aria-label="t('operatorSearch.title')" :title="t('operatorSearch.title')" @click="operatorSearchOpen = true">
+            <i class="pi pi-search"></i><span>{{ t('operatorSearch.title') }}</span><kbd>⌘K</kbd>
+          </button>
+          <NotificationCenter />
         </div>
-        <button type="button" class="secondary-button" @click="reloadApplication">
-          <i class="pi pi-refresh"></i>
-          {{ t('common.refresh') }}
-        </button>
-        <button type="button" class="icon-button" :aria-label="t('shell.dismissError')" :title="t('common.close')" @click="clearRouteFailure">
-          <i class="pi pi-times"></i>
-        </button>
-      </section>
-      <RouterView />
-    </main>
+      </header>
+      <main class="content">
+        <RuntimeReadinessBanner />
+        <section v-if="routeFailure" class="route-failure-banner" role="alert">
+          <i class="pi pi-exclamation-triangle"></i>
+          <div>
+            <strong>{{ t('shell.routeFailureTitle') }}</strong>
+            <span>{{ routeFailure.message }}</span>
+          </div>
+          <button type="button" class="secondary-button" @click="reloadApplication">
+            <i class="pi pi-refresh"></i>
+            {{ t('common.refresh') }}
+          </button>
+          <button type="button" class="icon-button" :aria-label="t('shell.dismissError')" :title="t('common.close')" @click="clearRouteFailure">
+            <i class="pi pi-times"></i>
+          </button>
+        </section>
+        <RouterView />
+      </main>
+    </div>
     <JobDock />
     <GlobalOperatorSearch :open="operatorSearchOpen" @close="operatorSearchOpen = false" />
     <div v-if="sessionWarningOpen" class="session-warning-backdrop">
@@ -291,10 +376,11 @@ watch(
         <div>
           <strong id="session-warning-title">{{ t('auth.sessionExpiringTitle') }}</strong>
           <p>{{ t('auth.sessionExpiringDescription', { time: sessionRemainingLabel }) }}</p>
+          <p v-if="sessionExtensionError" class="session-warning-error" role="alert">{{ sessionExtensionError }}</p>
         </div>
         <div class="session-warning-actions">
           <button type="button" class="secondary-button" @click="logout">{{ t('auth.logout') }}</button>
-          <button type="button" class="primary-button" :disabled="extendingSession" @click="extendSession">
+          <button type="button" class="primary-button" :disabled="extendingSession || !auth.session.session?.canExtend" @click="extendSession">
             <i class="pi pi-refresh"></i>
             {{ extendingSession ? t('auth.sessionExtending') : t('auth.extendSession') }}
           </button>

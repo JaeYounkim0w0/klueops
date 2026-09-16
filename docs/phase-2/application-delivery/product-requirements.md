@@ -2,7 +2,20 @@
 
 기준일: 2026-09-15
 
-상태: 설계 완료, 구현 미착수
+상태: 승인된 Phase 2 범위 구현 완료, OCI/S3 artifact adapter와 자동 DNS/TLS Provider는 후속
+
+## 구현 기준선
+
+2026-09-15 `feature/phase-2` 기준으로 Tenant별 Artifact Hub 검색·가져오기, Chart Library와 Source, 암호화된 Values revision, 대상 Cluster/Namespace 선택과 Namespace 생성, Helm preview/install/upgrade/rollback/uninstall, Application runtime·Service·Ingress·HTTPRoute 조회, Tenant 역할·메뉴 기능 정책·사용자 membership/offboarding, Ollama 및 외부 Provider profile·목적별 routing을 구현했다. P2-0은 짙은 공통 navigation shell, 상단 Tenant/Workspace context bar, semantic visual token과 전역 responsive surface로 실제 제품에 적용했다. Applications는 상태 요약, 검색·상태 필터 목록과 선택 상세 panel 구조로 시안의 정보 위계를 반영했다. 실제 OIDC 로그인 후 검색부터 배포·상태 확인·삭제까지 로컬 Kubernetes에서 검증했으며, Chart Values가 생성한 Ingress와 KlueOps가 Service에 연결한 companion HTTPRoute는 각각 실제 HTTP 응답까지 확인했다.
+
+다음 항목은 설계를 유지하지만 이번 핵심 구현 완료 범위에는 포함하지 않는다.
+
+- 후속 개선 1: PostgreSQL 기본 artifact 저장을 교체할 OCI/S3-compatible storage adapter
+- 후속 개선 2: 환경별 Provider 선택이 필요한 자동 DNS/TLS 발급·갱신 adapter
+
+다음 기능은 Phase 2 승인 범위로 구현됐다: `values.schema.json` Form/YAML 양방향 편집, 선택형 Helm provenance 검증, `allowedRoutes`와 cross-namespace `ReferenceGrant` 전체 preflight, companion Ingress/TCPRoute, PVC·DNS 경로·TLS 보존 선택과 cleanup 재시도, Local model 사용 중 삭제 보호와 9B 이하 모델 평가/승격 gate, 전체 정적 route 시각 회귀, modal focus trap·키보드·screen-reader 기본 계약.
+
+따라서 아래 요구사항에서 위 항목은 다음 확장 단계의 승인 기준이며, 현재 제품 동작은 `docs/product/current-product-specification.md`를 단일 기준으로 삼는다.
 
 ## 1. 제품 정의
 
@@ -50,13 +63,14 @@ P2-0은 단순 색상 변경이 아니라 기존 제품 전체의 정보 구조�
 - Artifact Hub에서 Helm package를 검색하고 버전, publisher, 문서와 보안 metadata를 비교한다.
 - Artifact Hub가 가리키는 원본 Helm repository 또는 OCI registry에서 정확한 Chart version을 가져온다.
 - `.tgz`, Helm repository와 OCI reference를 Tenant별 Chart Library에 등록한다.
+- `chart:manage` 권한 사용자는 정확한 확인 문구 후 불필요한 Chart를 Library에서 제거한다. 기존 Application, Release, Values revision이 참조하는 immutable artifact는 보존하며 동일 Chart 재가져오기 시 복원한다.
 - 원본 Chart artifact는 immutable SHA-256으로 보존하고 Custom은 versioned Values Profile만 지원한다.
 - `values.schema.json`이 있으면 beginner-friendly form을 제공하고 YAML editor와 양방향 동기화한다.
 - LLM이 사용자 요구와 sanitized Cluster capability를 근거로 Values patch를 제안한다.
 - Chart, Values, 생성 manifest, Cluster scope와 RBAC를 결정론적으로 검증한다.
 - preview, exact confirmation, async job, audit와 사후 health 검증을 거쳐 Helm install/upgrade/rollback/uninstall을 수행한다.
 - 기존 Namespace를 기본 대상으로 사용하고 권한·정책이 허용하는 경우에만 Namespace 생성을 지원한다.
-- Chart가 만든 Service를 Internal only, Chart-managed route 또는 KlueOps-managed HTTPRoute/Ingress로 노출한다.
+- Chart가 만든 Service를 Cluster 내부, Chart-managed route 또는 KlueOps companion HTTPRoute로 노출한다.
 - 배포 후 Application 상세에서 Workload, Pod, Service, 접근 URL, Route/DNS/TLS와 Release history를 함께 운영한다.
 - Ollama endpoint의 설치 모델을 조회하고 9B 이하 모델을 관리자 승인으로 추가해 AI 목적별로 라우팅한다.
 - Application Delivery를 사용하지 않는 설치에서는 Helm Runner와 background work를 비활성화한다.
@@ -134,12 +148,14 @@ Discover의 `URL로 직접 가져오기`는 특정 Chart/version을 한 번 조�
 
 Import 상태는 `IMPORTING → VALIDATING → READY | REJECTED`로 노출하며 `READY` 이후 Chart Library에 배포 가능한 버전으로 표시한다.
 
+Chart Library는 Chart 이름과 Chart/App 버전뿐 아니라 `제공사`와 `소스`를 분리해 표시한다. Artifact Hub에서 가져올 때 repository display name을 제공사 metadata로 저장하며, source repository 식별자는 archive confirmation과 재수집 좌표로 유지한다. 직접 업로드에서 신뢰할 수 있는 제공사 metadata가 없으면 임의 추정하지 않고 `제공사 미확인`으로 표시한다.
+
 ### 6.3 Custom Values
 
 1. immutable Chart version을 선택한다.
 2. 새 Values Profile을 생성하거나 기존 revision을 복제한다.
 3. Schema Form, YAML Editor 또는 AI Assistant로 값을 수정한다.
-4. schema/type/unknown key와 Secret pattern을 검사한다.
+4. 수동 입력과 AI 결과 모두 선택한 immutable Chart artifact로 `helm template`을 실행해 schema/type/template 계약과 렌더링된 Service 포트 계약을 검사한다. `nodePort`는 Service type이 `NodePort` 또는 `LoadBalancer`일 때만 사용하며 Kubernetes 기본 허용 범위 `30000-32767`을 벗어나면 Revision 저장 전에 차단한다.
 5. 저장 시 전체 values, parent revision, author, SHA-256과 redacted diff를 기록한다.
 
 ### 6.4 대상과 Namespace
@@ -148,9 +164,11 @@ Import 상태는 `IMPORTING → VALIDATING → READY | REJECTED`로 노출하며
 2. 기본적으로 접근 가능한 기존 Namespace만 선택한다.
 3. `namespace:create` capability와 Cluster 정책이 모두 허용할 때만 새 Namespace 생성을 제공한다.
 4. 새 Namespace 계획에는 ResourceQuota, LimitRange, 기본 NetworkPolicy와 소유 정책을 Preview한다.
-5. Application uninstall은 공유 Namespace를 삭제하지 않는다. KlueOps 전용 Namespace 삭제는 별도 plan과 exact confirmation을 요구한다.
+5. Application uninstall은 공유 Namespace를 삭제하지 않는다. Helm Release와 KlueOps companion resource 제거가 성공하면 `managed_applications` 및 해당 Application의 Endpoint, Release, Operation, 소비된 Plan metadata를 함께 삭제해 `UNINSTALLED` 잔여 행을 노출하지 않는다. 비동기 Job 결과는 최소 실행 증거로 보존한다. KlueOps 전용 Namespace 삭제는 별도 plan과 exact confirmation을 요구한다.
 
 Release 이름은 `Cluster + Namespace` 안에서 유일해야 한다.
+
+여러 사용자는 서로 다른 Release를 동시에 배포할 수 있다. 단, 동일 Application/Release에 대한 install·upgrade·rollback·uninstall mutation은 하나만 실행하며 후속 요청은 `409 APPLICATION_OPERATION_CONFLICT`로 거부한다. 비동기 worker는 Job·Application·Operation 저장 transaction이 commit된 뒤 시작하고, queue 포화나 worker 시작 실패도 화면에서 추적 가능한 terminal 실패 상태로 기록한다.
 
 ### 6.5 Exposure와 도메인
 
@@ -158,13 +176,13 @@ Release 이름은 `Cluster + Namespace` 안에서 유일해야 한다.
 
 | 모드 | 동작 | 기본값 |
 | --- | --- | --- |
-| `INTERNAL_ONLY` | Chart가 생성한 ClusterIP Service만 사용 | 기본 |
+| `NONE` | Chart가 생성한 Service만 사용하고 KlueOps가 외부 경로를 추가하지 않음 | 기본 |
 | `CHART_MANAGED` | Chart Values로 Ingress/HTTPRoute/LoadBalancer를 생성 | Chart가 명시적으로 지원할 때 |
-| `KLUEOPS_MANAGED` | 렌더링된 Service/Port에 companion HTTPRoute 또는 Ingress 연결 | 사용자가 선택할 때 |
+| `HTTP_ROUTE` | 렌더링된 Service/Port에 KlueOps companion HTTPRoute 연결 | 사용자가 선택할 때 |
 
-KlueOps-managed Exposure 입력은 Gateway/Listener, hostname, path, backend Service/Port, TLS와 DNS mode다. 예를 들어 `nginx.cluster.co.kr`은 wildcard DNS가 Gateway를 가리키면 별도 DNS 변경 없이 hostname으로 사용한다. 그렇지 않으면 ExternalDNS/DNS Provider 연동을 사용하거나 `DNS 설정 필요` 상태와 필요한 record를 사용자에게 안내한다.
+KlueOps HTTPRoute Exposure 입력은 Gateway, hostname, path와 backend Service/Port다. Service와 Port는 현재 Chart/Values를 `helm template`로 렌더링한 결과에서, Gateway는 선택한 Cluster의 실제 `Gateway` 중 HTTP/HTTPS listener가 있고 Application Namespace를 `allowedRoutes`로 허용하는 항목에서 고른다. HTTPRoute backend가 참조하는 포트는 Service의 `spec.ports[].port`이며 Pod 연결용 `targetPort`나 Node 외부 노출용 `nodePort`를 대신 사용하지 않는다. `appProtocol`, port name과 알려진 포트를 기준으로 PostgreSQL·Redis 등 명백한 비-HTTP TCP endpoint는 선택과 Preview를 차단한다. 판정이 불명확한 포트는 경고와 함께 사용자가 HTTP 프로토콜임을 확인하게 한다. 예를 들어 `nginx.cluster.co.kr`은 wildcard DNS가 Gateway를 가리키면 별도 DNS 변경 없이 hostname으로 사용한다. 그렇지 않으면 ExternalDNS/DNS Provider 연동을 사용하거나 `DNS 설정 필요` 상태와 필요한 record를 사용자에게 안내한다.
 
-HTTPRoute는 Gateway API capability, parent Gateway의 allowedRoutes, Service/Port와 `Accepted`/`ResolvedRefs` 조건을 사전·사후 검사한다. Gateway API가 없으면 정책에 따라 Ingress 또는 Internal only를 제안한다. Chart가 이미 Route를 생성하면 중복 companion resource를 만들지 않는다.
+현재 구현은 `CHART_MANAGED` preview에서 렌더 결과에 실제 Ingress 또는 HTTPRoute가 없으면 배포를 차단한다. `HTTP_ROUTE`와 `TCP_ROUTE`는 Target 조회, Preview와 실행 직전에 대상 Service/Port, route 종류에 맞는 listener, listener `allowedRoutes` Namespace admission과 Gateway `Accepted/Programmed` 상태를 다시 검사한다. 다른 Namespace의 Service는 대상 Namespace의 명시적 `ReferenceGrant`가 없으면 차단한다. `INGRESS`는 같은 Namespace의 HTTP Service만 허용한다. Gateway API/Controller를 자동 설치하거나 권한을 확대하지 않는다. DNS/TLS 자동 Provider만 후속 확장이다.
 
 TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-manager 연동만 사용한다. Certificate와 DNS를 자동 생성하는 것처럼 표시하지 않고 실제 연동 상태를 구분한다.
 
@@ -173,7 +191,7 @@ TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-m
 1. Chart version과 Values Profile revision을 고정한다.
 2. Tenant에 속한 Cluster, 허용 Namespace와 고유 Release 이름을 선택한다.
 3. Exposure mode와 Service/Port/hostname/TLS/DNS를 선택한다.
-4. render, policy, live diff와 RBAC/Gateway preflight를 실행한다.
+4. render, Service type/port/nodePort 계약, policy, live diff와 RBAC/Gateway preflight를 실행한다. Helm 3 release metadata 저장에 필요한 대상 Namespace Secret `get/list/create` 권한은 Preview와 실제 실행 직전에 SSAR로 재검증하며, 부족하면 exact confirmation 전에 차단한다.
 5. Helm resource와 companion resource의 생성·변경·삭제, cluster-scope, hook와 위험 설정을 표시한다.
 6. exact confirmation 후 async Helm job을 시작한다.
 7. 요청이 수락되면 Application을 `DEPLOYING` 상태로 만들어 Deployed Applications에 즉시 표시하고 Job Center/Job Dock에서 진행을 추적한다.
@@ -184,7 +202,8 @@ TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-m
 ### 6.7 Application 운영
 
 - Overview, Workload/Pod health, restart와 Event 조회
-- Service, HTTPRoute/Ingress, Gateway, DNS/TLS 상태와 접근 URL 조회
+- 배포에 사용한 Chart 이름·package·제공사/source·Chart/App version과 Values revision 조회
+- Service, HTTPRoute/Ingress, Gateway, DNS/TLS 상태와 접근 URL 조회. Service는 접근 범위와 ClusterIP, `spec.ports[].port`, `targetPort`, 선택형 `nodePort`를 구분해 표시한다.
 - 적용 Values, rendered resource와 companion resource 조회
 - Chart 또는 Values revision upgrade preview
 - Helm history와 revision rollback
@@ -192,32 +211,38 @@ TLS는 Gateway wildcard certificate, existing TLS Secret 또는 선택형 cert-m
 - 실행 전후 resource snapshot, output hash와 Audit
 - Application/Namespace AI Analysis로 이동
 
-Deployed Applications에는 `DEPLOYING`, `UPGRADING`, `ROLLING_BACK`, `UNINSTALLING` 같은 진행 상태와 `FAILED`도 포함한다. 전역 Job Center는 실행 단위의 queue/progress/cancel/retry를 담당하고, Application Detail의 History는 해당 Application에 귀속된 완료·실패 operation과 Audit을 영구 조회한다. 동일한 operation을 별도 화면에 중복 저장하지 않는다.
+Deployed Applications에는 `DEPLOYING`, `UPGRADING`, `ROLLING_BACK`, `UNINSTALLING` 같은 진행 상태와 `FAILED`도 포함한다. 진행 상태가 존재하는 동안에만 목록을 2초 간격으로 직렬 갱신하고 terminal 상태가 되면 폴링을 중지한다. 상태 전환 시 Revision·Runtime·History를 함께 다시 조회해 Job Center 완료와 Application 화면이 어긋나지 않아야 하며, 유휴 화면에는 불필요한 폴링을 하지 않는다. 전역 Job Center는 실행 단위의 queue/progress/cancel/retry를 담당하고, Application Detail의 History는 해당 Application에 귀속된 완료·실패 operation과 Audit을 영구 조회한다. 동일한 operation을 별도 화면에 중복 저장하지 않는다.
 
-Application은 KlueOps가 배포한 Helm Release만 대상으로 하며 Cluster의 기존 workload 자동 발견과 소유권 편입은 하지 않는다. Uninstall은 Application Release와 연결된 companion resource만 정리하고 Tenant Library Chart는 삭제하지 않는다. Chart artifact 삭제는 별도의 `chart:manage` 작업이다.
+Application은 KlueOps가 배포한 Helm Release만 대상으로 하며 Cluster의 기존 workload 자동 발견과 소유권 편입은 하지 않는다. Uninstall은 Application Release와 연결된 companion resource와 KlueOps의 Application 상세 metadata를 정리하되 Tenant Library Chart와 공유 Namespace는 삭제하지 않는다. Chart Library 제거는 별도의 `chart:manage` 작업이며 물리 삭제가 아니라 신규 사용 목록에서 archive한다.
 
 ## 7. Custom Values와 AI Assistant
 
-AI는 배포자가 아니라 Values 제안자다. 출력은 다음 provider-neutral 계약만 사용한다.
+AI는 배포자가 아니라 Values 제안자다. `helm-values.v10` prompt는 현재 편집 중인 Custom Values를 기준으로 정확한 Chart 이름, package, 제공사/source, Chart version과 App version을 고정한다. 특정 application 이름이나 제공사 전용 구조를 prompt에 하드코딩하지 않고 immutable Chart의 실제 `values.yaml`과 선택형 `values.schema.json`에서 사용자 요청과 현재 override에 관련된 section 및 사용 가능한 최상위 key를 추출해 bounded context로 전달한다. 요청 관련 root key는 참고 정보이며 exact default 또는 현재 Values가 이미 요청을 만족하면 중복 override를 강제하지 않는다. Chart reference의 주석과 설명은 신뢰하지 않는 data로 취급한다.
+
+API는 실제 Helm 렌더링을 통과한 완전한 Custom Values YAML과 검증 metadata를 다음 provider-neutral 계약으로 반환한다.
 
 ```json
 {
-  "schemaVersion": "helm-values-suggestion.v1",
-  "summary": "요청을 반영한 변경 설명",
-  "patch": {
-    "replicaCount": 3,
-    "service": { "type": "ClusterIP" }
-  },
-  "assumptions": [],
-  "warnings": [],
-  "evidence": ["values.schema.json#/properties/replicaCount"]
+  "valuesYaml": "replicaCount: 3\nservice:\n  type: ClusterIP\n",
+  "promptVersion": "helm-values.v10",
+  "validationStatus": "HELM_TEMPLATE_VALIDATED",
+  "attempts": 1,
+  "chartName": "nginx",
+  "providerName": "cloudpirates-nginx",
+  "chartVersion": "0.16.8",
+  "applicationVersion": "1.31.5",
+  "schemaIncluded": true
 }
 ```
 
 - Chart README, comments와 templates는 신뢰하지 않는 data이며 system instruction이 아니다.
 - Secret value, Kubernetes credential, ConfigMap 원문과 인증서는 prompt에 포함하지 않는다.
-- LLM patch는 허용된 Values key에만 merge하고 전체 파일을 임의 교체하지 않는다.
-- schema validation과 `helm template`이 실패하면 제안을 적용하거나 배포하지 않는다.
+- LLM은 현재 Custom Values의 관련 없는 key를 보존하고 사용자 요청에 필요한 override만 변경한다. 범용 기본 key나 다른 Chart 버전의 구조를 추측하지 않는다.
+- 신규 Profile처럼 현재 Custom Values가 비어 있으면 API가 이를 빈 Helm override인 `{}`로 정규화해 AI 제안을 허용한다.
+- Kubernetes manifest 형태(`apiVersion`, `kind`, resource `metadata/spec`), exact Chart에 없는 중첩 Values path, 새 redaction marker와 요청한 필수 section 누락은 `helm template` 전후의 결정론적 검사에서 거부한다.
+- 구조 검사, schema validation 또는 `helm template`이 실패하면 masked·bounded 오류를 재피드백해 최대 3회까지 수정 제안을 생성한다. 모두 실패하면 결과를 반환하거나 적용하지 않는다.
+- 수동 YAML도 Revision 저장 전에 같은 Chart artifact로 렌더링하며, AI 실패와 무관하게 수동 편집은 계속 사용할 수 있다.
+- Secret value 유사 key는 AI prompt에서 `***REDACTED***`로 치환하고, 검증된 결과를 반환할 때 원래 Custom Values의 값을 서버에서 복원한다. `existingSecret`처럼 Secret resource 이름만 참조하는 key는 실제 값을 노출하지 않으므로 정확한 Chart 계약 작성을 위해 보존한다.
 - 사용자가 diff를 승인하기 전에는 Values Profile revision을 만들지 않는다.
 - Provider failure 시 수동 Form/YAML 편집은 계속 사용할 수 있어야 한다.
 
@@ -344,7 +369,7 @@ Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한�
 4. Tenant A/B Chart와 Values Profile 상호 비노출
 5. schema form/YAML/AI patch의 동일 결과와 invalid key 차단
 6. 기존 Namespace 선택과 권한 있는 Namespace 생성 plan 검증
-7. Internal/Chart-managed/KlueOps-managed Exposure preview와 HTTPRoute condition 검증
+7. Cluster 내부/Chart-managed/KlueOps HTTPRoute Exposure preview와 HTTPRoute condition 검증
 8. manifest preview, 위험 resource와 RBAC/Gateway preflight 표시
 9. install 성공, Application/Pod/Endpoint health와 audit 확인
 10. Values upgrade, history, rollback 성공
@@ -358,6 +383,8 @@ Phase 2 MVP는 다음 수용 흐름이 격리 namespace에서 통과해야 한�
 18. User suspend/offboard의 session·RoleBinding·credential 회수와 Audit actor 보존
 19. 마지막 Platform Manager 제거 차단과 Platform Manager의 모든 Tenant 접근 검증
 20. Feature OFF 상태에서 메뉴, 직접 route와 API가 일관된 차단 결과를 반환
+
+2026-09-15 로컬 수용시험에서는 Kubernetes v1.34.1에서 Chart-managed Ingress와 Service 기반 companion HTTPRoute를 각각 배포했다. 두 Application 모두 Pod `1/1 Ready`와 `RUNNING`으로 수렴했고, Ingress Controller와 Envoy Gateway를 경유한 hostname 요청에서 HTTP 200 nginx 응답을 확인했다. HTTPRoute는 `Accepted=True`, `ResolvedRefs=True`였다. 재현 범위와 테스트 전용 Controller는 [로컬 Exposure 수용시험](local-exposure-acceptance.md)에 기록한다.
 
 ## 11. 단계별 구현
 

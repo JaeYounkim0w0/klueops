@@ -40,9 +40,11 @@ class RoleBindingEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    /** RoleBindingEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected RoleBindingEntity() {
     }
 
+    /** RoleBindingEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private RoleBindingEntity(RoleBinding binding) {
         id = binding.id();
         principalType = binding.principalType();
@@ -57,10 +59,12 @@ class RoleBindingEntity {
         createdAt = binding.createdAt();
     }
 
+    /** RoleBindingEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static RoleBindingEntity fromDomain(RoleBinding binding) {
         return new RoleBindingEntity(binding);
     }
 
+    /** RoleBindingEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     RoleBinding toDomain() {
         return new RoleBinding(id, principalType, principalKey, role,
                 new AccessScope(scopeType, tenantId, workspaceId, clusterId, namespace),

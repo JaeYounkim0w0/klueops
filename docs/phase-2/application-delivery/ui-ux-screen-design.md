@@ -2,7 +2,7 @@
 
 기준일: 2026-09-15
 
-상태: HTML 시안 완료, 구현 미착수
+상태: HTML 시안, P2-0 공통 제품 UI, 전체 정적 route visual regression과 modal 접근성 gate 구현 완료
 
 시안 회귀 확인은 mockup 디렉터리를 정적 서버로 연 뒤 `node smoke-test.mjs`와 `node capture-screenshots.mjs`로 재현한다. `CHROME_PATH`는 system Chrome을 사용할 때만 지정하며, 생략하면 Playwright bundled Chromium을 사용한다.
 
@@ -33,11 +33,20 @@ Tenant별 메뉴는 선택한 Tenant/Workspace의 effective capability와 Tenant
 - 기존 사용자 흐름, route, 권한과 API 결과는 UI 변경 전후 동일하게 동작해야 한다.
 - 대표 route와 loading/empty/error/permission-denied/modal 상태의 기준 screenshot을 승인하고 visual regression에 보관한다.
 
+### 실제 제품 적용 결과
+
+- `App.vue`의 전체 layout을 짙은 고정 navigation과 상단 context bar를 갖는 공통 product shell로 변경했다.
+- Tenant/Workspace selector는 좌측 메뉴 내부가 아니라 모든 화면에서 범위를 먼저 확인할 수 있는 상단 bar에 배치했다.
+- 운영 통합 검색과 알림은 상단 전역 action으로 제공하고, 모바일에서는 메뉴 button과 overlay navigation으로 전환한다.
+- semantic color, surface, radius, elevation과 focus token은 `frontend/src/styles/base.css`, 공통 shell 규칙은 `frontend/src/styles/product-shell.css`가 소유한다.
+- Applications는 요약 지표, 검색·상태 필터가 있는 목록, 선택 Application의 Runtime·Endpoint·최근 작업 inspector로 구성했다. 모바일에서는 inspector를 목록보다 먼저 보여 즉시 상태와 위험 작업을 확인한다.
+- 로컬 Kubernetes의 실제 OIDC 세션에서 Applications, Dashboard, 모바일 navigation과 Application 배포 chooser를 확인했다. 자동 visual regression의 전체 route 확대는 테스트 기반 확장 항목으로 남긴다.
+
 ## 1. 시안 실행
 
 [HTML 시안 열기](ui-mockups/index.html)
 
-브라우저에서 직접 열면 좌측 `Applications`, `Users & Access`, `AI Providers` 메뉴와 workflow 버튼을 통해 전체 시안을 확인할 수 있다. Query parameter deep-link도 지원한다.
+브라우저에서 직접 열면 `Application Delivery`, `사용자 및 권한`, `AI Providers` 진입점과 workflow 버튼을 통해 설계 기준을 확인할 수 있다. 실제 제품도 동일한 핵심 정보 구조와 query parameter deep-link를 지원하며, HTML은 구현 화면의 시각·상호작용 회귀 기준으로 유지한다.
 
 ```text
 ui-mockups/index.html?screen=discover
@@ -68,29 +77,19 @@ ui-mockups/index.html?screen=models
 ## 3. Navigation
 
 ```text
-운영 관리
-├─ Dashboard
-├─ Triage
-├─ Fleet Command
-├─ Incidents
-├─ Clusters
-├─ Applications
-│  ├─ Discover
-│  ├─ Chart Library
-│  │  └─ Sources
-│  └─ Deployed Applications
-├─ Policies
-└─ Audit
-
-설정
-├─ 사용자 설정
-├─ Data & Runtime
-├─ AI Provider
-│  └─ Local Models
-└─ 접근 관리
+개요                         Dashboard
+운영 대응                    Triage · Fleet Command · Incidents
+인프라                       Clusters
+Application Delivery         Applications
+AI 운영                      AI Analysis · AI Chat · Runbooks · AI 신뢰 센터
+거버넌스                     Policies · Audit · Operations Reliability
+플랫폼 설정                  Data & Runtime · AI Providers · 사용자 및 권한 · Tenant 관리
+개인 영역                    사용자 설정
 ```
 
-Feature가 비활성화되면 Applications 하위 메뉴 전체를 숨기고 직접 URL은 기능 비활성 Problem Detail 화면으로 연결한다.
+메뉴 그룹은 화면마다 바뀌지 않고 고정한다. 로그인 사용자의 capability와 Tenant Feature에 따라 접근할 수 없는 그룹은 제목과 항목을 함께 숨긴다. Feature가 비활성화되면 Applications 진입점을 숨기고 직접 URL은 기능 비활성 Problem Detail 화면으로 연결한다.
+
+`사용자 및 권한`은 좌측에 하나만 표시한다. Tenant 구성원 관리 권한이 있으면 Users & Access로 이동하며, Platform Manager는 화면 상단의 `플랫폼 계정 권한`을 통해 OIDC 사용자 활성 상태와 전역 역할 binding을 관리한다. 기존 `/settings/access`와 `/settings/users-access` URL은 북마크와 운영 절차 호환을 위해 유지한다.
 
 Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 여는 overlay panel이다. Install/Upgrade/Rollback/Uninstall 외에도 Chart import와 Local Model download를 함께 보여주며 각 항목에서 관련 Application, Chart 또는 Provider로 이동한다.
 
@@ -129,6 +128,7 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 ### 구성
 
 - 검색어, category, official/verified, repository filter
+- 초기 검색어는 비워 두며 제품명이나 기능 키워드를 직접 입력한 뒤 검색한다. 특정 Chart를 기본값으로 자동 조회하지 않는다.
 - 결과 card의 publisher, version, license, update 시각과 security summary
 - 우측 detail drawer에 README 요약, versions, default Values/Schema 제공 여부
 - `Tenant Library에 가져오기` 전 source URL, exact version과 trust 상태 확인
@@ -148,14 +148,16 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 ### 구성
 
 - 현재 Tenant 소유 Chart만 표시
-- source, version 수, trust, Values Profile, 최근 사용과 archive 상태
+- Chart 이름·설명 아래에 `제공사`와 `소스`를 명시적으로 구분하고 version 수, trust, Values Profile, 최근 사용과 archive 상태를 표시
+- `제공사`는 Artifact Hub repository display name을 우선하고 기존 Chart는 repository 식별자를 fallback으로 사용한다. 직접 업로드에서 확인할 수 없으면 `제공사 미확인`으로 표시하며 파일명이나 업로드 사용자를 제공사로 오인하지 않는다.
 - `.tgz 업로드`, Sources 관리, Artifact Hub로 이동
 - 선택 Chart의 immutable versions, digest, provenance와 사용 중 Release 수
+- `chart:manage` 권한 사용자에게만 `제거` action을 표시한다. Modal은 package, source와 보존되는 기존 배포·Release·Values revision을 먼저 설명하고 `source/package` exact confirmation이 일치해야 실행 버튼을 활성화한다.
 
 ### 위험 UX
 
-- 사용 중 version 삭제 금지
-- archive는 신규 배포만 차단하고 기존 Release/rollback artifact를 유지
+- 물리 삭제는 제공하지 않으며 Library 제거는 신규 선택 목록에서 Chart를 archive한다.
+- archive는 신규 배포만 차단하고 기존 Release/rollback/Values artifact를 유지하며 동일 Chart를 다시 가져오면 복원한다.
 - repository credential 오류는 secret을 표시하지 않고 source health만 표시
 
 ## 7. AD-03 Sources
@@ -183,6 +185,8 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 ### 저장
 
 - validation error가 있으면 revision 저장 차단
+- Form과 YAML 편집 중 `nodePort`가 기본 허용 범위 `30000-32767` 밖이면 즉시 오류와 정확한 경로를 표시하고 저장 버튼을 비활성화한다.
+- `nodePort`가 있으나 가장 가까운 Service `type`이 `NodePort` 또는 `LoadBalancer`가 아니면 적용되지 않을 수 있음을 경고하고, 서버는 실제 렌더링 결과로 최종 차단한다.
 - Secret-like field는 masked input과 existing Secret reference 우선
 - 저장 시 revision note와 변경 key 수 표시
 
@@ -199,10 +203,14 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 
 ### Exposure
 
-- `Internal only`: ClusterIP Service만 사용
-- `Chart-managed`: Chart Values가 만드는 Ingress/HTTPRoute 사용
-- `KlueOps-managed`: 렌더링된 Service/Port에 companion HTTPRoute/Ingress 연결
-- Gateway/Listener, hostname, path, backend Service/Port, TLS와 DNS mode 입력
+- `Cluster 내부`: Chart가 만든 Service만 사용하고 KlueOps가 외부 경로를 추가하지 않음
+- `Chart에서 관리`: Chart Values가 만드는 Ingress/HTTPRoute 사용. Preview에서 실제 Route 리소스가 없으면 다음 단계로 진행하지 않는다.
+- `KlueOps HTTPRoute`: 렌더링된 Service/Port에 companion HTTPRoute 연결. hostname/path를 입력하고, Service/Port와 parent Gateway는 조회 결과에서 선택한다.
+- Exposure 모드와 관계없이 Target 진입 시 현재 Values로 렌더링된 Service 이름·type·Service Port·Target Port·선택형 Node Port를 요약해, Preview 전에 실제 적용 결과를 확인할 수 있게 한다.
+- Service 선택기는 현재 Chart/Values의 렌더 결과만 표시하고 `spec.ports[].port`, `targetPort`, `nodePort`를 구분해 안내한다. HTTPRoute에는 `spec.ports[].port`를 사용한다.
+- Gateway 선택기는 대상 Cluster의 실제 Gateway namespace/name, HTTP/HTTPS listener와 `READY/NOT_READY/UNKNOWN` 상태를 표시하며 READY만 선택할 수 있다.
+- Gateway API CRD·Controller·Gateway가 없거나 조회 권한이 없으면 Preview를 비활성화하고 `kubectl get gatewayclass`, `kubectl get gateway -A`, listener `allowedRoutes` 점검 가이드를 표시한다.
+- Cluster Admin이 사전 조건을 나중에 구성한 경우 `다시 조회`로 선택지를 갱신한다. 내부 배포가 끝난 Application은 Upgrade의 접근 설정에서 노출 방식을 추가한다.
 - wildcard DNS/Gateway certificate 재사용 여부와 예상 URL 표시
 - Gateway API가 없거나 Chart Route와 중복되면 안전한 대안과 차단 사유 표시
 
@@ -239,10 +247,11 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 
 - 상단 lifecycle map으로 `배포 Wizard → Job Center → Deployed Applications → Application Detail`의 책임을 항상 표시
 - Tenant/Workspace/Cluster/Namespace filter
-- Application status, Pod/Endpoint health, Chart/Values revision, 마지막 작업과 운영자
+- Application status, Pod/Endpoint health, Chart/App version, Values revision, 마지막 작업과 운영자
 - install 요청이 수락된 즉시 `DEPLOYING` row를 만들고 진행률/Job Center link를 표시
 - 실패한 최초 install도 `FAILED` row로 유지해 실패 단계, retry와 cleanup에 접근 가능
-- detail에서 workload health, Helm history, Values diff와 Audit timeline
+- detail에서 Chart 이름·package·제공사/source·Chart/App version, workload health, Helm history, Values diff와 Audit timeline
+- Service endpoint는 접근 범위, IP/Host, Service Port, Target Port와 선택형 Node Port를 별도 label로 표시해 내부 주소를 외부 URL로 오인하지 않게 한다.
 - `Upgrade 계획`, `Rollback 계획`, `Uninstall 계획`은 서로 다른 modal/workflow
 
 목록에는 KlueOps가 배포한 Application만 표시하며 기존 Cluster workload 자동 발견·편입은 하지 않는다.
@@ -253,14 +262,14 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 
 - Overview: Cluster/Namespace, Chart/Values, current Helm revision
 - Workloads: Deployment/StatefulSet, Pod Ready/restart/Event와 Console 이동
-- Network & Endpoints: Service → HTTPRoute/Ingress → Gateway → URL 연결 관계
+- Network & Endpoints: Service → HTTPRoute/Ingress → Gateway → URL 연결 관계와 endpoint `READY/APPLIED/DEGRADED` 상태 배지
 - Endpoint 상태: Accepted, ResolvedRefs, DNS와 TLS를 독립 표시
 - Configuration: 적용 Values, redacted diff와 Secret reference
 - History: install/upgrade/rollback/uninstall operation과 Audit
 - Resources: Helm resource와 KlueOps companion resource의 ownership 구분
 - Uninstall 계획: Helm/companion/PVC/DNS/TLS/Namespace/Library의 삭제·보존 범위 확인
 
-Application uninstall은 Chart Library artifact와 공유 Namespace를 삭제하지 않는다. PVC, DNS와 TLS는 plan에서 명시한 보존 정책만 적용하며 exact confirmation을 요구한다.
+Application uninstall은 Chart Library artifact와 공유 Namespace를 삭제하지 않는다. PVC, DNS와 TLS는 plan에서 명시한 보존 정책만 적용하며 exact confirmation을 요구한다. 성공한 Application은 `UNINSTALLED` 카드나 상세 화면으로 남기지 않고 목록에서 즉시 제거하며, 완료 여부와 실패 원인은 전역 Job Center에서 확인한다. 진행 상태 아이콘과 취소 action은 배경 장식 없이 같은 행에 정렬한다.
 
 ![Application Uninstall 계획 Modal](ui-mockups/screenshots/15-uninstall-plan.png)
 
@@ -383,7 +392,7 @@ Import는 Cluster 상태를 변경하지 않으므로 exact phrase까지 요구�
 | --- | --- | --- |
 | Form/YAML/Diff | editor mode 변경 | 미저장 draft 유지 |
 | 좌측 Values category | category active state와 field group 변경 | validation 상태 유지 |
-| AI 전송 `↑` | 생성 중 상태, 중복 요청 방지 | Patch card 또는 masking된 오류 표시 |
+| 우측 정렬 `제안 생성`/AI 전송 `↑` | 생성 중 상태, 중복 요청 방지 | Patch card 또는 masking된 오류 표시 |
 | `검증 후 적용` | schema/type/unknown key 검증 결과 Toast | 유효한 patch만 Form draft에 반영 |
 | `초기화` | 사라질 변경 수와 복귀 revision 경고 Modal | 위험 색상의 `변경 초기화` 후 Toast |
 | `Values 저장` | profile 이름/revision note 입력 Modal | 새 immutable revision 저장 후 Toast |
@@ -396,8 +405,10 @@ Import는 Cluster 상태를 변경하지 않으므로 exact phrase까지 요구�
 | Control | Overlay/상태 | Confirm 이후 |
 | --- | --- | --- |
 | Cluster/Namespace | 권한 있는 대상 선택, 새 Namespace는 별도 plan | capability/Quota/NetworkPolicy 재검사 |
-| Exposure mode | Internal/Chart-managed/KlueOps-managed 단일 선택 | 입력 field와 capability 결과 갱신 |
-| Gateway/Listener | allowedRoutes를 통과한 Gateway만 선택 | HTTPRoute preflight 갱신 |
+| Exposure mode | Cluster 내부/Chart에서 관리/KlueOps HTTPRoute 단일 선택 | 입력 field와 capability 결과 갱신 |
+| Gateway 다시 조회 | 실제 Cluster의 HTTP/HTTPS Gateway와 준비 상태 조회 | READY Gateway 선택지를 갱신하고 없음/권한 오류별 가이드 표시 |
+| Backend Service/Port | 렌더링된 Service의 `spec.ports[].port`만 선택 | targetPort/nodePort 설명과 선택한 포트 상세 표시 |
+| Gateway | namespace/name과 listener를 목록에서 선택, READY만 허용 | HTTPRoute preflight 갱신 |
 | Hostname/Path | DNS/TLS coverage와 충돌 검사 | 예상 URL 표시 |
 | Backend Service/Port | render 결과의 Service만 선택 | ResolvedRefs 사전 검사 |
 | `배포 미리보기` | Target/Exposure plan 저장 후 Preview 이동 | plan 만료시간 시작 |
@@ -430,6 +441,8 @@ Import는 Cluster 상태를 변경하지 않으므로 exact phrase까지 요구�
 | `Application 배포` | 시작 chooser Modal: `Chart Library에서 선택`(기본·권장), `새 Chart 검색`, `URL 또는 .tgz 가져오기` | Library는 Chart/version 선택, 검색은 Discover, 직접 가져오기는 검사 Modal로 분기 |
 | Cluster/Status filter | release table filter | URL query 보존 |
 | Application row | 우측 health/endpoint/history 교체 | 별도 Confirm 없음 |
+| Helm Chart 정보 | 목록에는 Chart/App version, 우측 inspector에는 Chart·package·제공사/source를 표시 | immutable 배포 출처 확인 |
+| Runtime Endpoint | 접근 범위와 IP/Host, Service/Target/Node Port를 분리 표시하고 URL이 있으면 새 tab link 제공 | Cluster 내부 주소는 내부 범위로 명시 |
 | `…` | 상세/Audit/Uninstall 계획 action menu | Uninstall은 별도 exact confirmation 필요 |
 | `Rollback` | target revision과 영향이 표시된 위험 Modal | Release 이름 exact match 후 rollback Job |
 | `Upgrade` | 현재 Chart/Values를 고정해 Values Studio 이동 | Preview를 다시 통과해야 실행 가능 |
@@ -544,6 +557,8 @@ HTML의 `상태 시안`은 이 Matrix의 대표 상태를 한 화면에서 비�
 ![Applications tablet 900px](ui-mockups/screenshots/20-applications-tablet.png)
 
 ## 17. 접근성
+
+모든 `.delivery-modal`은 `role=dialog`, `aria-modal=true` 계약을 갖는다. 동적 modal이 열리면 첫 interactive control로 focus가 이동하고 Tab/Shift+Tab은 최상위 modal 안에서 순환하며, 닫히면 원래 trigger로 돌아간다. 아이콘 전용 닫기/삭제 버튼은 접근 가능한 이름을 제공한다. Playwright는 desktop/mobile 전체 정적 route snapshot과 대표 modal keyboard focus trap을 회귀 gate로 실행한다.
 
 - status를 색만으로 구분하지 않고 icon/text를 함께 제공한다.
 - tab, drawer, modal과 stepper에 keyboard focus 순서와 ARIA 상태를 제공한다.

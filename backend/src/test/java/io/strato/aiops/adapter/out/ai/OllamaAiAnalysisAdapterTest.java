@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OllamaAiAnalysisAdapterTest {
 
+    /** OllamaAiAnalysisAdapterTest의 callsChatClientWithStatelessJsonModeAndValidatesResponse 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void callsChatClientWithStatelessJsonModeAndValidatesResponse() {
         CapturingChatModel chatModel = new CapturingChatModel("""
@@ -76,6 +77,7 @@ class OllamaAiAnalysisAdapterTest {
         assertThat(options.getFormat()).isEqualTo("json");
     }
 
+    /** OllamaAiAnalysisAdapterTest의 rejectsInvalidJsonAnalysisResponses 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsInvalidJsonAnalysisResponses() {
         CapturingChatModel chatModel = new CapturingChatModel("not-json");
@@ -91,6 +93,7 @@ class OllamaAiAnalysisAdapterTest {
                 .hasMessageContaining("not valid JSON");
     }
 
+    /** OllamaAiAnalysisAdapterTest의 repairsJsonMissingOptionalAnalysisSections 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void repairsJsonMissingOptionalAnalysisSections() {
         CapturingChatModel chatModel = new CapturingChatModel("""
@@ -122,6 +125,7 @@ class OllamaAiAnalysisAdapterTest {
         assertThat(result).contains("\"resources\":[]");
     }
 
+    /** OllamaAiAnalysisAdapterTest의 repairsJsonMissingSchemaVersion 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void repairsJsonMissingSchemaVersion() {
         CapturingChatModel chatModel = new CapturingChatModel("""
@@ -147,6 +151,7 @@ class OllamaAiAnalysisAdapterTest {
         assertThat(result).contains("\"summary\":\"cluster posture needs verification\"");
     }
 
+    /** OllamaAiAnalysisAdapterTest의 repairsJsonSectionsWithWrongContainerTypes 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void repairsJsonSectionsWithWrongContainerTypes() {
         CapturingChatModel chatModel = new CapturingChatModel("""
@@ -186,6 +191,7 @@ class OllamaAiAnalysisAdapterTest {
         assertThat(result).contains("\"evidence\":{\"resources\":[],\"events\":[],\"logs\":[]}");
     }
 
+    /** OllamaAiAnalysisAdapterTest의 repairsJsonMissingRequiredSummaryAndSeverity 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void repairsJsonMissingRequiredSummaryAndSeverity() {
         CapturingChatModel chatModel = new CapturingChatModel("""
@@ -217,10 +223,12 @@ class OllamaAiAnalysisAdapterTest {
         private final String responseText;
         private Prompt prompt;
 
+        /** CapturingChatModel 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private CapturingChatModel(String responseText) {
             this.responseText = responseText;
         }
 
+        /** CapturingChatModel의 call 처리에 필요한 업무 로직을 수행한다. */
         @Override
         public ChatResponse call(Prompt prompt) {
             this.prompt = prompt;

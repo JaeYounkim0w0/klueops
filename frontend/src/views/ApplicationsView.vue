@@ -1,551 +1,426 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import {
-  api,
-  type ApplicationResponse,
-  type ApplicationRollbackPreviewResponse,
-  type ApplicationStatusResponse
-} from '@/api/client';
+import ApplicationDeliveryNav from '@/components/application/ApplicationDeliveryNav.vue';
+import DeploymentStartDialog from '@/components/application/DeploymentStartDialog.vue';
+import { api, type ApplicationResponse, type ApplicationReleaseResponse, type ApplicationRuntimeResponse, type ClusterResponse, type LibraryChartResponse, type ReleaseOperationResponse } from '@/api/client';
+import { isApplicationProgressing, useApplicationStatusPolling } from '@/composables/useApplicationStatusPolling';
 import { useJobCenterStore } from '@/stores/jobCenter';
-import { formatElapsedDuration } from '@/utils/time';
+import { useTenancyStore } from '@/stores/tenancy';
 
-type AppOperation = 'sync' | 'restart' | 'rollback';
-
-const route = useRoute();
 const router = useRouter();
-const jobCenter = useJobCenterStore();
-
+const route = useRoute();
+const tenancy = useTenancyStore();
+const jobs = useJobCenterStore();
 const applications = ref<ApplicationResponse[]>([]);
-const statusByApplicationId = ref<Record<string, ApplicationStatusResponse>>({});
+const clusters = ref<ClusterResponse[]>([]);
+const charts = ref<LibraryChartResponse[]>([]);
+const selectedId = ref('');
+const operations = ref<ReleaseOperationResponse[]>([]);
+const runtime = ref<ApplicationRuntimeResponse | null>(null);
+const releases = ref<ApplicationReleaseResponse[]>([]);
 const loading = ref(true);
-const statusLoadingId = ref('');
-const operatingId = ref('');
-const errorMessage = ref('');
-const feedback = ref<{ tone: 'success' | 'error' | 'info'; message: string; detail?: string } | null>(null);
-const selectedApplicationId = ref('');
-const pendingOperation = ref<{ application: ApplicationResponse; operation: AppOperation } | null>(null);
-const confirmInput = ref('');
-const rollbackPreview = ref<ApplicationRollbackPreviewResponse | null>(null);
-const rollbackPreviewLoading = ref(false);
-const rollbackTargetRevision = ref('');
+const startOpen = ref(false);
+const uninstallOpen = ref(false);
+const rollbackOpen = ref(false);
+const rollbackRevision = ref(0);
+const confirmationText = ref('');
+const confirmationInput = ref('');
+const impactSummary = ref('');
+const preservePvcs = ref(true);
+const preserveDns = ref(false);
+const preserveTls = ref(true);
+const cleanupRetry = ref(false);
+const message = ref('');
+const applicationSearch = ref('');
+const statusFilter = ref('ALL');
 
-const selectedApplication = computed(() =>
-  applications.value.find((application) => application.id === selectedApplicationId.value) ?? applications.value[0] ?? null
+const selected = computed(() => applications.value.find((item) => item.id === selectedId.value) ?? null);
+const clusterNames = computed(() => Object.fromEntries(clusters.value.map((cluster) => [cluster.id, cluster.name])));
+const chartVersions = computed(() => Object.fromEntries(charts.value.flatMap((chart) => chart.versions.map((version) => [
+  version.id,
+  {
+    name: chart.name,
+    packageName: chart.packageName,
+    provider: chart.sourceName || (chart.sourceType === 'HELM_REPOSITORY' ? 'Helm Repository' : '직접 업로드'),
+    sourceType: chart.sourceType,
+    chartVersion: version.chartVersion,
+    appVersion: version.appVersion,
+  },
+]))));
+const canUpgrade = computed(() => ['RUNNING', 'RUNNING_ENDPOINT_DEGRADED', 'FAILED'].includes(selected.value?.status || ''));
+const canUninstall = computed(() => !['UNINSTALLED', 'UNINSTALLING'].includes(selected.value?.status || ''));
+const filteredApplications = computed(() => {
+  // 검색과 상태 필터는 이미 Tenant로 제한된 목록에만 적용해 화면 scope를 유지한다.
+  const query = applicationSearch.value.trim().toLowerCase();
+  return applications.value.filter((application) => {
+    const matchesStatus = statusFilter.value === 'ALL' || application.status === statusFilter.value;
+    const searchTarget = [
+      application.name,
+      application.helmReleaseName,
+      application.namespace,
+      application.clusterId ? clusterNames.value[application.clusterId] : '',
+      application.chartVersionId ? chartVersions.value[application.chartVersionId]?.name : application.helmChart,
+    ].filter(Boolean).join(' ').toLowerCase();
+    return matchesStatus && (!query || searchTarget.includes(query));
+  });
+});
+const applicationSummary = computed(() => ({
+  healthy: applications.value.filter((item) => item.status === 'RUNNING').length,
+  progressing: applications.value.filter((item) => isApplicationProgressing(item.status)).length,
+  failed: applications.value.filter((item) => ['FAILED', 'DEGRADED', 'RUNNING_ENDPOINT_DEGRADED'].includes(item.status || '')).length,
+  inactive: applications.value.filter((item) => ['UNINSTALLED', 'UNKNOWN'].includes(item.status || '')).length,
+}));
+
+const statusPolling = useApplicationStatusPolling(
+  refreshApplicationStatuses,
+  () => applications.value.some((item) => isApplicationProgressing(item.status)),
 );
-const selectedApplicationJobDetail = computed(() => {
-  const application = selectedApplication.value;
-  return application ? `${application.namespace || 'default'}/${application.name}` : '';
-});
-const selectedApplicationOperations = computed(() => {
-  const detail = selectedApplicationJobDetail.value;
-  if (!detail) {
-    return [];
-  }
-  return jobCenter.jobs
-    .filter((job) => job.detail === detail && (job.type?.startsWith('APPLICATION_') || job.title.startsWith('Application ')))
-    .slice(0, 5);
-});
-const operationConfirmPhrase = computed(() => {
-  if (!pendingOperation.value) {
-    return '';
-  }
-  if (pendingOperation.value.operation === 'rollback' && rollbackPreview.value?.confirmationText) {
-    return rollbackPreview.value.confirmationText;
-  }
-  const app = pendingOperation.value.application;
-  return `${pendingOperation.value.operation.toUpperCase()} ${app.namespace || 'default'}/${app.name}`;
-});
-const canExecutePendingOperation = computed(() => {
-  const operation = pendingOperation.value;
-  if (!operation || confirmInput.value.trim() !== operationConfirmPhrase.value) {
-    return false;
-  }
-  return operation.operation !== 'rollback' || Boolean(rollbackPreview.value?.executable && rollbackTargetRevision.value);
+
+onMounted(async () => {
+  await load();
+  statusPolling.schedule();
 });
 
-onMounted(loadApplications);
-
-watch(() => route.query.applicationId, (value) => {
-  if (typeof value === 'string' && value) {
-    selectedApplicationId.value = value;
-  }
+watch(() => [tenancy.currentTenantId, tenancy.currentWorkspaceId], ([tenantId, workspaceId], previous) => {
+  // 상단 운영 범위가 바뀌면 이전 Tenant의 Application을 남기지 않고 즉시 다시 조회한다.
+  if (previous && tenantId && workspaceId) void load();
 });
 
-async function loadApplications() {
+/** load 처리 결과를 조회해 반환한다. */
+async function load(): Promise<void> {
   loading.value = true;
-  errorMessage.value = '';
   try {
-    applications.value = await api.listApplications();
-    applyRouteSelection();
-    await refreshVisibleStatuses();
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '애플리케이션 목록을 불러오지 못했습니다.';
-  } finally {
-    loading.value = false;
-  }
+    await tenancy.load();
+    const [clusterItems, applicationItems, chartItems] = await Promise.all([
+      api.listClusters({ tenantId: tenancy.currentTenantId, workspaceId: tenancy.currentWorkspaceId }),
+      api.listTenantApplications(tenancy.currentTenantId),
+      api.listLibraryCharts(tenancy.currentTenantId).catch(() => []),
+    ]);
+    clusters.value = clusterItems;
+    charts.value = chartItems;
+    const allowed = new Set(clusters.value.map((cluster) => cluster.id));
+    // 구형 목록 API의 응답도 선택 Tenant의 Cluster로 한 번 더 제한해 잘못된 화면 노출을 막는다.
+    applications.value = applicationItems
+      .filter((application) => application.clusterId && allowed.has(application.clusterId));
+    const requestedId = typeof route.query.applicationId === 'string' ? route.query.applicationId : '';
+    // 새 배포 직후 deep-link가 가리키는 Application을 우선 선택한다.
+    selectedId.value = applications.value.some((item) => item.id === requestedId)
+      ? requestedId : applications.value[0]?.id || '';
+    await loadOperations();
+    statusPolling.schedule();
+  } catch (error) { message.value = error instanceof Error ? error.message : 'Applications를 불러오지 못했습니다.'; }
+  finally { loading.value = false; }
 }
 
-function applyRouteSelection() {
-  const queryApplicationId = typeof route.query.applicationId === 'string' ? route.query.applicationId : '';
-  if (queryApplicationId && applications.value.some((application) => application.id === queryApplicationId)) {
-    selectedApplicationId.value = queryApplicationId;
-    return;
-  }
-  if (!applications.value.some((application) => application.id === selectedApplicationId.value)) {
-    selectedApplicationId.value = applications.value[0]?.id ?? '';
-  }
-}
-
-async function refreshVisibleStatuses() {
-  await Promise.all(applications.value.slice(0, 8).map((application) => loadApplicationStatus(application.id, false)));
-}
-
-async function loadApplicationStatus(applicationId: string, showFeedback = true) {
-  statusLoadingId.value = applicationId;
+/** refreshApplicationStatuses 처리의 핵심 작업 흐름을 실행한다. */
+async function refreshApplicationStatuses(): Promise<void> {
+  const previousSelected = selected.value;
   try {
-    statusByApplicationId.value[applicationId] = await api.getApplicationStatus(applicationId);
-    if (showFeedback) {
-      feedback.value = { tone: 'success', message: '상태를 갱신했습니다.' };
+    const applicationItems = await api.listTenantApplications(tenancy.currentTenantId);
+    const allowed = new Set(clusters.value.map((cluster) => cluster.id));
+    applications.value = applicationItems
+      .filter((application) => application.clusterId && allowed.has(application.clusterId));
+
+    if (!applications.value.some((item) => item.id === selectedId.value)) {
+      selectedId.value = applications.value[0]?.id || '';
     }
-  } catch (error) {
-    feedback.value = {
-      tone: 'error',
-      message: '상태 조회 실패',
-      detail: error instanceof Error ? error.message : '애플리케이션 상태를 조회하지 못했습니다.'
-    };
-  } finally {
-    statusLoadingId.value = '';
-  }
-}
-
-async function openOperation(application: ApplicationResponse, operation: AppOperation) {
-  pendingOperation.value = { application, operation };
-  confirmInput.value = '';
-  rollbackPreview.value = null;
-  rollbackTargetRevision.value = '';
-  if (operation === 'rollback') {
-    await loadRollbackPreview(application);
-  }
-}
-
-function closeOperation() {
-  pendingOperation.value = null;
-  confirmInput.value = '';
-  rollbackPreview.value = null;
-  rollbackTargetRevision.value = '';
-}
-
-async function loadRollbackPreview(application: ApplicationResponse, targetRevision = rollbackTargetRevision.value) {
-  rollbackPreviewLoading.value = true;
-  try {
-    const preview = await api.previewApplicationRollback(application.id, targetRevision || undefined);
-    rollbackPreview.value = preview;
-    rollbackTargetRevision.value = preview.targetRevision
-      || preview.revisions.find((revision) => !revision.current)?.revision
-      || '';
-    if (preview.confirmationText) {
-      confirmInput.value = '';
+    const currentSelected = selected.value;
+    // 완료·실패 전환 시 Release revision, Runtime, History도 같은 시점에 갱신한다.
+    if (previousSelected?.id !== currentSelected?.id || previousSelected?.status !== currentSelected?.status
+      || previousSelected?.currentReleaseRevision !== currentSelected?.currentReleaseRevision) {
+      await loadOperations();
     }
-  } catch (error) {
-    rollbackPreview.value = null;
-    feedback.value = {
-      tone: 'error',
-      message: '롤백 검토 실패',
-      detail: error instanceof Error ? error.message : '롤백 revision 정보를 불러오지 못했습니다.'
-    };
-  } finally {
-    rollbackPreviewLoading.value = false;
+  } catch {
+    // 일시적인 조회 실패에는 현재 화면을 유지하고 다음 주기에 다시 확인한다.
   }
 }
 
-async function selectRollbackRevision(revision: string) {
-  rollbackTargetRevision.value = revision;
-  confirmInput.value = '';
-  if (pendingOperation.value?.operation === 'rollback') {
-    await loadRollbackPreview(pendingOperation.value.application, revision);
-  }
+/** chartDetails 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+function chartDetails(application: ApplicationResponse | null) {
+  if (!application?.chartVersionId) return null;
+  return chartVersions.value[application.chartVersionId] || null;
 }
 
-async function executePendingOperation() {
-  if (!pendingOperation.value || !canExecutePendingOperation.value) {
-    return;
-  }
-  const { application, operation } = pendingOperation.value;
-  operatingId.value = application.id;
-  feedback.value = { tone: 'info', message: `${operationLabel(operation)} 요청 중` };
-  try {
-    const started = operation === 'sync'
-      ? await api.syncApplication(application.id)
-      : operation === 'restart'
-      ? await api.restartApplication(application.id)
-      : await api.rollbackApplication(application.id, rollbackTargetRevision.value, confirmInput.value.trim());
-    jobCenter.registerJob({
-      jobId: started.jobId,
-      title: `Application ${operationLabel(operation)}`,
-      detail: `${application.namespace || 'default'}/${application.name}`,
-      type: `APPLICATION_${operation.toUpperCase()}`
-    });
-    const job = await jobCenter.waitForJob(started.jobId, {
-      title: `Application ${operationLabel(operation)}`,
-      detail: `${application.namespace || 'default'}/${application.name}`,
-      type: `APPLICATION_${operation.toUpperCase()}`
-    });
-    feedback.value = job.status === 'SUCCEEDED'
-      ? { tone: 'success', message: `${operationLabel(operation)} 완료`, detail: `jobId=${started.jobId}` }
-      : { tone: 'error', message: `${operationLabel(operation)} 차단 또는 실패`, detail: job.errorMessage || job.errorCode || `jobId=${started.jobId}` };
-    await loadApplicationStatus(application.id, false);
-  } catch (error) {
-    feedback.value = {
-      tone: 'error',
-      message: `${operationLabel(operation)} 실패`,
-      detail: error instanceof Error ? error.message : '작업을 실행하지 못했습니다.'
-    };
-  } finally {
-    operatingId.value = '';
-    closeOperation();
-  }
+/** endpointScope 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+function endpointScope(scope?: string): string {
+  if (scope === 'EXTERNAL_DOMAIN') return '외부 도메인';
+  if (scope === 'LOAD_BALANCER') return 'LoadBalancer';
+  if (scope === 'NODE_PORT') return 'NodePort';
+  return '클러스터 내부';
 }
 
-function goToAnalysis(application: ApplicationResponse) {
-  router.push({
-    path: '/analysis',
-    query: {
-      mode: 'application',
-      applicationId: application.id,
-      clusterId: application.clusterId
-    }
-  });
+/** isBrowsableEndpoint 처리 조건의 충족 여부를 판단한다. */
+function isBrowsableEndpoint(endpoint: ApplicationRuntimeResponse['endpoints'][number]): boolean {
+  // TCP 데이터베이스 endpoint와 거부된 Route를 브라우저 URL처럼 오인하지 않게 한다.
+  return /^https?:\/\//.test(endpoint.url) && endpoint.status !== 'DEGRADED';
 }
 
-function goToNamespaceAnalysis(application: ApplicationResponse) {
-  router.push({
-    path: '/analysis',
-    query: {
-      mode: 'namespace',
-      clusterId: application.clusterId,
-      namespace: application.namespace || 'default'
-    }
-  });
+/** selectApplication 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+async function selectApplication(application: ApplicationResponse): Promise<void> {
+  selectedId.value = application.id;
+  await router.replace({ path: '/applications', query: { applicationId: application.id } });
+  await loadOperations();
 }
 
-function selectApplication(application: ApplicationResponse) {
-  selectedApplicationId.value = application.id;
-  router.replace({
-    path: '/applications',
-    query: { applicationId: application.id }
-  });
+/** loadOperations 처리 결과를 조회해 반환한다. */
+async function loadOperations(): Promise<void> {
+  if (!selectedId.value) { operations.value = []; releases.value = []; runtime.value = null; return; }
+  [operations.value, releases.value, runtime.value] = await Promise.all([
+    api.listReleaseOperations(tenancy.currentTenantId, selectedId.value).catch(() => []),
+    api.listApplicationReleases(tenancy.currentTenantId, selectedId.value).catch(() => []),
+    api.getApplicationRuntime(tenancy.currentTenantId, selectedId.value).catch(() => null),
+  ]);
 }
 
-function applicationStatus(application: ApplicationResponse) {
-  return statusByApplicationId.value[application.id]?.status || application.status || 'UNKNOWN';
+/** openRollback 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+async function openRollback(): Promise<void> {
+  if (!selected.value || !releases.value.length) return;
+  rollbackRevision.value = releases.value.find((item) => item.revision !== selected.value?.currentReleaseRevision)?.revision
+    || releases.value[releases.value.length - 1].revision;
+  await refreshRollbackConfirmation();
+  rollbackOpen.value = true;
 }
 
-function statusClass(status: string) {
-  const normalized = status.toUpperCase();
-  if (['RUNNING', 'READY', 'DEPLOYED'].includes(normalized)) {
-    return 'low';
-  }
-  if (['FAILED', 'DEGRADED'].includes(normalized)) {
-    return 'critical';
-  }
-  if (['DEPLOY_REQUESTED', 'UNKNOWN'].includes(normalized)) {
-    return 'medium';
-  }
-  return 'info';
+/** refreshRollbackConfirmation 처리의 핵심 작업 흐름을 실행한다. */
+async function refreshRollbackConfirmation(): Promise<void> {
+  if (!selected.value) return;
+  const preview = await api.getRollbackConfirmation(tenancy.currentTenantId, selected.value.id, rollbackRevision.value);
+  confirmationText.value = preview.confirmationText; impactSummary.value = preview.impactSummary;
+  confirmationInput.value = '';
 }
 
-function operationLabel(operation: AppOperation) {
-  if (operation === 'sync') {
-    return '동기화';
-  }
-  if (operation === 'restart') {
-    return '재시작';
-  }
-  return '롤백';
+/** rollback 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+async function rollback(): Promise<void> {
+  if (!selected.value || confirmationInput.value.trim() !== confirmationText.value) return;
+  const accepted = await api.rollbackHelmApplication(tenancy.currentTenantId, selected.value.id, rollbackRevision.value, confirmationInput.value);
+  const job = { jobId: accepted.jobId, title: 'Helm Application Rollback', detail: `revision ${rollbackRevision.value}`, type: 'HELM_ROLLBACK' };
+  rollbackOpen.value = false;
+  message.value = 'Rollback 작업을 시작했습니다.';
+  void jobs.trackJob(job).then(async (result) => {
+    message.value = result.status === 'SUCCEEDED'
+      ? 'Rollback 작업이 완료되었습니다.'
+      : 'Rollback 작업이 실패했습니다. Job Center에서 원인을 확인하세요.';
+    await load();
+  }).catch(() => { message.value = 'Rollback 작업이 실패했습니다. Job Center에서 원인을 확인하세요.'; });
+  await load();
 }
 
-function rollbackRevisionLabel(revision: string) {
-  if (!rollbackPreview.value) {
-    return revision;
-  }
-  const item = rollbackPreview.value.revisions.find((candidate) => candidate.revision === revision);
-  if (!item) {
-    return revision;
-  }
-  return `Revision ${item.revision}${item.current ? ' · 현재' : ''}`;
+/** statusTone 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+function statusTone(status?: string): string {
+  // Application, Workload, Endpoint 상태를 동일한 시각 언어로 전달한다.
+  if (['RUNNING', 'SUCCEEDED', 'READY', 'HEALTHY'].includes(status || '')) return 'success';
+  if (status === 'FAILED' || status === 'DEGRADED') return 'danger';
+  if (status?.includes('ING') || ['DEPLOY_REQUESTED', 'PENDING', 'APPLIED'].includes(status || '')) return 'progress';
+  return 'neutral';
 }
 
-function stateText(value?: string) {
-  return value && value.trim() ? value : '-';
+/** openUninstall 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+async function openUninstall(retry = false): Promise<void> {
+  if (!selected.value) return;
+  const preview = await api.getUninstallConfirmation(tenancy.currentTenantId, selected.value.id);
+  confirmationText.value = preview.confirmationText;
+  impactSummary.value = preview.impactSummary;
+  confirmationInput.value = '';
+  cleanupRetry.value = retry;
+  uninstallOpen.value = true;
 }
 
-function operationStatusClass(status: string) {
-  if (status === 'SUCCEEDED') {
-    return 'low';
-  }
-  if (['FAILED', 'CANCELED', 'TIMEOUT'].includes(status)) {
-    return 'critical';
-  }
-  return 'info';
+/** uninstall 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+async function uninstall(): Promise<void> {
+  if (!selected.value || confirmationInput.value.trim() !== confirmationText.value) return;
+  const options = { preservePvcs: preservePvcs.value, preserveDns: preserveDns.value, preserveTls: preserveTls.value };
+  const accepted = cleanupRetry.value
+    ? await api.retryApplicationCleanup(tenancy.currentTenantId, selected.value.id, confirmationInput.value, options)
+    : await api.uninstallHelmApplication(tenancy.currentTenantId, selected.value.id, confirmationInput.value, options);
+  const removedName = selected.value.name;
+  const job = { jobId: accepted.jobId, title: 'Helm Application 제거', detail: `${selected.value.namespace}/${removedName}`, type: 'HELM_UNINSTALL' };
+  uninstallOpen.value = false;
+  message.value = 'Uninstall 작업을 시작했습니다. Job Center에서 진행 상태를 확인할 수 있습니다.';
+  void jobs.trackJob(job).then(async (result) => {
+    // 삭제 성공 시 서버에서 Application graph가 사라지므로 목록과 선택 상세를 즉시 동기화한다.
+    message.value = result.status === 'SUCCEEDED'
+      ? `${removedName} Application을 제거했습니다.`
+      : 'Uninstall 작업이 실패했습니다. Job Center에서 원인을 확인하세요.';
+    await load();
+  }).catch(() => { message.value = 'Uninstall 작업이 실패했습니다. Job Center에서 원인을 확인하세요.'; });
+  await load();
 }
 
-function operationTime(value?: string) {
-  return value ? new Date(value).toLocaleString() : '-';
-}
-
-function operationDuration(startedAt?: string, completedAt?: string) {
-  return formatElapsedDuration(startedAt, completedAt);
+/** startUpgrade 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+function startUpgrade(): void {
+  if (!selected.value) return;
+  router.push({ path: '/applications/library', query: {
+    upgradeApplicationId: selected.value.id, clusterId: selected.value.clusterId,
+    namespace: selected.value.namespace, releaseName: selected.value.helmReleaseName || selected.value.name,
+  } });
 }
 </script>
 
 <template>
-  <section class="page">
-    <header class="page-header">
+  <section class="page delivery-page">
+    <header class="delivery-hero">
       <div>
-        <h1>Applications</h1>
-        <p>AI Analysis에서 식별한 애플리케이션의 상태 확인과 제한된 운영 조치를 수행합니다.</p>
+        <span class="delivery-eyebrow">APPLICATION DELIVERY</span>
+        <h1>Deployed Applications</h1>
+        <p>설치가 시작된 순간부터 완료·실패 이후까지 Helm Release의 상태, 접근 경로와 변경 이력을 한곳에서 운영합니다.</p>
       </div>
-      <div class="header-actions">
-        <button class="secondary-button" type="button" @click="loadApplications">
-          <i class="pi pi-refresh"></i>
-          <span>새로고침</span>
-        </button>
-      </div>
+      <button class="primary-button large" type="button" @click="startOpen = true">
+        <i class="pi pi-plus"></i> Application 배포
+      </button>
     </header>
-
-    <div v-if="errorMessage" class="inline-error">
-      <i class="pi pi-exclamation-triangle"></i>
-      <span>{{ errorMessage }}</span>
+    <ApplicationDeliveryNav />
+    <div class="delivery-lifecycle" aria-label="Application 배포 흐름">
+      <span><i class="pi pi-sliders-h"></i> 배포 Wizard</span><i class="pi pi-angle-right"></i>
+      <span><i class="pi pi-clock"></i> Job Center</span><i class="pi pi-angle-right"></i>
+      <span class="active"><i class="pi pi-box"></i> Deployed Applications</span><i class="pi pi-angle-right"></i>
+      <span><i class="pi pi-chart-line"></i> 상세 운영</span>
     </div>
-    <div v-if="feedback" class="operation-feedback" :class="feedback.tone">
-      <i :class="feedback.tone === 'error' ? 'pi pi-exclamation-triangle' : feedback.tone === 'success' ? 'pi pi-check-circle' : 'pi pi-info-circle'"></i>
-      <span>{{ feedback.message }}</span>
-      <button v-if="feedback.detail" type="button" @click="errorMessage = feedback.detail || ''">상세</button>
+    <div v-if="message" class="delivery-notice">{{ message }}</div>
+    <div v-if="loading" class="delivery-empty">
+      <i class="pi pi-spin pi-spinner"></i><p>Application 상태를 불러오는 중입니다.</p>
     </div>
+    <div v-else-if="applications.length" class="applications-workspace">
+      <section class="application-summary" aria-label="Application 상태 요약">
+        <article><span>Healthy</span><strong class="success">{{ applicationSummary.healthy }}</strong><small>정상 실행 중</small></article>
+        <article><span>Progressing</span><strong class="progress">{{ applicationSummary.progressing }}</strong><small>설치·변경 진행 중</small></article>
+        <article><span>Attention</span><strong class="danger">{{ applicationSummary.failed }}</strong><small>확인이 필요한 상태</small></article>
+        <article><span>Inactive</span><strong>{{ applicationSummary.inactive }}</strong><small>삭제됨·확인 불가</small></article>
+      </section>
 
-    <div v-if="loading" class="empty-state">
-      <i class="pi pi-spin pi-spinner"></i>
-      <span>애플리케이션 목록을 불러오는 중입니다.</span>
-    </div>
-    <div v-else-if="applications.length === 0" class="empty-state">
-      <i class="pi pi-box"></i>
-      <span>아직 관리 중인 애플리케이션이 없습니다. 배포 API 또는 AI Analysis 연계를 통해 등록된 애플리케이션이 표시됩니다.</span>
-    </div>
+      <div class="application-operation-layout">
+        <section class="application-list-panel">
+          <header class="application-list-toolbar">
+            <label class="application-search-field">
+              <i class="pi pi-search"></i>
+              <span class="visually-hidden">Application 검색</span>
+              <input v-model="applicationSearch" type="search" placeholder="Application, Cluster, Namespace 검색" />
+            </label>
+            <label class="application-filter-field">
+              <span class="visually-hidden">상태 필터</span>
+              <select v-model="statusFilter">
+                <option value="ALL">모든 상태</option>
+                <option value="RUNNING">Running</option>
+                <option value="DEPLOY_REQUESTED">Deploy requested</option>
+                <option value="FAILED">Failed</option>
+                <option value="DEGRADED">Degraded</option>
+                <option value="UNINSTALLED">Uninstalled</option>
+              </select>
+            </label>
+          </header>
 
-    <div v-else class="application-ops-layout">
-      <aside class="application-list-panel">
-        <button
-          v-for="application in applications"
-          :key="application.id"
-          class="application-list-item"
-          :class="{ active: selectedApplication?.id === application.id }"
-          type="button"
-          @click="selectApplication(application)"
-        >
-          <strong>{{ application.name }}</strong>
-          <span>{{ application.namespace || '-' }} · {{ application.deploymentType || '-' }}</span>
-          <small>{{ application.id }}</small>
-        </button>
-      </aside>
-
-      <section v-if="selectedApplication" class="application-detail-panel">
-        <header>
-          <div>
-            <span class="label">APPLICATION OPERATIONS</span>
-            <h2>{{ selectedApplication.name }}</h2>
-            <p>{{ selectedApplication.namespace || 'default' }} namespace · cluster {{ selectedApplication.clusterId || '-' }}</p>
+          <div class="application-table" role="table" aria-label="배포된 Application">
+            <div class="application-table-header" role="row">
+              <span role="columnheader">Application / Release</span>
+              <span role="columnheader">Cluster / Namespace</span>
+              <span role="columnheader">Helm Chart</span>
+              <span role="columnheader">상태</span>
+              <span role="columnheader">Revision</span>
+            </div>
+            <button
+              v-for="application in filteredApplications"
+              :key="application.id"
+              type="button"
+              class="application-table-row"
+              :class="{ selected: selectedId === application.id }"
+              role="row"
+              @click="selectApplication(application)"
+            >
+              <span class="application-table-title" role="cell">
+                <span class="application-mark"><i class="pi pi-box"></i></span>
+                <span><strong>{{ application.name }}</strong><small>{{ application.helmReleaseName || application.name }}</small></span>
+              </span>
+              <span class="application-table-target" role="cell">
+                <strong>{{ clusterNames[application.clusterId || ''] || application.clusterId }}</strong>
+                <small>{{ application.namespace || 'default' }}</small>
+              </span>
+              <span class="application-table-chart" role="cell">
+                <strong>{{ chartDetails(application)?.name || application.helmChart || '-' }}</strong>
+                <small v-if="chartDetails(application)">Chart {{ chartDetails(application)?.chartVersion }}<template v-if="chartDetails(application)?.appVersion"> · App {{ chartDetails(application)?.appVersion }}</template></small>
+              </span>
+              <span role="cell"><span class="status-dot" :class="statusTone(application.status)">{{ application.status || 'UNKNOWN' }}</span></span>
+              <span role="cell">{{ application.currentReleaseRevision || '-' }}</span>
+            </button>
+            <div v-if="!filteredApplications.length" class="application-filter-empty">
+              <i class="pi pi-filter-slash"></i><span>조건에 맞는 Application이 없습니다.</span>
+            </div>
           </div>
-          <span class="status-pill" :class="statusClass(applicationStatus(selectedApplication))">
-            {{ applicationStatus(selectedApplication) }}
-          </span>
-        </header>
-
-        <div class="application-ops-summary">
-          <article>
-            <span>배포 유형</span>
-            <strong>{{ selectedApplication.deploymentType || '-' }}</strong>
-          </article>
-          <article>
-            <span>최근 동기화</span>
-            <strong>{{ statusByApplicationId[selectedApplication.id]?.lastSyncedAt || '-' }}</strong>
-          </article>
-          <article>
-            <span>동기화 상태</span>
-            <strong>{{ statusByApplicationId[selectedApplication.id]?.lastSyncStatus || '-' }}</strong>
-          </article>
-        </div>
-
-        <div v-if="statusByApplicationId[selectedApplication.id]?.lastSyncError" class="inline-error">
-          <i class="pi pi-exclamation-triangle"></i>
-          <span>{{ statusByApplicationId[selectedApplication.id]?.lastSyncError }}</span>
-        </div>
-
-        <div class="application-action-grid">
-          <button class="secondary-button" type="button" :disabled="statusLoadingId === selectedApplication.id" @click="loadApplicationStatus(selectedApplication.id)">
-            <i :class="statusLoadingId === selectedApplication.id ? 'pi pi-spin pi-spinner' : 'pi pi-heart'"></i>
-            상태 확인
-          </button>
-          <button class="secondary-button" type="button" :disabled="operatingId === selectedApplication.id" @click="openOperation(selectedApplication, 'sync')">
-            <i class="pi pi-refresh"></i>
-            동기화
-          </button>
-          <button class="danger-button" type="button" :disabled="operatingId === selectedApplication.id" @click="openOperation(selectedApplication, 'restart')">
-            <i class="pi pi-replay"></i>
-            재시작
-          </button>
-          <button class="secondary-button" type="button" :disabled="operatingId === selectedApplication.id" @click="openOperation(selectedApplication, 'rollback')">
-            <i class="pi pi-undo"></i>
-            롤백 검토
-          </button>
-          <button class="primary-button" type="button" @click="goToAnalysis(selectedApplication)">
-            <i class="pi pi-chart-line"></i>
-            AI 분석
-          </button>
-        </div>
-
-        <section class="application-guard-panel">
-          <strong>운영 안전 기준</strong>
-          <p>재시작은 Deployment rollout restart로 제한됩니다. 롤백은 revision diff, RBAC, dry-run, rollback guard, 확인 문구를 모두 통과한 경우에만 실행됩니다.</p>
         </section>
 
-        <section class="application-operation-timeline-panel">
+        <aside v-if="selected" class="application-inspector">
           <header>
             <div>
-              <span class="label">ACTION TIMELINE</span>
-              <h3>최근 운영 조치</h3>
-              <p>이 Application에서 실행한 sync/restart/rollback Job과 조치 후 확인 경로입니다.</p>
+              <span class="delivery-eyebrow">SELECTED APPLICATION</span>
+              <h2>{{ selected.name }}</h2>
+              <p>{{ selected.namespace }} · {{ clusterNames[selected.clusterId || ''] }}</p>
             </div>
-            <button class="secondary-button" type="button" @click="goToNamespaceAnalysis(selectedApplication)">
-              <i class="pi pi-chart-line"></i>
-              namespace 재분석
-            </button>
+            <span class="status-dot" :class="statusTone(selected.status)">{{ selected.status }}</span>
           </header>
-          <div v-if="selectedApplicationOperations.length === 0" class="empty-state compact">
-            <i class="pi pi-history"></i>
-            <span>아직 이 화면에서 실행한 운영 조치가 없습니다. 조치 후에는 Job Dock과 이 타임라인에서 결과를 함께 확인하세요.</span>
+          <div class="inspector-actions">
+            <button class="secondary-button" type="button" @click="router.push({ path: '/analysis', query: { mode: 'application', applicationId: selected.id, clusterId: selected.clusterId } })"><i class="pi pi-sparkles"></i> AI Analysis</button>
+            <button class="secondary-button" type="button" :disabled="!canUpgrade" @click="startUpgrade"><i class="pi pi-arrow-up-right"></i> Upgrade</button>
+            <button class="secondary-button" type="button" :disabled="!canUpgrade || releases.filter(item => item.revision !== selected?.currentReleaseRevision).length === 0" @click="openRollback"><i class="pi pi-history"></i> Rollback</button>
+            <button class="danger-ghost-button" type="button" :disabled="!canUninstall" @click="openUninstall()"><i class="pi pi-trash"></i> Uninstall</button>
+            <button v-if="selected.status === 'FAILED'" class="secondary-button" type="button" @click="openUninstall(true)"><i class="pi pi-refresh"></i> Cleanup 재시도</button>
           </div>
-          <div v-else class="application-operation-timeline">
-            <article v-for="job in selectedApplicationOperations" :key="job.jobId">
-              <span class="status-pill" :class="operationStatusClass(job.status)">{{ job.status }}</span>
-              <div>
-                <strong>{{ job.title }}</strong>
-                <p>{{ job.errorMessage || job.detail || job.type }}</p>
-                <small>
-                  job {{ job.jobId.slice(0, 8) }}
-                  · {{ operationTime(job.completedAt || job.startedAt || job.createdAt || job.updatedAt) }}
-                  · {{ operationDuration(job.startedAt, job.completedAt) }}
-                </small>
-              </div>
-              <button class="secondary-button compact-button" type="button" @click="goToAnalysis(selectedApplication)">
-                application 분석
-              </button>
-            </article>
-          </div>
-        </section>
-      </section>
-    </div>
-
-    <div v-if="pendingOperation" class="modal-backdrop" @click.self="closeOperation">
-      <section class="modal-panel operation-modal">
-        <header class="modal-header">
-          <div>
-            <span class="label">{{ operationLabel(pendingOperation.operation) }}</span>
-            <h2>{{ pendingOperation.application.name }}</h2>
-            <p>{{ pendingOperation.application.namespace || 'default' }} namespace</p>
-          </div>
-          <button class="icon-button" type="button" @click="closeOperation">
-            <i class="pi pi-times"></i>
-          </button>
-        </header>
-        <div class="operation-modal-body">
-          <div class="operation-impact-list">
-            <article>
-              <strong>대상</strong>
-              <span>Deployment/{{ pendingOperation.application.name }}</span>
-            </article>
-            <article>
-              <strong>영향</strong>
-              <span>{{ pendingOperation.operation === 'restart' ? 'Pod가 순차 재생성될 수 있습니다.' : pendingOperation.operation === 'sync' ? '상태 조회/동기화 Job을 기록합니다.' : '선택한 revision의 Pod template으로 Deployment를 되돌립니다.' }}</span>
-            </article>
-            <article>
-              <strong>다음 확인</strong>
-              <span>{{ pendingOperation.operation === 'restart' ? '재시작 후 같은 scope를 AI 재분석하고 rollout event를 확인하세요.' : pendingOperation.operation === 'rollback' ? '롤백 후 status, event, 관련 namespace 분석을 다시 확인하세요.' : 'Job Dock에서 동기화 완료 여부를 확인하세요.' }}</span>
-            </article>
-          </div>
-
-          <section v-if="pendingOperation.operation === 'rollback'" class="application-rollback-panel">
-            <header>
-              <div>
-                <span class="label">ROLLBACK PREVIEW</span>
-                <h3>되돌릴 revision을 선택하세요</h3>
-                <p>현재 revision과 대상 revision의 template 상태를 비교한 뒤 guard가 통과한 경우에만 실행할 수 있습니다.</p>
-              </div>
-              <span class="status-pill" :class="rollbackPreview?.executable ? 'low' : 'critical'">
-                {{ rollbackPreview?.executable ? 'Guard 통과' : 'Guard 차단' }}
-              </span>
-            </header>
-            <div v-if="rollbackPreviewLoading" class="empty-state compact">
-              <i class="pi pi-spin pi-spinner"></i>
-              <span>revision 정보를 확인하는 중입니다.</span>
+          <section class="application-package-panel">
+            <h3>배포 Helm 정보</h3>
+            <dl v-if="chartDetails(selected)" class="application-package-grid">
+              <div><dt>Chart</dt><dd>{{ chartDetails(selected)?.name }}</dd></div>
+              <div><dt>Package</dt><dd>{{ chartDetails(selected)?.packageName }}</dd></div>
+              <div><dt>Chart Version</dt><dd>{{ chartDetails(selected)?.chartVersion }}</dd></div>
+              <div><dt>App Version</dt><dd>{{ chartDetails(selected)?.appVersion || '제공되지 않음' }}</dd></div>
+              <div class="wide"><dt>제공사 / Source</dt><dd>{{ chartDetails(selected)?.provider }} · {{ chartDetails(selected)?.sourceType }}</dd></div>
+            </dl>
+            <div v-else class="mini-empty">Chart Library 메타데이터를 찾지 못했습니다. 참조 ID: {{ selected.chartVersionId || selected.helmChart || '-' }}</div>
+          </section>
+          <section v-if="runtime">
+            <h3>Runtime</h3>
+            <div class="runtime-summary">
+              <span><b>{{ runtime.readyPods }} / {{ runtime.totalPods }}</b> Ready Pods</span>
+              <span><b>{{ runtime.restarts }}</b> Restarts</span>
             </div>
-            <div v-else-if="rollbackPreview" class="application-rollback-content">
-              <div class="application-rollback-revisions">
-                <button
-                  v-for="revision in rollbackPreview.revisions"
-                  :key="revision.revision"
-                  type="button"
-                  class="application-rollback-revision"
-                  :class="{ active: rollbackTargetRevision === revision.revision, current: revision.current }"
-                  :disabled="revision.current"
-                  @click="selectRollbackRevision(revision.revision)"
-                >
-                  <strong>{{ rollbackRevisionLabel(revision.revision) }}</strong>
-                  <span>{{ revision.image || 'image 정보 없음' }}</span>
-                  <small>{{ revision.replicaSetName || '-' }}</small>
-                </button>
-              </div>
-              <div class="application-rollback-diff">
-                <article>
-                  <span class="label">Current</span>
-                  <strong>Revision {{ rollbackPreview.currentRevision || '-' }}</strong>
-                  <code>{{ stateText(rollbackPreview.currentState) }}</code>
-                </article>
-                <article>
-                  <span class="label">Target</span>
-                  <strong>Revision {{ rollbackPreview.targetRevision || rollbackTargetRevision || '-' }}</strong>
-                  <code>{{ stateText(rollbackPreview.targetState) }}</code>
-                </article>
-              </div>
-              <div class="application-rollback-guard" :class="{ blocked: !rollbackPreview.executable }">
-                <i :class="rollbackPreview.executable ? 'pi pi-shield' : 'pi pi-exclamation-triangle'"></i>
-                <div>
-                  <strong>{{ rollbackPreview.executable ? 'rollback guard가 통과했습니다.' : 'rollback guard가 실행을 차단했습니다.' }}</strong>
-                  <p>{{ rollbackPreview.reason || '대상 revision과 권한을 확인하세요.' }}</p>
+            <div class="runtime-list">
+              <article v-for="workload in runtime.workloads" :key="`${workload.kind}/${workload.name}`">
+                <strong>{{ workload.kind }}/{{ workload.name }}</strong>
+                <span class="status-dot" :class="statusTone(workload.status)">{{ workload.ready }}/{{ workload.desired }} · {{ workload.status }}</span>
+              </article>
+              <article v-for="endpoint in runtime.endpoints" :key="endpoint.url" class="runtime-endpoint">
+                <div class="runtime-endpoint-heading"><strong>{{ endpoint.type }} · {{ endpoint.name }}</strong><span class="status-dot" :class="statusTone(endpoint.status)">{{ endpoint.status }}</span></div>
+                <div class="runtime-endpoint-address">
+                  <span><small>접근 범위</small><b>{{ endpointScope(endpoint.accessScope) }}</b></span>
+                  <span><small>IP / Host</small><b>{{ endpoint.address || '할당 대기' }}</b></span>
+                  <span><small>Service Port</small><b>{{ endpoint.port || '-' }}</b></span>
+                  <span v-if="endpoint.targetPort"><small>Target Port</small><b>{{ endpoint.targetPort }}</b></span>
+                  <span v-if="endpoint.nodePort"><small>Node Port</small><b>{{ endpoint.nodePort }}</b></span>
                 </div>
-              </div>
+                <a v-if="isBrowsableEndpoint(endpoint)" :href="endpoint.url" target="_blank" rel="noreferrer">{{ endpoint.url }} <i class="pi pi-external-link"></i></a>
+                <span v-else class="runtime-endpoint-value">{{ endpoint.url }}<small>{{ endpoint.status === 'DEGRADED' ? '사용할 수 없는 접근 경로' : '전용 Client 또는 port-forward로 접속' }}</small></span>
+              </article>
             </div>
           </section>
-
-          <label class="form-field">
-            <span>확인 문구</span>
-            <input v-model="confirmInput" :placeholder="operationConfirmPhrase" />
-            <small>{{ operationConfirmPhrase }}</small>
-          </label>
-          <div class="modal-actions">
-            <button class="secondary-button" type="button" @click="closeOperation">취소</button>
-            <button
-              class="danger-button"
-              type="button"
-              :disabled="!canExecutePendingOperation || Boolean(operatingId)"
-              @click="executePendingOperation"
-            >
-              <i :class="operatingId ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i>
-              실행
-            </button>
-          </div>
-        </div>
-      </section>
+          <section>
+            <h3>최근 작업</h3>
+            <div v-if="operations.length" class="operation-timeline">
+              <article v-for="operation in operations" :key="operation.id">
+                <span class="timeline-dot" :class="statusTone(operation.status)"></span>
+                <div><strong>{{ operation.type }} · {{ operation.status }}</strong><p>{{ operation.outputSummary || operation.errorMessage || 'Job Center에서 실행 중' }}</p><small>{{ new Date(operation.requestedAt).toLocaleString() }} · {{ operation.requestedBy }}</small></div>
+              </article>
+            </div>
+            <div v-else class="mini-empty">기록된 Helm 작업이 없습니다.</div>
+          </section>
+        </aside>
+      </div>
+    </div>
+    <div v-else class="delivery-empty">
+      <i class="pi pi-box"></i><h2>배포된 Application이 없습니다</h2><p>보유한 Chart Library에서 시작하거나 Artifact Hub에서 Chart를 찾아보세요.</p><button class="primary-button" type="button" @click="startOpen = true">첫 Application 배포</button>
+    </div>
+    <DeploymentStartDialog :open="startOpen" @close="startOpen = false" />
+    <div v-if="uninstallOpen" class="delivery-modal-backdrop" @click.self="uninstallOpen = false">
+      <section class="delivery-modal narrow" role="dialog" aria-modal="true"><header><div><span class="delivery-eyebrow danger">{{ cleanupRetry ? 'CLEANUP RETRY' : 'DESTRUCTIVE ACTION' }}</span><h2>{{ selected?.name }} {{ cleanupRetry ? 'Cleanup 재시도' : 'Uninstall' }}</h2><p>{{ impactSummary }}</p></div><button class="icon-button" type="button" aria-label="닫기" @click="uninstallOpen = false"><i class="pi pi-times"></i></button></header><div class="uninstall-policy"><label><input v-model="preservePvcs" type="checkbox" /> PVC 보존</label><label><input v-model="preserveDns" type="checkbox" /> KlueOps DNS 경로 보존</label><label><input v-model="preserveTls" type="checkbox" /> TLS Secret 보존</label><small>보존하지 않은 release label 범위의 자원만 정리합니다. Namespace와 Chart Library는 항상 유지합니다.</small></div><label class="exact-confirm-field">정확 확인 문구<code>{{ confirmationText }}</code><input v-model="confirmationInput" autocomplete="off" /></label><footer><button class="secondary-button" type="button" @click="uninstallOpen = false">취소</button><button class="danger-button" type="button" :disabled="confirmationInput.trim() !== confirmationText" @click="uninstall">{{ cleanupRetry ? 'Cleanup 재시도' : 'Uninstall 시작' }}</button></footer></section>
+    </div>
+    <div v-if="rollbackOpen" class="delivery-modal-backdrop" @click.self="rollbackOpen = false">
+      <section class="delivery-modal narrow"><header><div><span class="delivery-eyebrow">CONTROLLED ROLLBACK</span><h2>{{ selected?.name }} Rollback</h2><p>{{ impactSummary }}</p></div><button class="icon-button" type="button" @click="rollbackOpen = false"><i class="pi pi-times"></i></button></header><label class="delivery-field">Target revision<select v-model.number="rollbackRevision" @change="refreshRollbackConfirmation"><option v-for="release in releases" :key="release.id" :value="release.revision">Revision {{ release.revision }} · {{ release.status }}</option></select></label><label class="exact-confirm-field">정확 확인 문구<code>{{ confirmationText }}</code><input v-model="confirmationInput" autocomplete="off" /></label><footer><button class="secondary-button" type="button" @click="rollbackOpen = false">취소</button><button class="danger-button" type="button" :disabled="confirmationInput.trim() !== confirmationText" @click="rollback">Rollback 시작</button></footer></section>
     </div>
   </section>
 </template>

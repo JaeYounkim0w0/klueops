@@ -25,6 +25,7 @@ const openCount = computed(() => incidents.value.filter((item) => item.state !==
 const criticalCount = computed(() => incidents.value.filter((item) => item.state !== 'RESOLVED' && ['CRITICAL', 'HIGH'].includes(item.severity)).length);
 const recurringCount = computed(() => incidents.value.filter((item) => item.occurrenceCount > 1 || item.reopenCount > 0).length);
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load() {
   loading.value = true;
   error.value = '';
@@ -42,6 +43,7 @@ async function load() {
   }
 }
 
+/** reconcile 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function reconcile() {
   reconciling.value = true;
   error.value = '';
@@ -55,6 +57,7 @@ async function reconcile() {
   }
 }
 
+/** createIncident 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function createIncident() {
   creating.value = true;
   error.value = '';
@@ -66,6 +69,7 @@ async function createIncident() {
   finally { creating.value = false; }
 }
 
+/** severityClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function severityClass(value?: string) {
   return String(value ?? '').toLowerCase();
 }

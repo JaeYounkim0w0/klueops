@@ -16,6 +16,7 @@ public record AiChatContextReferenceResponse(
         String label,
         Instant createdAt
 ) {
+    /** AiChatContextReferenceResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static AiChatContextReferenceResponse from(AiChatContextReference reference) {
         return new AiChatContextReferenceResponse(reference.id(), reference.messageId(), reference.referenceType(),
                 reference.referenceId(), reference.label(), reference.createdAt());

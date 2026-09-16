@@ -40,9 +40,11 @@ class AiChatMessageEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    /** AiChatMessageEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected AiChatMessageEntity() {
     }
 
+    /** AiChatMessageEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private AiChatMessageEntity(UUID id, UUID conversationId, AiChatRole role, String content, String model,
                                 String promptVersion, String finishReason, Long latencyMs, Long firstTokenLatencyMs,
                                 Long totalLatencyMs, Integer contextChars, String errorCode,
@@ -64,6 +66,7 @@ class AiChatMessageEntity {
         this.createdAt = createdAt;
     }
 
+    /** AiChatMessageEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static AiChatMessageEntity fromDomain(AiChatMessage message) {
         return new AiChatMessageEntity(message.id(), message.conversationId(), message.role(), message.content(),
                 message.model(), message.promptVersion(), message.finishReason(), message.latencyMs(),
@@ -71,6 +74,7 @@ class AiChatMessageEntity {
                 message.errorCode(), message.errorMessage(), message.createdBy(), message.createdAt());
     }
 
+    /** AiChatMessageEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     AiChatMessage toDomain() {
         return new AiChatMessage(id, conversationId, role, content, model, promptVersion, finishReason,
                 latencyMs, firstTokenLatencyMs, totalLatencyMs, contextChars, errorCode, errorMessage,

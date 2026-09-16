@@ -16,6 +16,7 @@ const visibleRuns = computed(() => state.value === 'ALL'
   ? runs.value
   : runs.value.filter((run) => run.state === state.value));
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load() {
   loading.value = true;
   error.value = '';
@@ -29,6 +30,7 @@ async function load() {
   }
 }
 
+/** stateClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function stateClass(value: string) {
   if (value === 'PASSED') return 'healthy';
   if (value === 'FAILED' || value === 'BLOCKED') return 'critical';

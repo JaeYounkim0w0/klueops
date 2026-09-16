@@ -58,6 +58,7 @@ public record RegisterClusterRequest(
         @Valid
         SyncSettingsRequest syncSettings
 ) {
+    /** RegisterClusterRequest 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public RegisterClusterRequest(String name, String description, ClusterEnvironment environment,
                                   ClusterProvider provider, String region, ClusterCredentialType credentialType,
                                   String kubeconfig, ServiceAccountCredentialRequest serviceAccount,
@@ -66,6 +67,7 @@ public record RegisterClusterRequest(
                 serviceAccount, namespaceAccess, syncSettings);
     }
 
+    /** RegisterClusterRequest의 toCommand 처리 데이터를 필요한 표현으로 변환한다. */
     public RegisterClusterCommand toCommand() {
         return new RegisterClusterCommand(
                 tenantId,

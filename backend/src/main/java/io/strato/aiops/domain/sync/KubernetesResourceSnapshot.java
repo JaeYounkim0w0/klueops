@@ -18,6 +18,7 @@ public record KubernetesResourceSnapshot(
         boolean truncated,
         Instant collectedAt
 ) {
+    /** KubernetesResourceSnapshot 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public KubernetesResourceSnapshot {
         Objects.requireNonNull(id, "id must not be null");
         Objects.requireNonNull(clusterId, "clusterId must not be null");
@@ -28,6 +29,7 @@ public record KubernetesResourceSnapshot(
         Objects.requireNonNull(collectedAt, "collectedAt must not be null");
     }
 
+    /** KubernetesResourceSnapshot의 collected 처리의 핵심 작업 흐름을 실행한다. */
     public static KubernetesResourceSnapshot collected(UUID clusterId, UUID syncJobId, CollectedResource resource) {
         return new KubernetesResourceSnapshot(
                 UUID.randomUUID(),

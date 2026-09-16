@@ -42,46 +42,54 @@ public class OperationsReadinessController {
 
     private final OperationsReadinessService service;
 
+    /** OperationsReadinessController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationsReadinessController(OperationsReadinessService service) {
         this.service = service;
     }
 
+    /** OperationsReadinessController의 fleetQueue 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get the cross-cluster operations priority queue")
     @GetMapping("/fleet-queue")
     public FleetQueue fleetQueue() {
         return service.fleetQueue();
     }
 
+    /** OperationsReadinessController의 shiftBriefing 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get an evidence-based operator shift briefing")
     @GetMapping("/shift-briefing")
     public ShiftBriefing shiftBriefing() {
         return service.shiftBriefing();
     }
 
+    /** OperationsReadinessController의 validationScenarios 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List safe virtual AIOps validation scenarios")
     @GetMapping("/validation-lab/scenarios")
     public List<ValidationScenario> validationScenarios() {
         return service.scenarios();
     }
 
+    /** OperationsReadinessController의 runValidation 처리의 핵심 작업 흐름을 실행한다. */
     @Operation(summary = "Execute the safe virtual AIOps validation suite")
     @PostMapping("/validation-lab/runs")
     public ValidationLabRun runValidation(HttpServletRequest request) {
         return service.runValidation(actor(request));
     }
 
+    /** OperationsReadinessController의 liveValidationPolicy 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get guarded live validation safety policy")
     @GetMapping("/validation-lab/live/policy")
     public LiveValidationPolicy liveValidationPolicy() {
         return service.liveValidationPolicy();
     }
 
+    /** OperationsReadinessController의 previewLiveValidation 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Preview live validation RBAC and safety checks without changing Kubernetes")
     @PostMapping("/validation-lab/live/preview")
     public LiveValidationPreview previewLiveValidation(@Valid @RequestBody LiveValidationPreviewRequest body) {
         return service.previewLiveValidation(body.clusterId(), body.scenarioId(), body.ttlSeconds());
     }
 
+    /** OperationsReadinessController의 runLiveValidation 처리의 핵심 작업 흐름을 실행한다. */
     @Operation(summary = "Run an isolated, TTL-bound live validation fixture")
     @PostMapping("/validation-lab/live/runs")
     @ResponseStatus(HttpStatus.CREATED)
@@ -91,12 +99,14 @@ public class OperationsReadinessController {
                 body.confirmation(), actor(request), requestId(request));
     }
 
+    /** OperationsReadinessController의 cleanupLiveValidation 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Delete only the namespace owned by a live validation run")
     @DeleteMapping("/validation-lab/live/runs/{runId}")
     public LiveValidationRun cleanupLiveValidation(@PathVariable UUID runId, HttpServletRequest request) {
         return service.cleanupLiveValidation(runId, actor(request), requestId(request));
     }
 
+    /** OperationsReadinessController의 runBenchmark 처리의 핵심 작업 흐름을 실행한다. */
     @Operation(summary = "Execute analysis benchmark and produce a release recommendation")
     @PostMapping("/validation-lab/benchmarks")
     @ResponseStatus(HttpStatus.CREATED)
@@ -104,6 +114,7 @@ public class OperationsReadinessController {
         return service.runBenchmark(actor(request));
     }
 
+    /** OperationsReadinessController의 latestBenchmark 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get the latest analysis benchmark")
     @GetMapping("/validation-lab/benchmarks/latest")
     public ResponseEntity<AnalysisBenchmark> latestBenchmark() {
@@ -111,12 +122,14 @@ public class OperationsReadinessController {
         return benchmark == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(benchmark);
     }
 
+    /** OperationsReadinessController의 remediationLearning 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get outcome-based remediation recommendations for an incident")
     @GetMapping("/incidents/{incidentId}/remediation-learning")
     public RemediationLearning remediationLearning(@PathVariable UUID incidentId) {
         return service.remediationLearning(incidentId);
     }
 
+    /** OperationsReadinessController의 reliabilityTrend 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get event-based fleet reliability trend without utilization claims")
     @GetMapping("/reliability-trend")
     public ReliabilityTrend reliabilityTrend(
@@ -126,10 +139,12 @@ public class OperationsReadinessController {
         return service.reliabilityTrend(clusterId, namespace, days);
     }
 
+    /** OperationsReadinessController의 actor 처리에 필요한 업무 로직을 수행한다. */
     private String actor(HttpServletRequest request) {
         return request.getUserPrincipal() == null ? "anonymous" : request.getUserPrincipal().getName();
     }
 
+    /** OperationsReadinessController의 requestId 처리에 필요한 업무 로직을 수행한다. */
     private String requestId(HttpServletRequest request) {
         return String.valueOf(request.getAttribute(RequestAttributes.REQUEST_ID));
     }

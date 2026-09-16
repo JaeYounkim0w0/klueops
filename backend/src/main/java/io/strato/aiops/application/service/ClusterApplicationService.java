@@ -61,6 +61,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
     private final TenantRepositoryPort tenantRepositoryPort;
     private final WorkspaceRepositoryPort workspaceRepositoryPort;
 
+    /** ClusterApplicationService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ClusterApplicationService(
             ClusterRepositoryPort clusterRepositoryPort,
             ClusterDataDeletionPort clusterDataDeletionPort,
@@ -87,12 +88,14 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         this.workspaceRepositoryPort = workspaceRepositoryPort;
     }
 
+    /** ClusterApplicationService의 listClusters 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public List<Cluster> listClusters() {
         return clusterRepositoryPort.findAll();
     }
 
+    /** ClusterApplicationService의 listClusters 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public List<Cluster> listClusters(UUID tenantId, UUID workspaceId) {
@@ -102,15 +105,18 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         return clusterRepositoryPort.findAll(tenantId, workspaceId);
     }
 
+    /** ClusterApplicationService의 getCluster 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public Cluster getCluster(UUID clusterId) {
         return findCluster(clusterId);
     }
 
+    /** ClusterApplicationService의 getClusterCredential 처리 결과를 조회해 반환한다. */
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public ClusterCredentialResult getClusterCredential(UUID clusterId, boolean reveal, String actor, String requestId) {
+        // 원문 조회 시 감사 로그를 같은 트랜잭션에 확정해야 하므로 read-only 트랜잭션을 사용하지 않는다.
         Cluster cluster = findCluster(clusterId);
         EncryptedClusterCredential credential = clusterCredentialRepositoryPort.findByClusterId(cluster.id())
                 .orElseThrow(() -> new NoSuchElementException("Cluster credential not found: " + clusterId));
@@ -139,6 +145,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         );
     }
 
+    /** ClusterApplicationService의 listNamespaces 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public List<KubernetesNamespaceSummary> listNamespaces(UUID clusterId) {
@@ -148,6 +155,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
                 .toList();
     }
 
+    /** ClusterApplicationService의 listNodes 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public List<KubernetesNodeSummary> listNodes(UUID clusterId) {
@@ -163,6 +171,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
                 .toList();
     }
 
+    /** ClusterApplicationService의 getResourceManifest 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public KubernetesResourceManifestResult getResourceManifest(UUID clusterId, String namespace, String resourceType, String resourceName) {
@@ -190,6 +199,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         }
     }
 
+    /** ClusterApplicationService의 registerCluster 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     @Transactional
     public Cluster registerCluster(RegisterClusterCommand command, String actor, String requestId) {
@@ -237,6 +247,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         return savedCluster;
     }
 
+    /** ClusterApplicationService의 testClusterConnection 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public ClusterConnectionTestResult testClusterConnection(UUID clusterId, String actor, String requestId) {
@@ -262,6 +273,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         );
     }
 
+    /** ClusterApplicationService의 deleteCluster 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Override
     @Transactional
     public void deleteCluster(UUID clusterId, String actor, String requestId) {
@@ -278,11 +290,13 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         clusterDataDeletionPort.deleteClusterData(cluster.id());
     }
 
+    /** ClusterApplicationService의 findCluster 처리 결과를 조회해 반환한다. */
     private Cluster findCluster(UUID clusterId) {
         return clusterRepositoryPort.findById(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster not found: " + clusterId));
     }
 
+    /** ClusterApplicationService의 connectionCredential 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesConnectionCredential connectionCredential(UUID clusterId) {
         EncryptedClusterCredential credential = clusterCredentialRepositoryPort.findByClusterId(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster credential not found: " + clusterId));
@@ -296,6 +310,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         return new KubernetesConnectionCredential(credential.credentialType(), plaintextPayload);
     }
 
+    /** ClusterApplicationService의 validate 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void validate(RegisterClusterCommand command) {
         if (command.credentialType() == ClusterCredentialType.KUBECONFIG) {
             if (command.kubeconfig() == null || command.kubeconfig().isBlank()) {
@@ -312,6 +327,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         }
     }
 
+    /** ClusterApplicationService의 validatePlacement 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void validatePlacement(UUID tenantId, UUID workspaceId) {
         var tenant = tenantRepositoryPort.findById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
@@ -325,6 +341,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         }
     }
 
+    /** ClusterApplicationService의 credentialPayload 처리에 필요한 업무 로직을 수행한다. */
     private String credentialPayload(RegisterClusterCommand command) {
         if (command.credentialType() == ClusterCredentialType.KUBECONFIG) {
             return command.kubeconfig();
@@ -344,6 +361,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
         );
     }
 
+    /** ClusterApplicationService의 escapeJson 처리에 필요한 업무 로직을 수행한다. */
     private String escapeJson(String value) {
         return value == null ? "" : value
                 .replace("\\", "\\\\")
@@ -352,6 +370,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
                 .replace("\r", "\\r");
     }
 
+    /** ClusterApplicationService의 maskCredentialPayload 처리에 필요한 업무 로직을 수행한다. */
     private String maskCredentialPayload(String payload) {
         if (payload == null || payload.isBlank()) {
             return "";
@@ -365,6 +384,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
                 .replaceAll("(?i)(\"caCertificate\"\\s*:\\s*\").*?(\")", "$1***$2");
     }
 
+    /** ClusterApplicationService의 fallbackResourceManifest 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesResourceManifestResult fallbackResourceManifest(
             UUID clusterId,
             String namespace,
@@ -390,6 +410,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
                 .orElseThrow(() -> exception);
     }
 
+    /** ClusterApplicationService의 fallbackManifestBody 처리에 필요한 업무 로직을 수행한다. */
     private String fallbackManifestBody(KubernetesResourceSnapshot snapshot) {
         if ("Secret".equalsIgnoreCase(snapshot.resourceType())) {
             return """
@@ -413,6 +434,7 @@ public class ClusterApplicationService implements RegisterClusterUseCase, TestCl
                 """.formatted(snapshot.summaryJson());
     }
 
+    /** ClusterApplicationService의 conciseExceptionMessage 처리에 필요한 업무 로직을 수행한다. */
     private String conciseExceptionMessage(RuntimeException exception) {
         Throwable root = exception;
         while (root.getCause() != null) {

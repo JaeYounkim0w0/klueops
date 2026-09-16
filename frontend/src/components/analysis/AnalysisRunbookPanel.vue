@@ -18,10 +18,12 @@ const emit = defineEmits<{
 
 const visibleActions = computed(() => props.actions.filter((action) => !isDestructive(action)));
 
+/** isDestructive 처리 조건의 충족 여부를 판단한다. */
 function isDestructive(action: AnalysisResult) {
   return Boolean(action.destructive) || textValue(action.commandType, '').toLowerCase() === 'destructive';
 }
 
+/** textValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function textValue(value: unknown, fallback = '') {
   return value === null || value === undefined ? fallback : String(value);
 }

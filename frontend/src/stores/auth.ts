@@ -38,6 +38,15 @@ export interface AuthSession {
   session: BrowserSessionInfo | null;
 }
 
+export interface EffectiveAccess {
+  platformRole?: string;
+  tenantId: string;
+  workspaceId?: string;
+  effectiveCapabilities: string[];
+  enabledFeatures: string[];
+  navigation: Record<string, boolean>;
+}
+
 const ANONYMOUS: AuthSession = {
   authenticated: false,
   localDevelopment: false,
@@ -53,9 +62,11 @@ export const useAuthStore = defineStore('auth', () => {
   const session = ref<AuthSession>({ ...ANONYMOUS });
   const loaded = ref(false);
   const loading = ref(false);
+  const effectiveAccess = ref<EffectiveAccess | null>(null);
   const authenticated = computed(() => session.value.authenticated);
   const user = computed(() => session.value.user);
 
+  /** load 처리 결과를 조회해 반환한다. */
   async function load(force = false): Promise<AuthSession> {
     if (loaded.value && !force) return session.value;
     loading.value = true;
@@ -68,21 +79,40 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /** hasCapability 처리 조건의 충족 여부를 판단한다. */
   function hasCapability(capability: string): boolean {
-    return session.value.capabilities.includes(capability);
+    const capabilities = effectiveAccess.value?.effectiveCapabilities ?? session.value.capabilities;
+    return capabilities.includes(capability);
   }
 
+  /** canNavigate 처리 조건의 충족 여부를 판단한다. */
+  function canNavigate(area: string): boolean {
+    // Tenant 정책이 로드되기 전에는 기존 capability 판정을 유지하고, 로드 후에는 서버 결정을 따른다.
+    return effectiveAccess.value?.navigation[area] ?? true;
+  }
+
+  /** loadEffectiveAccess 처리 결과를 조회해 반환한다. */
+  async function loadEffectiveAccess(tenantId: string, workspaceId?: string): Promise<void> {
+    if (!tenantId) { effectiveAccess.value = null; return; }
+    const query = new URLSearchParams({ tenantId });
+    if (workspaceId) query.set('workspaceId', workspaceId);
+    effectiveAccess.value = await requestJson<EffectiveAccess>(`/api/me/access?${query}`);
+  }
+
+  /** beginLogin 처리에 필요한 화면 또는 업무 로직을 수행한다. */
   function beginLogin(returnTo = '/'): void {
     if (typeof window === 'undefined') return;
     window.sessionStorage.setItem('aiops.auth.returnTo', normalizeReturnTo(returnTo) ?? '/');
     window.location.assign(session.value.loginUrl || ANONYMOUS.loginUrl);
   }
 
+  /** authenticatedReturnTo 처리에 필요한 화면 또는 업무 로직을 수행한다. */
   async function authenticatedReturnTo(returnTo = '/'): Promise<string | null> {
     const current = await load(true);
     return current.authenticated ? normalizeReturnTo(returnTo) ?? '/' : null;
   }
 
+  /** continueLogin 처리에 필요한 화면 또는 업무 로직을 수행한다. */
   async function continueLogin(returnTo = '/'): Promise<string | null> {
     const destination = await authenticatedReturnTo(returnTo);
     if (destination) return destination;
@@ -90,6 +120,7 @@ export const useAuthStore = defineStore('auth', () => {
     return null;
   }
 
+  /** consumeReturnTo 처리에 필요한 화면 또는 업무 로직을 수행한다. */
   function consumeReturnTo(): string | null {
     if (typeof window === 'undefined') return null;
     const returnTo = window.sessionStorage.getItem('aiops.auth.returnTo');
@@ -97,12 +128,14 @@ export const useAuthStore = defineStore('auth', () => {
     return returnTo ? normalizeReturnTo(returnTo) : null;
   }
 
+  /** extendSession 처리에 필요한 화면 또는 업무 로직을 수행한다. */
   async function extendSession(): Promise<BrowserSessionInfo> {
     const extended = await requestJson<BrowserSessionInfo>('/api/auth/session/extend', { method: 'POST' });
     session.value = { ...session.value, session: extended };
     return extended;
   }
 
+  /** logout 처리에 필요한 화면 또는 업무 로직을 수행한다. */
   function logout(): void {
     if (typeof document === 'undefined') return;
     const form = document.createElement('form');
@@ -124,10 +157,13 @@ export const useAuthStore = defineStore('auth', () => {
     session,
     loaded,
     loading,
+    effectiveAccess,
     authenticated,
     user,
     load,
     hasCapability,
+    canNavigate,
+    loadEffectiveAccess,
     beginLogin,
     authenticatedReturnTo,
     continueLogin,
@@ -137,6 +173,7 @@ export const useAuthStore = defineStore('auth', () => {
   };
 });
 
+/** classifyLoginFailure 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function classifyLoginFailure(error?: unknown, reason?: unknown): LoginFailure {
   if (reason === 'identity-provider-unavailable' || reason === 'oidc-login-failed') {
     return 'identity-provider';
@@ -150,6 +187,7 @@ export function classifyLoginFailure(error?: unknown, reason?: unknown): LoginFa
   return error || reason ? 'session' : null;
 }
 
+/** sessionExpiredRedirect 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function sessionExpiredRedirect(currentPath: string, publicRoute: boolean): {
   name: 'login';
   query: { returnTo: string; reason: 'session-expired' };
@@ -164,10 +202,12 @@ export function sessionExpiredRedirect(currentPath: string, publicRoute: boolean
   };
 }
 
+/** normalizeReturnTo 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function normalizeReturnTo(returnTo: string): string | null {
   return returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : null;
 }
 
+/** normalizeSameOriginPath 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function normalizeSameOriginPath(path: string): string | null {
   return path.startsWith('/') && !path.startsWith('//') ? path : null;
 }

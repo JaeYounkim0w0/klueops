@@ -33,9 +33,11 @@ class AuditLogEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    /** AuditLogEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected AuditLogEntity() {
     }
 
+    /** AuditLogEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private AuditLogEntity(UUID id, String action, String targetType, String targetId, String actor, String requestId, Instant createdAt) {
         this.id = id;
         this.action = action;
@@ -46,6 +48,7 @@ class AuditLogEntity {
         this.createdAt = createdAt;
     }
 
+    /** AuditLogEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static AuditLogEntity fromDomain(AuditLog auditLog) {
         return new AuditLogEntity(
                 auditLog.id(),
@@ -58,6 +61,7 @@ class AuditLogEntity {
         );
     }
 
+    /** AuditLogEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     AuditLog toDomain() {
         return new AuditLog(id, action, targetType, targetId, actor, requestId, createdAt);
     }

@@ -9,6 +9,7 @@ const { t } = useI18n();
 
 onMounted(() => void tenancy.load());
 
+/** changeTenant 처리 대상의 상태를 갱신한다. */
 async function changeTenant(event: Event): Promise<void> {
   await tenancy.selectTenant((event.target as HTMLSelectElement).value);
 }

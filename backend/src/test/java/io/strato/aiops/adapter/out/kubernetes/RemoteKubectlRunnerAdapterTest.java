@@ -16,6 +16,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class RemoteKubectlRunnerAdapterTest {
+    /** RemoteKubectlRunnerAdapterTest의 streamsNdjsonAndAuthenticatesTheInternalRequest 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void streamsNdjsonAndAuthenticatesTheInternalRequest() throws Exception {
         try (MockWebServer server = new MockWebServer()) {

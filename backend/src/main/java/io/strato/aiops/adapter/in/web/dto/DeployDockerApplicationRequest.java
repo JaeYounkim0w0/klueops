@@ -14,6 +14,7 @@ public record DeployDockerApplicationRequest(
         @NotBlank String name,
         @NotBlank String image
 ) {
+    /** DeployDockerApplicationRequest의 toCommand 처리 데이터를 필요한 표현으로 변환한다. */
     public DeployDockerApplicationCommand toCommand() {
         return new DeployDockerApplicationCommand(clusterId, namespace, name, image);
     }

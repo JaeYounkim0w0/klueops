@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const root = new URL('../', import.meta.url);
-const read = (path: string) => readFileSync(new URL(path, root), 'utf8');
+const read = /** read 처리 결과를 조회해 반환한다. */ (path: string) => readFileSync(new URL(path, root), 'utf8');
 
 describe('operator workspace contracts', () => {
   it('provides keyboard-accessible cross-resource search', () => {

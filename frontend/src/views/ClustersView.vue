@@ -89,6 +89,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleEscape);
 });
 
+/** handleEscape 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
 function handleEscape(event: KeyboardEvent) {
   if (event.key !== 'Escape') return;
   showRegistration.value = false;
@@ -96,6 +97,7 @@ function handleEscape(event: KeyboardEvent) {
   closeActionMenu();
 }
 
+/** loadClusters 처리 결과를 조회해 반환한다. */
 async function loadClusters() {
   closeActionMenu();
   loading.value = true;
@@ -112,6 +114,7 @@ async function loadClusters() {
   }
 }
 
+/** registerCluster 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function registerCluster() {
   if (!canSubmit.value) {
     formError.value = '필수 입력값을 확인해주세요.';
@@ -136,6 +139,7 @@ async function registerCluster() {
   }
 }
 
+/** importKubeconfig 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function importKubeconfig(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
@@ -146,6 +150,7 @@ async function importKubeconfig(event: Event) {
   input.value = '';
 }
 
+/** buildRequest 처리에 필요한 결과를 조합해 반환한다. */
 function buildRequest(): RegisterClusterRequest {
   const allowedNamespaces = form.value.allowedNamespacesText
     .split(',')
@@ -181,11 +186,13 @@ function buildRequest(): RegisterClusterRequest {
   };
 }
 
+/** optionalText 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function optionalText(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+/** resetForm 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function resetForm() {
   form.value = {
     name: '',
@@ -209,6 +216,7 @@ function resetForm() {
   };
 }
 
+/** testConnection 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function testConnection(clusterId: string) {
   closeActionMenu();
   await runClusterAction(clusterId, 'connection-test', async () => {
@@ -220,6 +228,7 @@ async function testConnection(clusterId: string) {
   });
 }
 
+/** syncCluster 처리의 핵심 작업 흐름을 실행한다. */
 async function syncCluster(clusterId: string) {
   closeActionMenu();
   await runClusterAction(clusterId, 'sync', async () => {
@@ -235,6 +244,7 @@ async function syncCluster(clusterId: string) {
   });
 }
 
+/** deleteCluster 처리 대상과 관련 상태를 안전하게 정리한다. */
 async function deleteCluster(cluster: ClusterResponse) {
   closeActionMenu();
   const confirmed = window.confirm(`${cluster.name} 클러스터 등록 정보를 삭제할까요? 실제 Kubernetes 리소스는 삭제하지 않습니다.`);
@@ -251,6 +261,7 @@ async function deleteCluster(cluster: ClusterResponse) {
   });
 }
 
+/** runClusterAction 처리의 핵심 작업 흐름을 실행한다. */
 async function runClusterAction(clusterId: string, action: string, work: () => Promise<void>) {
   runningAction.value = {
     ...runningAction.value,
@@ -274,6 +285,7 @@ async function runClusterAction(clusterId: string, action: string, work: () => P
   }
 }
 
+/** preparedKubeconfig 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function preparedKubeconfig() {
   let kubeconfig = form.value.kubeconfig;
   const serverOverride = form.value.kubeconfigServerOverride.trim();
@@ -286,10 +298,12 @@ function preparedKubeconfig() {
   return kubeconfig;
 }
 
+/** replaceKubeconfigServer 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function replaceKubeconfigServer(kubeconfig: string, serverUrl: string) {
   return kubeconfig.replace(/^(\s*server:\s*).+$/m, `$1${serverUrl}`);
 }
 
+/** applyKubeconfigInsecureSkipTlsVerify 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function applyKubeconfigInsecureSkipTlsVerify(kubeconfig: string) {
   const normalized = kubeconfig.replace(/\r\n/g, '\n');
   const lines = normalized.split('\n');
@@ -314,6 +328,7 @@ function applyKubeconfigInsecureSkipTlsVerify(kubeconfig: string) {
   return nextLines.join('\n');
 }
 
+/** connectionFeedback 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function connectionFeedback(result: ClusterConnectionTestResponse) {
   const failureMessage = result.message || '연결에 실패했습니다.';
   const namespaces = result.namespaces || [];
@@ -332,6 +347,7 @@ function connectionFeedback(result: ClusterConnectionTestResponse) {
   };
 }
 
+/** connectionFailureSummary 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function connectionFailureSummary(message: string) {
   if (message.includes('x509') || message.includes('certificate')) {
     return '연결 실패 · 인증서 오류';
@@ -345,14 +361,17 @@ function connectionFailureSummary(message: string) {
   return '연결 실패';
 }
 
+/** showFeedbackDetail 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function showFeedbackDetail(clusterId: string) {
   detailFeedbackClusterId.value = clusterId;
 }
 
+/** closeFeedbackDetail 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeFeedbackDetail() {
   detailFeedbackClusterId.value = null;
 }
 
+/** toggleActionMenu 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function toggleActionMenu(event: MouseEvent, clusterId: string) {
   event.stopPropagation();
   if (activeActionClusterId.value === clusterId) {
@@ -380,10 +399,12 @@ function toggleActionMenu(event: MouseEvent, clusterId: string) {
   activeActionClusterId.value = clusterId;
 }
 
+/** closeActionMenu 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeActionMenu() {
   activeActionClusterId.value = null;
 }
 
+/** openClusterDetail 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openClusterDetail(clusterId: string) {
   closeActionMenu();
   router.push({ name: 'cluster-detail', params: { clusterId } });
@@ -647,6 +668,9 @@ function openClusterDetail(clusterId: string) {
               <input v-model="form.clusterWide" type="checkbox" />
               <span>Cluster-wide</span>
             </label>
+            <small class="field-help">
+              전체 리소스 동기화는 ServiceAccount에 Deployment, Pod, Service 등 cluster-wide list 권한이 있어야 합니다. 연결 확인 성공만으로 동기화 권한까지 보장되지는 않습니다.
+            </small>
           </div>
 
           <label class="form-field">

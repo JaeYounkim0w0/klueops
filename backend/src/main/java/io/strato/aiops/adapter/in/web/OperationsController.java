@@ -61,53 +61,62 @@ public class OperationsController {
     private final OperationsControlPlaneService service;
     private final IdentityAccessService accessService;
 
+    /** OperationsController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationsController(OperationsControlPlaneService service, IdentityAccessService accessService) {
         this.service = service;
         this.accessService = accessService;
     }
 
+    /** OperationsController의 overview 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get the integrated AIOps operations overview")
     @GetMapping("/operations/overview")
     public OperationsOverview overview() {
         return service.getOverview();
     }
 
+    /** OperationsController의 reconcile 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Reconcile incidents, policies and resource baselines from current platform evidence")
     @PostMapping("/operations/reconcile")
     public OperationsOverview reconcile(HttpServletRequest request) {
         return service.reconcile(actor(request), requestId(request));
     }
 
+    /** OperationsController의 priorityQueue 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List operations priority items")
     @GetMapping("/operations/priority-queue")
     public List<PriorityItem> priorityQueue() {
         return service.getOverview().priorityQueue();
     }
 
+    /** OperationsController의 clusterHealth 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List cluster health posture")
     @GetMapping("/operations/cluster-health")
     public List<ClusterHealth> clusterHealth() {
         return service.getOverview().clusterHealth();
     }
 
+    /** OperationsController의 aiQuality 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get AI analysis quality summary")
     @GetMapping("/operations/ai-quality")
     public AiQualitySummary aiQuality() {
         return service.getAiQuality();
     }
 
+    /** OperationsController의 aiCalibration 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get AI ground-truth calibration by model and prompt version")
     @GetMapping("/operations/ai-calibration")
     public AiCalibrationSummary aiCalibration() {
         return service.getAiCalibration();
     }
 
+    /** OperationsController의 scorecard 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get operator scorecard without external metric integrations")
     @GetMapping("/operations/scorecard")
     public OperationsScorecard scorecard() {
         return service.getScorecard();
     }
 
+    /** OperationsController의 triage 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List deduplicated real-time triage signals")
     @GetMapping("/operations/triage")
     public TriageQueue triage(@RequestParam(required = false) UUID clusterId,
@@ -117,6 +126,7 @@ public class OperationsController {
         return service.getTriageQueue(clusterId, namespace, state, limit);
     }
 
+    /** OperationsController의 updateTriageState 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Update a real-time triage signal lifecycle state")
     @PatchMapping("/operations/triage/{groupId}/state")
     public WatchSignalGroup updateTriageState(@PathVariable UUID groupId,
@@ -125,6 +135,7 @@ public class OperationsController {
         return service.updateSignalGroupState(groupId, body.state(), actor(request), requestId(request));
     }
 
+    /** OperationsController의 incidents 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List incidents")
     @GetMapping("/incidents")
     public List<Incident> incidents(@RequestParam(required = false) UUID clusterId,
@@ -139,6 +150,7 @@ public class OperationsController {
                 .toList();
     }
 
+    /** OperationsController의 incident 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get incident details with evidence and timeline")
     @GetMapping("/incidents/{incidentId}")
     public IncidentDetail incident(@PathVariable UUID incidentId, HttpServletRequest request) {
@@ -147,12 +159,14 @@ public class OperationsController {
         return detail;
     }
 
+    /** OperationsController의 reconcileIncidents 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Reconcile incidents and all operations evidence")
     @PostMapping("/incidents/reconcile")
     public OperationsOverview reconcileIncidents(HttpServletRequest request) {
         return service.reconcile(actor(request), requestId(request));
     }
 
+    /** OperationsController의 updateIncidentState 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Update incident lifecycle state")
     @PatchMapping("/incidents/{incidentId}/state")
     public Incident updateIncidentState(@PathVariable UUID incidentId,
@@ -162,6 +176,7 @@ public class OperationsController {
         return service.updateIncidentState(incidentId, body.state(), body.note(), actor(request), requestId(request));
     }
 
+    /** OperationsController의 incidentTimeline 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List incident timeline")
     @GetMapping("/incidents/{incidentId}/timeline")
     public List<IncidentActivity> incidentTimeline(@PathVariable UUID incidentId, HttpServletRequest request) {
@@ -170,6 +185,7 @@ public class OperationsController {
         return detail.timeline();
     }
 
+    /** OperationsController의 notifications 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List internal notifications")
     @GetMapping("/notifications")
     public List<Notification> notifications(@RequestParam(defaultValue = "false") boolean unreadOnly,
@@ -177,12 +193,14 @@ public class OperationsController {
         return service.listNotifications(unreadOnly, limit);
     }
 
+    /** OperationsController의 unreadCount 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get unread notification count")
     @GetMapping("/notifications/unread-count")
     public UnreadCountResponse unreadCount() {
         return new UnreadCountResponse(service.unreadNotificationCount());
     }
 
+    /** OperationsController의 readNotification 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Mark one notification as read")
     @PatchMapping("/notifications/{notificationId}/read")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -190,6 +208,7 @@ public class OperationsController {
         service.markNotificationRead(notificationId, actor(request), requestId(request));
     }
 
+    /** OperationsController의 readAllNotifications 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Mark all notifications as read")
     @PostMapping("/notifications/read-all")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -197,12 +216,14 @@ public class OperationsController {
         service.markAllNotificationsRead(actor(request), requestId(request));
     }
 
+    /** OperationsController의 policies 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List policy definitions")
     @GetMapping("/policies")
     public List<PolicyDefinition> policies() {
         return service.listPolicies();
     }
 
+    /** OperationsController의 updatePolicy 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Update policy enablement and severity")
     @PutMapping("/policies/{policyId}")
     public PolicyDefinition updatePolicy(@PathVariable String policyId,
@@ -211,12 +232,14 @@ public class OperationsController {
         return service.updatePolicy(policyId, body.enabled(), body.severity(), actor(request), requestId(request));
     }
 
+    /** OperationsController의 evaluatePolicies 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Evaluate policies and reconcile resource baselines for a cluster")
     @PostMapping("/policies/evaluate")
     public List<PolicyEvaluation> evaluatePolicies(@RequestParam UUID clusterId, HttpServletRequest request) {
         return service.evaluatePolicies(clusterId, actor(request), requestId(request));
     }
 
+    /** OperationsController의 policyEvaluations 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List policy evaluations")
     @GetMapping("/policies/evaluations")
     public List<PolicyEvaluation> policyEvaluations(@RequestParam(required = false) UUID clusterId,
@@ -226,6 +249,7 @@ public class OperationsController {
         return service.listPolicyEvaluations(clusterId, namespace, result, limit);
     }
 
+    /** OperationsController의 changes 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "List safe resource change events")
     @GetMapping("/changes")
     public List<ResourceChange> changes(@RequestParam(required = false) UUID clusterId,
@@ -234,12 +258,14 @@ public class OperationsController {
         return service.listChanges(clusterId, namespace, limit);
     }
 
+    /** OperationsController의 change 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Get a safe resource change event")
     @GetMapping("/changes/{changeId}")
     public ResourceChange change(@PathVariable UUID changeId) {
         return service.getChange(changeId);
     }
 
+    /** OperationsController의 runbooks 처리의 핵심 작업 흐름을 실행한다. */
     @Operation(summary = "List verified runbook templates")
     @GetMapping("/runbooks")
     public List<RunbookTemplate> runbooks(@RequestParam(required = false) String signal,
@@ -247,18 +273,21 @@ public class OperationsController {
         return service.listRunbooks(signal, category);
     }
 
+    /** OperationsController의 runbook 처리의 핵심 작업 흐름을 실행한다. */
     @Operation(summary = "Get a verified runbook template")
     @GetMapping("/runbooks/{runbookId}")
     public RunbookTemplate runbook(@PathVariable String runbookId) {
         return service.getRunbook(runbookId);
     }
 
+    /** OperationsController의 matchRunbooks 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Match verified runbooks to a Kubernetes signal")
     @PostMapping("/runbooks/match")
     public List<RunbookTemplate> matchRunbooks(@Valid @RequestBody RunbookMatchRequest body) {
         return service.matchRunbooks(body.signal(), body.category(), body.resourceKind());
     }
 
+    /** OperationsController의 feedback 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get operator feedback for an AI analysis")
     @GetMapping("/analysis/{analysisId}/feedback")
     public ResponseEntity<AnalysisFeedback> feedback(@PathVariable UUID analysisId) {
@@ -266,6 +295,7 @@ public class OperationsController {
         return feedback == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(feedback);
     }
 
+    /** OperationsController의 saveFeedback 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Operation(summary = "Save operator feedback for an AI analysis")
     @PutMapping("/analysis/{analysisId}/feedback")
     public AnalysisFeedback saveFeedback(@PathVariable UUID analysisId,
@@ -276,12 +306,14 @@ public class OperationsController {
                 body.validatedResourceName(), body.confidenceExpectation(), actor(request), requestId(request));
     }
 
+    /** OperationsController의 settings 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Get operation and retention settings")
     @GetMapping("/settings/operations")
     public OperationSettings settings() {
         return service.getSettings();
     }
 
+    /** OperationsController의 updateSettings 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Update operation and retention settings")
     @PutMapping("/settings/operations")
     public OperationSettings updateSettings(@Valid @RequestBody OperationSettingsRequest body,
@@ -289,18 +321,21 @@ public class OperationsController {
         return service.updateSettings(body.toDomain(actor(request)), actor(request), requestId(request));
     }
 
+    /** OperationsController의 cleanupPreview 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Preview data cleanup using current retention settings")
     @PostMapping("/settings/operations/cleanup-preview")
     public CleanupPreview cleanupPreview() {
         return service.previewCleanup();
     }
 
+    /** OperationsController의 cleanup 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Execute data cleanup using current retention settings")
     @PostMapping("/settings/operations/cleanup")
     public CleanupPreview cleanup(HttpServletRequest request) {
         return service.executeCleanup(actor(request), requestId(request));
     }
 
+    /** OperationsController의 auditLogs 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List platform audit logs")
     @GetMapping("/audit-logs")
     public List<AuditLogResponse> auditLogs(@RequestParam(required = false) String actor,
@@ -316,14 +351,17 @@ public class OperationsController {
                 .toList();
     }
 
+    /** OperationsController의 actor 처리에 필요한 업무 로직을 수행한다. */
     private String actor(HttpServletRequest request) {
         return request.getUserPrincipal() == null ? "anonymous" : request.getUserPrincipal().getName();
     }
 
+    /** OperationsController의 access 처리에 필요한 업무 로직을 수행한다. */
     private ResolvedAccess access(HttpServletRequest request) {
         return (ResolvedAccess) request.getAttribute(ApiAuthorizationInterceptor.RESOLVED_ACCESS_ATTRIBUTE);
     }
 
+    /** OperationsController의 requireIncidentAccess 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void requireIncidentAccess(Incident incident, Capability capability, HttpServletRequest request) {
         ResolvedAccess access = access(request);
         if (access != null && !accessService.allows(access, capability, incident.clusterId(), incident.namespace())) {
@@ -331,6 +369,7 @@ public class OperationsController {
         }
     }
 
+    /** OperationsController의 requestId 처리에 필요한 업무 로직을 수행한다. */
     private String requestId(HttpServletRequest request) {
         return String.valueOf(request.getAttribute(RequestAttributes.REQUEST_ID));
     }
@@ -361,6 +400,7 @@ public class OperationsController {
 
     public record AuditLogResponse(UUID id, String action, String targetType, String targetId, String actor,
                                    String requestId, Instant createdAt) {
+        /** AuditLogResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
         static AuditLogResponse from(AuditLog auditLog) {
             return new AuditLogResponse(auditLog.id(), auditLog.action(), auditLog.targetType(), auditLog.targetId(),
                     auditLog.actor(), auditLog.requestId(), auditLog.createdAt());
@@ -380,6 +420,7 @@ public class OperationsController {
             @Min(5) @Max(1440) int staleSyncMinutes,
             @Min(30) @Max(3600) int longRunningJobSeconds
     ) {
+        /** OperationSettingsRequest의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
         OperationSettings toDomain(String actor) {
             return new OperationSettings(eventRetentionDays, analysisRetentionDays, jobRetentionDays,
                     notificationRetentionDays, resolvedIncidentRetentionDays, changeRetentionDays,

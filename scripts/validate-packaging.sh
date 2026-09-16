@@ -152,6 +152,8 @@ rg -q 'image: aiops/frontend@sha256:' "${rendered_production}"
 rg -q 'proxy_set_header X-Forwarded-Host \$http_host;' "${rendered_production}"
 rg -q 'runAsUser: 999' "${rendered_production}"
 rg -q 'runAsGroup: 999' "${rendered_production}"
+rg -q 'AIOPS_CREDENTIAL_REVEAL_ENABLED: "true"' "${rendered_local}"
+rg -q 'AIOPS_CREDENTIAL_REVEAL_ENABLED: "false"' "${rendered_production}"
 rg -q 'AIOPS_OIDC_ISSUER_URI: "https://identity.example.invalid/realms/aiops"' "${rendered_external_oidc}"
 if rg -q 'app.kubernetes.io/component: keycloak$' "${rendered_external_oidc}"; then
   echo "External OIDC package rendered the managed Keycloak workload." >&2
@@ -189,6 +191,22 @@ if helm template aiops "${ROOT_DIR}/deploy/helm/aiops" \
   --set postgresql.networkCidr=10.20.0.10/32 >/dev/null 2>&1; then
   echo "Production package accepted a public frontend NodePort." >&2
   exit 8
+fi
+
+if helm template aiops "${ROOT_DIR}/deploy/helm/aiops" \
+  --values "${ROOT_DIR}/deploy/helm/aiops/values-production.yaml" \
+  --set portal.security.credentialRevealEnabled=true \
+  --set portal.database.runtimeExistingSecret=aiops-portal-db \
+  --set portal.crypto.masterKeyExistingSecret=aiops-portal-master-key \
+  --set portal.commandRunner.tokenExistingSecret=aiops-command-runner \
+  --set authentication.managedKeycloak.database.runtimeExistingSecret=aiops-keycloak-db \
+  --set authentication.managedKeycloak.adminExistingSecret=aiops-keycloak-admin \
+  --set authentication.managedKeycloak.clientExistingSecret=aiops-keycloak-client \
+  --set authentication.managedKeycloak.initialAdminExistingSecret=aiops-initial-platform-admin \
+  --set postgresql.host=postgresql.example.internal \
+  --set postgresql.networkCidr=10.20.0.10/32 >/dev/null 2>&1; then
+  echo "Production package accepted plaintext credential reveal." >&2
+  exit 9
 fi
 
 echo "Packaging contracts passed."

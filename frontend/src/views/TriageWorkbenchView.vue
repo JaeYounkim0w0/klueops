@@ -27,7 +27,7 @@ const severity = ref('');
 const loading = ref(true);
 const updatingId = ref('');
 const error = ref('');
-let unsubscribe = () => {};
+let unsubscribe = /** unsubscribe 처리에 필요한 화면 또는 업무 로직을 수행한다. */ () => {};
 let refreshTimer: number | undefined;
 
 const items = computed(() => {
@@ -35,6 +35,7 @@ const items = computed(() => {
   return severity.value ? source.filter((item) => item.severity === severity.value) : source;
 });
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load() {
   loading.value = true;
   error.value = '';
@@ -61,6 +62,7 @@ async function load() {
   }
 }
 
+/** updateState 처리 대상의 상태를 갱신한다. */
 async function updateState(item: TriageItemResponse, nextState: 'OPEN' | 'ACKNOWLEDGED' | 'SUPPRESSED') {
   updatingId.value = item.id;
   error.value = '';
@@ -74,6 +76,7 @@ async function updateState(item: TriageItemResponse, nextState: 'OPEN' | 'ACKNOW
   }
 }
 
+/** openItem 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openItem(item: TriageItemResponse) {
   if (item.incidentId) {
     void router.push(`/incidents/${item.incidentId}`);
@@ -108,10 +111,12 @@ onBeforeUnmount(() => {
         <h1>실시간 운영 판단</h1>
         <p>반복 신호를 하나의 원인 후보로 묶고, 확인이 필요한 순서와 다음 행동을 제시합니다.</p>
       </div>
-      <div class="triage-mode-switch" role="group" aria-label="표시 난이도">
+      <div class="triage-header-actions">
         <span class="live-feed-indicator compact" :class="{ connected: feedConnected }"><span></span>{{ feedConnected ? 'Live' : '재연결' }}</span>
-        <button type="button" :class="{ active: mode === 'BEGINNER' }" @click="mode = 'BEGINNER'">초보자</button>
-        <button type="button" :class="{ active: mode === 'EXPERT' }" @click="mode = 'EXPERT'">숙련자</button>
+        <div class="triage-mode-switch" role="group" aria-label="표시 난이도">
+          <button type="button" :class="{ active: mode === 'BEGINNER' }" @click="mode = 'BEGINNER'">초보자</button>
+          <button type="button" :class="{ active: mode === 'EXPERT' }" @click="mode = 'EXPERT'">숙련자</button>
+        </div>
       </div>
     </header>
 

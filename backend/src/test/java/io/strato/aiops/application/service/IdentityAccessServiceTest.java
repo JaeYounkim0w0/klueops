@@ -4,6 +4,8 @@ import io.strato.aiops.application.port.out.RoleBindingRepositoryPort;
 import io.strato.aiops.application.port.out.UserAccountRepositoryPort;
 import io.strato.aiops.application.port.out.ClusterRepositoryPort;
 import io.strato.aiops.application.port.out.WorkspaceRepositoryPort;
+import io.strato.aiops.application.port.out.OidcGroupMappingRepositoryPort;
+import io.strato.aiops.application.port.out.TenantMembershipRepositoryPort;
 import io.strato.aiops.domain.cluster.Cluster;
 import io.strato.aiops.domain.cluster.ClusterEnvironment;
 import io.strato.aiops.domain.cluster.ClusterProvider;
@@ -14,6 +16,9 @@ import io.strato.aiops.domain.identity.PlatformRole;
 import io.strato.aiops.domain.identity.PrincipalType;
 import io.strato.aiops.domain.identity.RoleBinding;
 import io.strato.aiops.domain.identity.UserAccount;
+import io.strato.aiops.domain.identity.OidcGroupMapping;
+import io.strato.aiops.domain.identity.TenantMembership;
+import io.strato.aiops.domain.identity.MembershipStatus;
 import io.strato.aiops.domain.tenancy.Workspace;
 import org.junit.jupiter.api.Test;
 
@@ -38,9 +43,13 @@ class IdentityAccessServiceTest {
     private final InMemoryBindings bindings = new InMemoryBindings();
     private final InMemoryClusters clusters = new InMemoryClusters();
     private final InMemoryWorkspaces workspaces = new InMemoryWorkspaces();
+    private final InMemoryGroupMappings groupMappings = new InMemoryGroupMappings();
+    private final InMemoryMemberships memberships = new InMemoryMemberships();
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-02T00:00:00Z"), ZoneOffset.UTC);
-    private final IdentityAccessService service = new IdentityAccessService(users, bindings, clusters, workspaces, clock);
+    private final IdentityAccessService service = new IdentityAccessService(users, bindings, clusters, workspaces,
+            groupMappings, memberships, clock);
 
+    /** IdentityAccessServiceTest의 provisionsOnceAndRefreshesIdentityOnLaterLogin 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void provisionsOnceAndRefreshesIdentityOnLaterLogin() {
         ExternalIdentity first = new ExternalIdentity("https://idp", "subject-1", "operator", "First Name",
@@ -56,6 +65,7 @@ class IdentityAccessServiceTest {
         assertThat(users.items).hasSize(1);
     }
 
+    /** IdentityAccessServiceTest의 doesNotWriteUnchangedIdentityOnEveryApiRequest 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void doesNotWriteUnchangedIdentityOnEveryApiRequest() {
         ExternalIdentity identity = new ExternalIdentity("https://idp", "subject-stable", "operator", "Operator",
@@ -67,6 +77,7 @@ class IdentityAccessServiceTest {
         assertThat(users.saveCount).isEqualTo(1);
     }
 
+    /** IdentityAccessServiceTest의 combinesUserAndGroupBindingsIntoCapabilities 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void combinesUserAndGroupBindingsIntoCapabilities() {
         UserAccount user = service.provision(new ExternalIdentity("https://idp", "subject-2", "viewer", "Viewer",
@@ -82,6 +93,7 @@ class IdentityAccessServiceTest {
         assertThat(access.bindings()).hasSize(2);
     }
 
+    /** IdentityAccessServiceTest의 rejectsDisabledAccount 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsDisabledAccount() {
         UserAccount user = service.provision(new ExternalIdentity("https://idp", "subject-3", "blocked", "Blocked",
@@ -92,6 +104,7 @@ class IdentityAccessServiceTest {
                 .isInstanceOf(AccountDisabledException.class);
     }
 
+    /** IdentityAccessServiceTest의 mapsConventionalOidcGroupsWithoutDatabaseBootstrap 처리 데이터를 필요한 표현으로 변환한다. */
     @Test
     void mapsConventionalOidcGroupsWithoutDatabaseBootstrap() {
         UserAccount user = service.provision(new ExternalIdentity("https://idp", "subject-4", "admin", "Admin",
@@ -106,6 +119,7 @@ class IdentityAccessServiceTest {
         });
     }
 
+    /** IdentityAccessServiceTest의 limitsGlobalAndClusterVisibilityToAssignedScope 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void limitsGlobalAndClusterVisibilityToAssignedScope() {
         UUID assignedCluster = UUID.fromString("11111111-1111-1111-1111-111111111111");
@@ -124,17 +138,49 @@ class IdentityAccessServiceTest {
         assertThat(service.allows(access, Capability.CLUSTER_READ, otherCluster, null)).isFalse();
     }
 
+    /** IdentityAccessServiceTest의 platformScopeCanSeeEveryCluster 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void platformScopeCanSeeEveryCluster() {
         UserAccount user = service.provision(new ExternalIdentity("https://idp", "subject-6", "platform", "Platform",
-                "platform@example.com", Set.of("aiops-viewers")));
+                "platform@example.com", Set.of()));
+        bindings.save(RoleBinding.create(PrincipalType.USER, user.id().toString(), PlatformRole.VIEWER,
+                AccessScope.platform(), "admin", clock.instant()));
 
-        var access = service.resolveAccess(user, Set.of("aiops-viewers"));
+        var access = service.resolveAccess(user, Set.of());
 
         assertThat(service.hasPlatformScope(access, Capability.CLUSTER_READ)).isTrue();
         assertThat(service.visibleClusterIds(access)).isEmpty();
     }
 
+    /** IdentityAccessServiceTest의 doesNotInferTenantRoleFromConventionalGroupName 처리에 필요한 업무 로직을 수행한다. */
+    @Test
+    void doesNotInferTenantRoleFromConventionalGroupName() {
+        UserAccount user = service.provision(new ExternalIdentity("https://idp", "subject-no-implicit", "operator",
+                "Operator", "operator@example.com", Set.of("aiops-operators")));
+
+        var access = service.resolveAccess(user, Set.of("aiops-operators"));
+
+        assertThat(access.bindings()).isEmpty();
+        assertThat(access.capabilities()).isEmpty();
+    }
+
+    /** IdentityAccessServiceTest의 resolvesOnlyExplicitIssuerAndGroupMapping 처리에 필요한 결과를 조합해 반환한다. */
+    @Test
+    void resolvesOnlyExplicitIssuerAndGroupMapping() {
+        UUID tenantId = UUID.randomUUID();
+        UserAccount user = service.provision(new ExternalIdentity("https://idp", "mapped", "mapped", "Mapped",
+                null, Set.of("/companies/aa/operators")));
+        groupMappings.save(OidcGroupMapping.create("https://idp", "/companies/aa/operators", tenantId,
+                PlatformRole.OPERATOR, AccessScope.tenant(tenantId), "admin", clock.instant()));
+
+        var access = service.resolveAccess(user, Set.of("/companies/aa/operators"));
+
+        assertThat(service.effectiveCapabilities(access, tenantId, null))
+                .contains(Capability.APPLICATION_DEPLOY, Capability.ANALYSIS_RUN)
+                .doesNotContain(Capability.APPLICATION_DELETE);
+    }
+
+    /** IdentityAccessServiceTest의 tenantAndWorkspaceBindingsInheritOnlyToOwnedClusters 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void tenantAndWorkspaceBindingsInheritOnlyToOwnedClusters() {
         UUID tenantA = UUID.randomUUID();
@@ -159,6 +205,7 @@ class IdentityAccessServiceTest {
         assertThat(service.visibleWorkspaceIds(access)).containsExactly(workspaceA);
     }
 
+    /** IdentityAccessServiceTest의 tenantBindingAllowsOnlyDirectWorkspacesOwnedByThatTenant 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void tenantBindingAllowsOnlyDirectWorkspacesOwnedByThatTenant() {
         UUID tenantA = UUID.randomUUID();
@@ -176,29 +223,70 @@ class IdentityAccessServiceTest {
         assertThat(service.allowsWorkspace(access, Capability.CLUSTER_READ, workspaceB.id())).isFalse();
     }
 
+    /** IdentityAccessServiceTest의 protectsLastActivePlatformManagerFromDisableAndBindingDeletion 처리에 필요한 업무 로직을 수행한다. */
+    @Test
+    void protectsLastActivePlatformManagerFromDisableAndBindingDeletion() {
+        UserAccount actor = service.provision(new ExternalIdentity("https://idp", "manager-actor", "actor",
+                "Actor", null, Set.of()));
+        UserAccount lastManager = service.provision(new ExternalIdentity("https://idp", "manager-last", "manager",
+                "Manager", null, Set.of()));
+        RoleBinding managerBinding = bindings.save(RoleBinding.create(PrincipalType.USER,
+                lastManager.id().toString(), PlatformRole.PLATFORM_ADMIN, AccessScope.platform(), "bootstrap",
+                clock.instant()));
+
+        assertThatThrownBy(() -> service.setActive(lastManager.id(), false, actor.id()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Platform Manager");
+        assertThatThrownBy(() -> service.deleteBinding(managerBinding.id()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Platform Manager");
+    }
+
+    /** IdentityAccessServiceTest의 allowsPlatformManagerRemovalWhenAnotherActiveManagerRemains 처리에 필요한 업무 로직을 수행한다. */
+    @Test
+    void allowsPlatformManagerRemovalWhenAnotherActiveManagerRemains() {
+        UserAccount actor = service.provision(new ExternalIdentity("https://idp", "manager-one", "manager-one",
+                "Manager One", null, Set.of()));
+        UserAccount replacement = service.provision(new ExternalIdentity("https://idp", "manager-two", "manager-two",
+                "Manager Two", null, Set.of()));
+        RoleBinding actorBinding = bindings.save(RoleBinding.create(PrincipalType.USER, actor.id().toString(),
+                PlatformRole.PLATFORM_ADMIN, AccessScope.platform(), "bootstrap", clock.instant()));
+        bindings.save(RoleBinding.create(PrincipalType.USER, replacement.id().toString(),
+                PlatformRole.PLATFORM_ADMIN, AccessScope.platform(), "bootstrap", clock.instant()));
+
+        service.deleteBinding(actorBinding.id());
+
+        assertThat(bindings.items).noneMatch(binding -> binding.id().equals(actorBinding.id()));
+    }
+
     private static final class InMemoryUsers implements UserAccountRepositoryPort {
         private final Map<UUID, UserAccount> items = new LinkedHashMap<>();
         private int saveCount;
 
+        /** InMemoryUsers의 findByIssuerAndSubject 처리 결과를 조회해 반환한다. */
         @Override
         public Optional<UserAccount> findByIssuerAndSubject(String issuer, String subject) {
             return items.values().stream().filter(user -> user.issuer().equals(issuer) && user.subject().equals(subject)).findFirst();
         }
 
+        /** InMemoryUsers의 lockProvisioning 처리에 필요한 업무 로직을 수행한다. */
         @Override
         public void lockProvisioning(String issuer, String subject) {
         }
 
+        /** InMemoryUsers의 findById 처리 결과를 조회해 반환한다. */
         @Override
         public Optional<UserAccount> findById(UUID id) {
             return Optional.ofNullable(items.get(id));
         }
 
+        /** InMemoryUsers의 findAll 처리 결과를 조회해 반환한다. */
         @Override
         public List<UserAccount> findAll() {
             return List.copyOf(items.values());
         }
 
+        /** InMemoryUsers의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override
         public UserAccount save(UserAccount user) {
             saveCount++;
@@ -210,16 +298,24 @@ class IdentityAccessServiceTest {
     private static final class InMemoryBindings implements RoleBindingRepositoryPort {
         private final List<RoleBinding> items = new ArrayList<>();
 
+        /** InMemoryBindings의 findByPrincipals 처리 결과를 조회해 반환한다. */
         @Override
         public List<RoleBinding> findByPrincipals(Collection<String> principals) {
             return items.stream().filter(binding -> principals.contains(binding.principalKey())).toList();
         }
 
+        /** InMemoryBindings의 findAll 처리 결과를 조회해 반환한다. */
         @Override
         public List<RoleBinding> findAll() {
             return List.copyOf(items);
         }
 
+        /** InMemoryBindings의 findById 처리 결과를 조회해 반환한다. */
+        @Override public Optional<RoleBinding> findById(UUID id) {
+            return items.stream().filter(item -> item.id().equals(id)).findFirst();
+        }
+
+        /** InMemoryBindings의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override
         public RoleBinding save(RoleBinding binding) {
             items.removeIf(item -> item.id().equals(binding.id()));
@@ -227,6 +323,7 @@ class IdentityAccessServiceTest {
             return binding;
         }
 
+        /** InMemoryBindings의 deleteById 처리 대상과 관련 상태를 안전하게 정리한다. */
         @Override
         public void deleteById(UUID id) {
             items.removeIf(item -> item.id().equals(id));
@@ -236,22 +333,85 @@ class IdentityAccessServiceTest {
     private static final class InMemoryClusters implements ClusterRepositoryPort {
         private final Map<UUID, Cluster> items = new LinkedHashMap<>();
 
+        /** InMemoryClusters의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override public Cluster save(Cluster cluster) { items.put(cluster.id(), cluster); return cluster; }
+        /** InMemoryClusters의 findById 처리 결과를 조회해 반환한다. */
         @Override public Optional<Cluster> findById(UUID clusterId) { return Optional.ofNullable(items.get(clusterId)); }
+        /** InMemoryClusters의 findAll 처리 결과를 조회해 반환한다. */
         @Override public List<Cluster> findAll() { return List.copyOf(items.values()); }
     }
 
     private static final class InMemoryWorkspaces implements WorkspaceRepositoryPort {
         private final Map<UUID, Workspace> items = new LinkedHashMap<>();
 
+        /** InMemoryWorkspaces의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override public Workspace save(Workspace workspace) { items.put(workspace.id(), workspace); return workspace; }
+        /** InMemoryWorkspaces의 findById 처리 결과를 조회해 반환한다. */
         @Override public Optional<Workspace> findById(UUID id) { return Optional.ofNullable(items.get(id)); }
+        /** InMemoryWorkspaces의 findByTenantIdAndCode 처리 결과를 조회해 반환한다. */
         @Override public Optional<Workspace> findByTenantIdAndCode(UUID tenantId, String code) {
             return items.values().stream().filter(item -> item.tenantId().equals(tenantId) && item.code().equals(code)).findFirst();
         }
+        /** InMemoryWorkspaces의 findByTenantId 처리 결과를 조회해 반환한다. */
         @Override public List<Workspace> findByTenantId(UUID tenantId) {
             return items.values().stream().filter(item -> item.tenantId().equals(tenantId)).toList();
         }
+        /** InMemoryWorkspaces의 findAll 처리 결과를 조회해 반환한다. */
         @Override public List<Workspace> findAll() { return List.copyOf(items.values()); }
+    }
+
+    private static final class InMemoryGroupMappings implements OidcGroupMappingRepositoryPort {
+        private final List<OidcGroupMapping> items = new ArrayList<>();
+
+        /** InMemoryGroupMappings의 findActive 처리 결과를 조회해 반환한다. */
+        @Override public List<OidcGroupMapping> findActive(String issuer, Collection<String> groups) {
+            return items.stream().filter(OidcGroupMapping::active)
+                    .filter(item -> item.issuer().equals(issuer) && groups.contains(item.groupValue())).toList();
+        }
+        /** InMemoryGroupMappings의 findByTenantId 처리 결과를 조회해 반환한다. */
+        @Override public List<OidcGroupMapping> findByTenantId(UUID tenantId) {
+            return items.stream().filter(item -> item.tenantId().equals(tenantId)).toList();
+        }
+        /** InMemoryGroupMappings의 findByIdAndTenantId 처리 결과를 조회해 반환한다. */
+        @Override public Optional<OidcGroupMapping> findByIdAndTenantId(UUID id, UUID tenantId) {
+            return items.stream().filter(item -> item.id().equals(id) && item.tenantId().equals(tenantId)).findFirst();
+        }
+        /** InMemoryGroupMappings의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
+        @Override public OidcGroupMapping save(OidcGroupMapping mapping) {
+            items.removeIf(item -> item.id().equals(mapping.id()));
+            items.add(mapping);
+            return mapping;
+        }
+        /** InMemoryGroupMappings의 delete 처리 대상과 관련 상태를 안전하게 정리한다. */
+        @Override public void delete(OidcGroupMapping mapping) { items.removeIf(item -> item.id().equals(mapping.id())); }
+    }
+
+    private static final class InMemoryMemberships implements TenantMembershipRepositoryPort {
+        private final List<TenantMembership> items = new ArrayList<>();
+
+        /** InMemoryMemberships의 findByTenantId 처리 결과를 조회해 반환한다. */
+        @Override public List<TenantMembership> findByTenantId(UUID tenantId) {
+            return items.stream().filter(item -> item.tenantId().equals(tenantId)).toList();
+        }
+        /** InMemoryMemberships의 findByIdAndTenantId 처리 결과를 조회해 반환한다. */
+        @Override public Optional<TenantMembership> findByIdAndTenantId(UUID id, UUID tenantId) {
+            return items.stream().filter(item -> item.id().equals(id) && item.tenantId().equals(tenantId)).findFirst();
+        }
+        /** InMemoryMemberships의 findInvitedByIssuerAndSubject 처리 결과를 조회해 반환한다. */
+        @Override public List<TenantMembership> findInvitedByIssuerAndSubject(String issuer, String subject) {
+            return items.stream().filter(item -> item.status() == MembershipStatus.INVITED)
+                    .filter(item -> issuer.equals(item.pendingIssuer()) && subject.equals(item.pendingSubject())).toList();
+        }
+        /** InMemoryMemberships의 findInvitedByIssuerAndEmail 처리 결과를 조회해 반환한다. */
+        @Override public List<TenantMembership> findInvitedByIssuerAndEmail(String issuer, String email) {
+            return items.stream().filter(item -> item.status() == MembershipStatus.INVITED)
+                    .filter(item -> issuer.equals(item.pendingIssuer()) && email.equalsIgnoreCase(item.pendingEmail())).toList();
+        }
+        /** InMemoryMemberships의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
+        @Override public TenantMembership save(TenantMembership membership) {
+            items.removeIf(item -> item.id().equals(membership.id()));
+            items.add(membership);
+            return membership;
+        }
     }
 }

@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class OllamaAiChatAdapterTest {
 
+    /** OllamaAiChatAdapterTest의 includesPersistedConversationMemoryWhenCallingChatClient 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void includesPersistedConversationMemoryWhenCallingChatClient() {
         UUID conversationId = UUID.randomUUID();
@@ -61,6 +62,7 @@ class OllamaAiChatAdapterTest {
 
         private Prompt prompt;
 
+        /** CapturingChatModel의 call 처리에 필요한 업무 로직을 수행한다. */
         @Override
         public ChatResponse call(Prompt prompt) {
             this.prompt = prompt;
@@ -75,16 +77,19 @@ class OllamaAiChatAdapterTest {
 
         private final List<AiChatMessage> messages;
 
+        /** FakeMessageRepository 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private FakeMessageRepository(List<AiChatMessage> messages) {
             this.messages = new ArrayList<>(messages);
         }
 
+        /** FakeMessageRepository의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override
         public AiChatMessage save(AiChatMessage message) {
             messages.add(message);
             return message;
         }
 
+        /** FakeMessageRepository의 findByConversationId 처리 결과를 조회해 반환한다. */
         @Override
         public List<AiChatMessage> findByConversationId(UUID conversationId, int limit) {
             return messages.stream()

@@ -4,6 +4,7 @@ import io.strato.aiops.adapter.out.ai.AiAnalysisResponseFormatException;
 import io.strato.aiops.adapter.out.ai.OllamaAiException;
 import io.strato.aiops.adapter.out.kubernetes.KubernetesApiException;
 import io.strato.aiops.application.service.AccountDisabledException;
+import io.strato.aiops.application.service.ApplicationOperationConflictException;
 import io.strato.aiops.application.service.CommandCapacityExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -26,6 +27,7 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /** GlobalExceptionHandler의 handleCredentialRevealDisabledException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(CredentialRevealDisabledException.class)
     public ProblemDetail handleCredentialRevealDisabledException(
             CredentialRevealDisabledException exception,
@@ -38,6 +40,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleIllegalArgumentException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgumentException(IllegalArgumentException exception, HttpServletRequest request) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
@@ -47,6 +50,20 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleApplicationOperationConflictException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
+    @ExceptionHandler(ApplicationOperationConflictException.class)
+    public ProblemDetail handleApplicationOperationConflictException(
+            ApplicationOperationConflictException exception,
+            HttpServletRequest request
+    ) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problemDetail.setTitle("Application operation conflict");
+        problemDetail.setProperty("code", "APPLICATION_OPERATION_CONFLICT");
+        enrich(problemDetail, request);
+        return problemDetail;
+    }
+
+    /** GlobalExceptionHandler의 handleMethodArgumentNotValidException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleMethodArgumentNotValidException(MethodArgumentNotValidException exception, HttpServletRequest request) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Request validation failed");
@@ -60,6 +77,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleNoSuchElementException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(NoSuchElementException.class)
     public ProblemDetail handleNoSuchElementException(NoSuchElementException exception, HttpServletRequest request) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
@@ -69,6 +87,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleNoResourceFoundException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(NoResourceFoundException.class)
     public ProblemDetail handleNoResourceFoundException(NoResourceFoundException exception, HttpServletRequest request) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "Requested route was not found");
@@ -78,6 +97,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleOllamaAiException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(OllamaAiException.class)
     public ProblemDetail handleOllamaAiException(OllamaAiException exception, HttpServletRequest request) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage());
@@ -87,6 +107,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleAiAnalysisResponseFormatException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(AiAnalysisResponseFormatException.class)
     public ProblemDetail handleAiAnalysisResponseFormatException(
             AiAnalysisResponseFormatException exception,
@@ -99,6 +120,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleKubernetesApiException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(KubernetesApiException.class)
     public ProblemDetail handleKubernetesApiException(KubernetesApiException exception, HttpServletRequest request) {
         log.warn("Kubernetes API request failed. path={}, requestId={}",
@@ -110,6 +132,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleAccountDisabledException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(AccountDisabledException.class)
     public ProblemDetail handleAccountDisabledException(AccountDisabledException exception, HttpServletRequest request) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
@@ -119,6 +142,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleCommandCapacityExceededException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(CommandCapacityExceededException.class)
     public ProblemDetail handleCommandCapacityExceededException(
             CommandCapacityExceededException exception,
@@ -132,6 +156,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleAccessDeniedException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail handleAccessDeniedException(AccessDeniedException exception, HttpServletRequest request) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
@@ -141,6 +166,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 handleDisconnectedAsyncClient 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(IOException.class)
     public void handleDisconnectedAsyncClient(IOException exception, HttpServletRequest request) throws IOException {
         String message = exception.getMessage() == null ? "" : exception.getMessage().toLowerCase();
@@ -154,6 +180,7 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(), request.getAttribute(RequestAttributes.REQUEST_ID), exception.getMessage());
     }
 
+    /** GlobalExceptionHandler의 handleException 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleException(Exception exception, HttpServletRequest request) {
         log.error("Unhandled API exception. path={}, requestId={}",
@@ -165,6 +192,7 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    /** GlobalExceptionHandler의 enrich 처리에 필요한 업무 로직을 수행한다. */
     private void enrich(ProblemDetail problemDetail, HttpServletRequest request) {
         problemDetail.setProperty("requestId", request.getAttribute(RequestAttributes.REQUEST_ID));
         problemDetail.setProperty("correlationId", request.getAttribute(RequestAttributes.CORRELATION_ID));

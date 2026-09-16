@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class KubernetesUpgradeCatalogTest {
 
+    /** KubernetesUpgradeCatalogTest의 loadsVersionedApiAndAddonCompatibilityRules 처리 결과를 조회해 반환한다. */
     @Test
     void loadsVersionedApiAndAddonCompatibilityRules() {
         var catalog = KubernetesUpgradeCatalog.loadDefault();

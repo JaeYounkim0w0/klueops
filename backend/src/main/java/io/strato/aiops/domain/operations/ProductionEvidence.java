@@ -16,9 +16,11 @@ public final class ProductionEvidence {
             "(?i)((?:password|passwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key)\\s*[:=]\\s*)[^\\s,;]+"
     );
 
+    /** ProductionEvidence 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private ProductionEvidence() {
     }
 
+    /** ProductionEvidence의 sha256 처리에 필요한 업무 로직을 수행한다. */
     public static String sha256(String value) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
@@ -28,6 +30,7 @@ public final class ProductionEvidence {
         }
     }
 
+    /** ProductionEvidence의 sanitize 처리에 필요한 업무 로직을 수행한다. */
     public static String sanitize(String value) {
         if (value == null || value.isBlank()) return value;
         return ASSIGNMENT.matcher(BEARER.matcher(value).replaceAll("$1***")).replaceAll("$1***");
@@ -41,12 +44,14 @@ public final class ProductionEvidence {
                       String triggeredBy, Instant startedAt, Instant completedAt,
                       Instant expiresAt, List<Check> checks) {
 
+        /** Run의 start 처리에 필요한 업무 로직을 수행한다. */
         public static Run start(UUID id, String releaseName, String environment,
                                 String triggeredBy, Instant startedAt) {
             return new Run(id, releaseName, environment, State.RUNNING, triggeredBy,
                     startedAt, null, null, List.of());
         }
 
+        /** Run의 complete 처리에 필요한 업무 로직을 수행한다. */
         public Run complete(State target, Instant completedAt, List<Check> checks) {
             if (state != State.RUNNING) throw new IllegalStateException("Only a running evidence run can complete");
             if (target == State.RUNNING || target == State.NOT_RUN || target == State.EXPIRED) {
@@ -65,6 +70,7 @@ public final class ProductionEvidence {
     public record Artifact(UUID id, UUID checkId, String fileName, String mediaType,
                            String checksum, long sizeBytes, String reference, Instant createdAt) {
 
+        /** Artifact의 metadata 처리에 필요한 업무 로직을 수행한다. */
         public static Artifact metadata(UUID checkId, String fileName, String mediaType,
                                         String content, String reference, Instant createdAt) {
             String safe = sanitize(content == null ? "" : content);

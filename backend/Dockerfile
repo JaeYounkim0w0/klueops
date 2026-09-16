@@ -7,6 +7,8 @@ COPY src ./src
 RUN mvn -q -DskipTests package
 
 # Run only the packaged jar on a smaller JRE image as a numeric non-root user.
+FROM alpine/helm:3.19.0 AS helm
+
 FROM eclipse-temurin:17-jre-noble
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
@@ -15,6 +17,7 @@ RUN apt-get update \
     && useradd --system --gid aiops --home-dir /app aiops
 WORKDIR /app
 COPY --from=build --chown=aiops:aiops /workspace/target/klueops-backend-*.jar app.jar
+COPY --from=helm /usr/bin/helm /usr/local/bin/helm
 USER 999:999
 EXPOSE 8080
 HEALTHCHECK --interval=20s --timeout=5s --start-period=40s --retries=5 CMD curl --fail --silent http://127.0.0.1:8080/actuator/health/readiness || exit 1

@@ -1,0 +1,160 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: klueops-application-delivery
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+automountServiceAccountToken: false
+---
+# 반복 수용 테스트 중 단기 토큰 만료로 오판하지 않도록 값이 없는 ServiceAccount token Secret만 선언한다.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: klueops-application-delivery-token
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+  annotations:
+    kubernetes.io/service-account.name: klueops-application-delivery
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: klueops-application-delivery-acceptance-discovery
+  labels:
+    aiops.strato.io/fixture: application-exposure
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "nodes"]
+    verbs: ["get", "list"]
+  # 이 ServiceAccount로 등록한 로컬 cluster의 전체 inventory 동기화에 필요한 읽기 전용 권한이다.
+  - apiGroups: [""]
+    resources:
+      - "pods"
+      - "services"
+      - "configmaps"
+      - "secrets"
+      - "serviceaccounts"
+      - "endpoints"
+      - "persistentvolumeclaims"
+      - "persistentvolumes"
+      - "resourcequotas"
+      - "limitranges"
+      - "events"
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list"]
+  # Gateway 선택 목록은 리소스를 변경하지 않고 Cluster 전체의 이름과 준비 상태만 읽는다.
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: klueops-application-delivery-acceptance-discovery
+  labels:
+    aiops.strato.io/fixture: application-exposure
+subjects:
+  - kind: ServiceAccount
+    name: klueops-application-delivery
+    namespace: klueops-exposure-acceptance
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: klueops-application-delivery-acceptance-discovery
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: klueops-application-delivery-acceptance-admin
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+subjects:
+  - kind: ServiceAccount
+    name: klueops-application-delivery
+    namespace: klueops-exposure-acceptance
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: klueops-application-delivery-acceptance-gateway
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+rules:
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: klueops-application-delivery-acceptance-gateway
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+subjects:
+  - kind: ServiceAccount
+    name: klueops-application-delivery
+    namespace: klueops-exposure-acceptance
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: klueops-application-delivery-acceptance-gateway
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: klueops-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: klueops-acceptance
+  namespace: klueops-exposure-acceptance
+  labels:
+    aiops.strato.io/fixture: application-exposure
+spec:
+  gatewayClassName: klueops-acceptance
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same

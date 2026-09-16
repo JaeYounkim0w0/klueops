@@ -10,13 +10,33 @@ Vue 화면별 파일에 CSS와 재사용 로직이 흩어지면 화면이 늘어
 - 정적 inline style은 사용하지 않는다.
 - 공통 스타일은 `frontend/src/styles` 아래에 작성한다.
 - `frontend/src/main.ts`만 전역 CSS를 import한다.
-- 화면별로 필요한 스타일도 재사용 가능한 class로 설계하고 `frontend/src/styles`에 둔다.
+- input, select, textarea, button, card, panel, form grid, field, modal처럼 제품 전반에서 반복되는 기본 UI는 공통 CSS와 semantic UI class를 반드시 사용한다.
+- 기능 화면을 구현하기 전에 기존 공통 class로 표현할 수 있는지 확인하고, 공통 표현이 부족하면 기능별 CSS를 만들기 전에 공통 CSS를 확장한다.
+- 둘 이상의 화면에서 재사용할 수 있거나 특정 업무 도메인에 종속되지 않는 스타일은 공통 CSS가 소유한다. 기능별 CSS에 같은 border, radius, spacing, typography, focus, disabled 규칙을 복제하지 않는다.
+- 기능별 CSS는 YAML/terminal editor, topology, Kubernetes resource viewer처럼 해당 기능에서만 필요한 구조·상태·상호작용을 표현할 때만 사용한다.
+- `div` 같은 일반 HTML 요소를 포괄적으로 꾸미지 않고 `.ui-surface-card`, `.ui-form-grid`처럼 의미가 드러나는 공통 class를 부여한다. 이 규칙은 예상하지 못한 화면까지 전역 스타일이 전파되는 것을 방지한다.
+- 기능별 스타일도 `frontend/src/styles/components` 등 소유권이 드러나는 파일에 두며 Vue 파일 안에 두지 않는다.
 - 동적 overlay 위치처럼 런타임 좌표가 필요한 경우에만 Vue `:style` binding을 예외적으로 허용한다.
 
 현재 스타일 파일 역할:
 
-- `frontend/src/styles/base.css`: root, body, button, input 등 전역 기본값
-- `frontend/src/styles/main.css`: layout, table, modal, action menu, chat, analysis 등 재사용 UI class
+- `frontend/src/styles/base.css`: root, body, typography, button 등 전역 기본값과 design token
+- `frontend/src/styles/form-controls.css`: 제품 전 화면의 input/select/textarea 상태와 form/card 계열 `.ui-*` 공통 primitive
+- `frontend/src/styles/main.css`: layout, table, modal, action menu, chat 등 기존 교차 도메인 재사용 UI class
+- `frontend/src/styles/product-shell.css`: 제품 shell, context bar, 전역 responsive visual rule
+- `frontend/src/styles/components/*.css`: 특정 기능에서만 사용하는 구조·상태·상호작용
+
+## 공통 CSS와 기능별 CSS 판단 순서
+
+새 UI를 구현할 때 다음 순서를 지킨다.
+
+1. 기존 공통 class와 design token을 조합하여 구현한다.
+2. 기본 control, surface, layout 또는 상태 표현이 부족하면 공통 CSS에 재사용 가능한 semantic class를 추가한다.
+3. 특정 기능의 데이터 구조나 상호작용에만 필요한 경우에 한해 기능별 CSS를 추가한다.
+4. 기능별 CSS에서도 색상, 간격, 테두리, focus ring을 임의 값으로 다시 정의하지 않고 공통 token을 사용한다.
+5. 새 규칙이 다른 화면에서도 반복되기 시작하면 즉시 공통 CSS로 승격하고 중복 규칙을 제거한다.
+
+예를 들어 일반 입력창의 높이, 테두리, hover/focus, disabled 상태는 `form-controls.css`가 소유한다. Values Studio의 YAML 편집기 구문 표시나 Kubernetes 콘솔의 terminal 출력처럼 일반 입력창과 다른 동작만 해당 기능 CSS가 소유한다.
 
 ## 재사용 JavaScript/TypeScript 배치 원칙
 
@@ -51,8 +71,10 @@ scripts/validate-frontend-style.sh
 ## 개발 시 체크리스트
 
 - 새 UI class가 기존 `frontend/src/styles` class로 표현 가능한지 먼저 확인한다.
-- 버튼, 테이블, 모달, 상태 pill, action menu는 기존 class를 재사용한다.
+- input, select, textarea, button, card, panel, form grid, field, 테이블, 모달, 상태 pill, action menu는 공통 class를 재사용한다.
 - 새로운 UI 패턴이 생기면 Vue 파일보다 스타일 공통 파일을 먼저 확장한다.
+- 기능별 CSS에는 해당 기능에만 필요한 차이만 남기고 공통 UI 기본값을 중복 작성하지 않는다.
+- 일반 요소 selector 대신 역할이 드러나는 semantic class를 사용한다.
 - view component가 비대해지면 API, util, composable로 분리한다.
 - 화면 이동 후에도 유지되어야 하는 상태는 Pinia store로 분리한다.
 - 스타일이나 재사용 규칙을 바꾸면 이 문서와 `docs/architecture/frontend-architecture.md`를 함께 갱신한다.

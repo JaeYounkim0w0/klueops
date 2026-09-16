@@ -20,6 +20,7 @@ public record AiChatConversationResponse(
         Instant updatedAt,
         Instant archivedAt
 ) {
+    /** AiChatConversationResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static AiChatConversationResponse from(AiChatConversation conversation) {
         return new AiChatConversationResponse(conversation.id(), conversation.title(), conversation.mode().name(), conversation.favorite(), conversation.clusterId(),
                 conversation.namespace(), conversation.applicationId(), conversation.createdBy(), conversation.createdAt(),

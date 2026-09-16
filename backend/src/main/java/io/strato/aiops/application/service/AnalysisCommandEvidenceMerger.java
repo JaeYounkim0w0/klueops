@@ -17,10 +17,12 @@ final class AnalysisCommandEvidenceMerger {
 
     private final ObjectMapper objectMapper;
 
+    /** AnalysisCommandEvidenceMerger 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     AnalysisCommandEvidenceMerger(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /** AnalysisCommandEvidenceMerger의 merge 처리에 필요한 업무 로직을 수행한다. */
     Optional<String> merge(String resultJson, AnalysisCommandExecution execution,
                            AnalysisCommandParser.ParsedCommand parsed) {
         if (resultJson == null || resultJson.isBlank()) {
@@ -41,6 +43,7 @@ final class AnalysisCommandEvidenceMerger {
         }
     }
 
+    /** AnalysisCommandEvidenceMerger의 appendCommandVerification 처리에 필요한 업무 로직을 수행한다. */
     private void appendCommandVerification(ObjectNode root, AnalysisCommandExecution execution) {
         ObjectNode section = objectField(root, "commandVerification");
         section.put("summary", "최근 검증 명령 실행 결과를 분석 결과에 연결했습니다.");
@@ -59,6 +62,7 @@ final class AnalysisCommandEvidenceMerger {
         section.set("executions", executions);
     }
 
+    /** AnalysisCommandEvidenceMerger의 appendCommandEvidence 처리에 필요한 업무 로직을 수행한다. */
     private void appendCommandEvidence(ObjectNode root, AnalysisCommandExecution execution) {
         ObjectNode ledger = objectField(root, "evidenceLedger");
         ledger.put("summary", "분석 판단에 사용된 사실과 추론, 검증 명령 결과를 분리해 표시합니다.");
@@ -77,6 +81,7 @@ final class AnalysisCommandEvidenceMerger {
         item.put("outputSummary", commandExecutionSummary(execution));
     }
 
+    /** AnalysisCommandEvidenceMerger의 appendIssueGroupCommandVerification 처리에 필요한 업무 로직을 수행한다. */
     private int appendIssueGroupCommandVerification(ObjectNode root, AnalysisCommandExecution execution,
                                                     AnalysisCommandParser.ParsedCommand parsed) {
         ArrayNode issueGroups = arrayOrEmpty(root.get("issueGroups"));
@@ -106,6 +111,7 @@ final class AnalysisCommandEvidenceMerger {
         return matched;
     }
 
+    /** AnalysisCommandEvidenceMerger의 appendCommandConclusion 처리에 필요한 업무 로직을 수행한다. */
     private void appendCommandConclusion(ObjectNode root, AnalysisCommandExecution execution, int matchedIssueGroups) {
         ObjectNode validation = objectField(root, "conclusionValidation");
         validation.put("summary", "AI 결론과 사용자가 실행한 검증 명령 결과를 함께 추적합니다.");
@@ -125,6 +131,7 @@ final class AnalysisCommandEvidenceMerger {
         validation.put("needsFollowUpCommandCount", countNonSucceededCommandResults(commandResults));
     }
 
+    /** AnalysisCommandEvidenceMerger의 copyDistinctHistory 처리에 필요한 업무 로직을 수행한다. */
     private void copyDistinctHistory(ArrayNode previous, ArrayNode target, AnalysisCommandExecution execution,
                                      int limit) {
         for (JsonNode item : previous) {
@@ -137,6 +144,7 @@ final class AnalysisCommandEvidenceMerger {
         }
     }
 
+    /** AnalysisCommandEvidenceMerger의 commandMatchesIssueGroup 처리에 필요한 업무 로직을 수행한다. */
     private boolean commandMatchesIssueGroup(AnalysisCommandParser.ParsedCommand parsed, JsonNode group) {
         String commandKind = normalizeResourceType(parsed.resourceType());
         String commandName = valueOrBlank(parsed.resourceName());
@@ -174,6 +182,7 @@ final class AnalysisCommandEvidenceMerger {
         return false;
     }
 
+    /** AnalysisCommandEvidenceMerger의 issueGroupCommandStatus 처리 조건의 충족 여부를 판단한다. */
     private String issueGroupCommandStatus(AnalysisCommandExecution execution) {
         return switch (execution.status()) {
             case SUCCEEDED -> "COMMAND_VERIFIED";
@@ -182,6 +191,7 @@ final class AnalysisCommandEvidenceMerger {
         };
     }
 
+    /** AnalysisCommandEvidenceMerger의 issueGroupCommandMeaning 처리 조건의 충족 여부를 판단한다. */
     private String issueGroupCommandMeaning(AnalysisCommandExecution execution) {
         return switch (execution.status()) {
             case SUCCEEDED -> "관련 검증 명령이 성공했습니다. 출력 내용을 근거로 다음 조치 또는 재분석을 진행하세요.";
@@ -190,6 +200,7 @@ final class AnalysisCommandEvidenceMerger {
         };
     }
 
+    /** AnalysisCommandEvidenceMerger의 commandExecutionJson 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode commandExecutionJson(AnalysisCommandExecution execution) {
         ObjectNode item = objectMapper.createObjectNode();
         item.put("id", execution.id().toString());
@@ -203,6 +214,7 @@ final class AnalysisCommandEvidenceMerger {
         return item;
     }
 
+    /** AnalysisCommandEvidenceMerger의 objectField 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode objectField(ObjectNode parent, String fieldName) {
         JsonNode existing = parent.get(fieldName);
         if (existing instanceof ObjectNode objectNode) {
@@ -213,6 +225,7 @@ final class AnalysisCommandEvidenceMerger {
         return created;
     }
 
+    /** AnalysisCommandEvidenceMerger의 arrayField 처리에 필요한 업무 로직을 수행한다. */
     private ArrayNode arrayField(ObjectNode parent, String fieldName) {
         JsonNode existing = parent.get(fieldName);
         if (existing instanceof ArrayNode arrayNode) {
@@ -223,10 +236,12 @@ final class AnalysisCommandEvidenceMerger {
         return created;
     }
 
+    /** AnalysisCommandEvidenceMerger의 arrayOrEmpty 처리에 필요한 업무 로직을 수행한다. */
     private ArrayNode arrayOrEmpty(JsonNode node) {
         return node instanceof ArrayNode arrayNode ? arrayNode : objectMapper.createArrayNode();
     }
 
+    /** AnalysisCommandEvidenceMerger의 countCommandResults 처리에 필요한 업무 로직을 수행한다. */
     private long countCommandResults(ArrayNode commandResults, String status) {
         long count = 0;
         for (JsonNode item : commandResults) {
@@ -237,6 +252,7 @@ final class AnalysisCommandEvidenceMerger {
         return count;
     }
 
+    /** AnalysisCommandEvidenceMerger의 countNonSucceededCommandResults 처리에 필요한 업무 로직을 수행한다. */
     private long countNonSucceededCommandResults(ArrayNode commandResults) {
         long count = 0;
         for (JsonNode item : commandResults) {
@@ -247,6 +263,7 @@ final class AnalysisCommandEvidenceMerger {
         return count;
     }
 
+    /** AnalysisCommandEvidenceMerger의 commandEvidenceConfidence 처리에 필요한 업무 로직을 수행한다. */
     private String commandEvidenceConfidence(AnalysisCommandExecution execution) {
         return switch (execution.status()) {
             case SUCCEEDED -> "HIGH";
@@ -255,6 +272,7 @@ final class AnalysisCommandEvidenceMerger {
         };
     }
 
+    /** AnalysisCommandEvidenceMerger의 commandBeginnerExplanation 처리에 필요한 업무 로직을 수행한다. */
     private String commandBeginnerExplanation(AnalysisCommandExecution execution) {
         return switch (execution.status()) {
             case SUCCEEDED -> "명령이 성공했으므로 AI 분석의 일부 근거를 실제 클러스터에서 확인한 상태입니다.";
@@ -263,6 +281,7 @@ final class AnalysisCommandEvidenceMerger {
         };
     }
 
+    /** AnalysisCommandEvidenceMerger의 commandExecutionSummary 처리에 필요한 업무 로직을 수행한다. */
     private String commandExecutionSummary(AnalysisCommandExecution execution) {
         String output = execution.status().name().equals("SUCCEEDED")
                 ? valueOrBlank(execution.stdoutText()) : valueOrBlank(execution.stderrText());
@@ -272,6 +291,7 @@ final class AnalysisCommandEvidenceMerger {
         return truncate(output.replaceAll("\\s+", " ").trim(), 500);
     }
 
+    /** AnalysisCommandEvidenceMerger의 normalizeResourceType 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeResourceType(String resourceType) {
         return switch (valueOrBlank(resourceType).toLowerCase(Locale.ROOT)) {
             case "", "all" -> "";
@@ -293,11 +313,13 @@ final class AnalysisCommandEvidenceMerger {
         };
     }
 
+    /** AnalysisCommandEvidenceMerger의 truncate 처리에 필요한 업무 로직을 수행한다. */
     private String truncate(String value, int maxLength) {
         String normalized = valueOrBlank(value);
         return normalized.length() <= maxLength ? normalized : normalized.substring(0, maxLength) + "...";
     }
 
+    /** AnalysisCommandEvidenceMerger의 valueOrBlank 처리에 필요한 업무 로직을 수행한다. */
     private String valueOrBlank(String value) {
         return value == null ? "" : value;
     }

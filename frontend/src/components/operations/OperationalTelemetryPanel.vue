@@ -14,6 +14,7 @@ const failureRate = computed(() => {
   return Math.round(telemetry.value.failureCount * 1000 / telemetry.value.requestCount) / 10;
 });
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load() {
   loading.value = true;
   error.value = '';

@@ -530,9 +530,32 @@ export interface ApplicationResponse {
   name: string;
   namespace?: string;
   deploymentType?: string;
+  helmReleaseName?: string;
+  helmChart?: string;
   status?: string;
   clusterId?: string;
   createdAt?: string;
+  currentReleaseRevision?: number;
+  chartVersionId?: string;
+  valuesRevisionId?: string;
+}
+
+export interface ApplicationRuntimeResponse {
+  readyPods: number;
+  totalPods: number;
+  restarts: number;
+  workloads: Array<{ kind: string; name: string; ready: number; desired: number; status: string }>;
+  endpoints: Array<{
+    type: string;
+    name: string;
+    url: string;
+    status: string;
+    address?: string;
+    port?: number;
+    targetPort?: string;
+    nodePort?: number;
+    accessScope?: 'CLUSTER_INTERNAL' | 'NODE_PORT' | 'LOAD_BALANCER' | 'EXTERNAL_DOMAIN';
+  }>;
 }
 
 export interface ApplicationStatusResponse {
@@ -1425,6 +1448,7 @@ export interface AiTrustSnapshotResponse {
 export interface ProductionEvidenceRunResponse {
   id: string;
   releaseName: string;
+  createNamespace: boolean;
   environment: string;
   state: 'NOT_RUN' | 'RUNNING' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'EXPIRED';
   triggeredBy: string;
@@ -1552,24 +1576,283 @@ export interface AuditLogResponse {
   createdAt: string;
 }
 
+export interface CatalogPackageResponse {
+  packageId: string;
+  repository: string;
+  repositoryDisplayName: string;
+  repositoryUrl?: string;
+  name: string;
+  description?: string;
+  version: string;
+  appVersion?: string;
+  contentUrl?: string;
+  official: boolean;
+  verifiedPublisher: boolean;
+  availableVersions: string[];
+}
+
+export interface ChartVersionResponse {
+  id: string;
+  chartVersion: string;
+  appVersion?: string;
+  digestSha256: string;
+  provenanceStatus: string;
+  sourceReference: string;
+  importedAt: string;
+}
+
+export interface LibraryChartResponse {
+  id: string;
+  tenantId: string;
+  name: string;
+  packageName: string;
+  description?: string;
+  sourceType: string;
+  sourceName?: string;
+  providerName?: string;
+  repositoryUrl?: string;
+  trustStatus: string;
+  versions: ChartVersionResponse[];
+}
+
+export interface ChartSourceResponse {
+  id: string;
+  tenantId: string;
+  sourceType: 'HELM_REPOSITORY' | 'OCI_REGISTRY';
+  name: string;
+  endpoint: string;
+  credentialConfigured: boolean;
+  tlsPolicy: string;
+  enabled: boolean;
+  updatedAt: string;
+}
+
+export interface ValuesProfileResponse {
+  id: string;
+  tenantId: string;
+  chartVersionId: string;
+  name: string;
+  description?: string;
+  updatedAt: string;
+}
+
+export interface ValuesRevisionResponse {
+  id: string;
+  revision: number;
+  valuesSha256: string;
+  parentRevision?: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface DeploymentPlanResponse {
+  id: string;
+  applicationId?: string;
+  clusterId: string;
+  chartVersionId: string;
+  valuesRevisionId?: string;
+  namespace: string;
+  releaseName: string;
+  exposureType: 'NONE' | 'CHART_MANAGED' | 'HTTP_ROUTE' | 'INGRESS' | 'TCP_ROUTE';
+  hostname?: string;
+  exposurePath?: string;
+  backendServiceNamespace?: string;
+  backendServiceName?: string;
+  backendServicePort?: number;
+  gatewayName?: string;
+  gatewayNamespace?: string;
+  manifestSha256: string;
+  warnings: string[];
+  confirmationText: string;
+  renderedManifest: string;
+  expiresAt: string;
+}
+
+export interface RenderedServiceOptionResponse {
+  namespace: string;
+  name: string;
+  type: string;
+  portName?: string;
+  port: number;
+  targetPort?: string;
+  nodePort?: number;
+  protocol: string;
+  appProtocol?: string;
+  httpRouteCompatibility: 'HTTP' | 'NON_HTTP' | 'UNKNOWN';
+  compatibilityMessage?: string;
+}
+
+export interface GatewayListenerOptionResponse {
+  name: string;
+  protocol: string;
+  port?: number;
+  hostname?: string;
+}
+
+export interface GatewayOptionResponse {
+  namespace: string;
+  name: string;
+  readiness: 'READY' | 'NOT_READY' | 'UNKNOWN';
+  listeners: GatewayListenerOptionResponse[];
+}
+
+export interface DeploymentTargetOptionsResponse {
+  services: RenderedServiceOptionResponse[];
+  gateways: GatewayOptionResponse[];
+  gatewayDiscoveryStatus: 'AVAILABLE' | 'EMPTY' | 'UNAVAILABLE';
+  gatewayDiscoveryMessage?: string;
+}
+
+export interface DeploymentAcceptedResponse {
+  applicationId: string;
+  jobId: string;
+  operationId: string;
+}
+
+export interface ValuesSuggestionResponse {
+  valuesYaml: string;
+  promptVersion: string;
+  validationStatus: 'HELM_TEMPLATE_VALIDATED';
+  attempts: number;
+  chartName: string;
+  providerName?: string;
+  chartVersion: string;
+  applicationVersion?: string;
+  schemaIncluded: boolean;
+}
+
+export interface ValuesContractResponse {
+  defaultValuesYaml: string;
+  valuesSchemaJson?: string;
+  schemaIncluded: boolean;
+}
+
+export interface ReleaseOperationResponse {
+  id: string;
+  jobId: string;
+  type: string;
+  status: string;
+  releaseRevision?: number;
+  outputSummary?: string;
+  errorMessage?: string;
+  requestedBy: string;
+  requestedAt: string;
+  completedAt?: string;
+}
+
+export interface ApplicationReleaseResponse {
+  id: string;
+  revision: number;
+  chartVersionId: string;
+  valuesRevisionId?: string;
+  manifestSha256: string;
+  status: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface AiProviderProfileResponse {
+  id: string;
+  name: string;
+  providerType: 'OLLAMA' | 'OPENAI' | 'GOOGLE_GENAI' | 'OPENAI_COMPATIBLE';
+  baseUrl: string;
+  credentialConfigured: boolean;
+  defaultModel: string;
+  allowedModels: string[];
+  enabled: boolean;
+  externalDataTransfer: boolean;
+  validationStatus: string;
+  lastValidatedAt?: string;
+}
+
+export interface AiRoutingResponse {
+  purpose: 'ANALYSIS' | 'CHAT' | 'HELM_VALUES';
+  primaryProfileId: string;
+  model: string;
+  fallbackProfileId?: string;
+  fallbackModel?: string;
+  externalTransferAllowed: boolean;
+  maximumContextChars: number;
+  maximumOutputTokens: number;
+  updatedAt: string;
+}
+
+export interface LocalAiModelResponse {
+  id: string;
+  modelTag: string;
+  parameterBillions?: number;
+  status: 'PULLING' | 'READY' | 'FAILED' | 'UNSUPPORTED' | 'DELETING';
+  sizeBytes?: number;
+  digest?: string;
+  evaluationScore?: number;
+  evaluationSamples?: number;
+  averageLatencyMs?: number;
+  promoted: boolean;
+  updatedAt: string;
+}
+
+export interface TenantMemberResponse {
+  id: string;
+  tenantId: string;
+  userId?: string;
+  username?: string;
+  displayName?: string;
+  email?: string;
+  role: 'TENANT_ADMIN' | 'CLUSTER_ADMIN' | 'OPERATOR' | 'VIEWER';
+  scopeType: 'TENANT' | 'WORKSPACE' | 'CLUSTER' | 'NAMESPACE';
+  workspaceId?: string;
+  clusterId?: string;
+  namespace?: string;
+  status: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'OFFBOARDED';
+  updatedAt: string;
+}
+
+export interface OidcGroupMappingResponse {
+  id: string;
+  issuer: string;
+  groupValue: string;
+  tenantId: string;
+  role: string;
+  scopeType: string;
+  workspaceId?: string;
+  clusterId?: string;
+  namespace?: string;
+  active: boolean;
+  updatedAt: string;
+}
+
+export interface TenantMemberOffboardPlanResponse {
+  membershipId: string;
+  username: string;
+  status: string;
+  roleBindingsToRemove: number;
+  sessionsRevoked: boolean;
+  confirmationText: string;
+}
+
+export type TenantFeatureKey =
+  | 'CORE_OVERVIEW' | 'CLUSTER_OPERATIONS' | 'KUBERNETES_CONSOLE' | 'AI_OPERATIONS'
+  | 'APPLICATION_DELIVERY' | 'AI_PROVIDER_ROUTING' | 'AI_PROVIDER_PLATFORM'
+  | 'ACCESS_CONTROL' | 'AUDIT' | 'PLATFORM_ADMINISTRATION';
+
 export const api = {
-  getRuntimeReadiness: () => request<RuntimeReadinessResponse>('/api/operations/runtime-readiness'),
-  listTenants: () => request<TenantResponse[]>('/api/tenants'),
-  createTenant: (body: CreateTenancyRequest) => request<TenantResponse>('/api/tenants', {
+  getRuntimeReadiness: /** getRuntimeReadiness 처리 결과를 조회해 반환한다. */ () => request<RuntimeReadinessResponse>('/api/operations/runtime-readiness'),
+  listTenants: /** listTenants 처리 결과를 조회해 반환한다. */ () => request<TenantResponse[]>('/api/tenants'),
+  createTenant: /** createTenant 처리에 필요한 데이터를 생성하거나 저장한다. */ (body: CreateTenancyRequest) => request<TenantResponse>('/api/tenants', {
     method: 'POST', body: JSON.stringify(body),
   }),
-  listWorkspaces: (tenantId: string) => request<WorkspaceResponse[]>(`/api/tenants/${encodeURIComponent(tenantId)}/workspaces`),
-  createWorkspace: (tenantId: string, body: CreateTenancyRequest) => request<WorkspaceResponse>(`/api/tenants/${encodeURIComponent(tenantId)}/workspaces`, {
+  listWorkspaces: /** listWorkspaces 처리 결과를 조회해 반환한다. */ (tenantId: string) => request<WorkspaceResponse[]>(`/api/tenants/${encodeURIComponent(tenantId)}/workspaces`),
+  createWorkspace: /** createWorkspace 처리에 필요한 데이터를 생성하거나 저장한다. */ (tenantId: string, body: CreateTenancyRequest) => request<WorkspaceResponse>(`/api/tenants/${encodeURIComponent(tenantId)}/workspaces`, {
     method: 'POST', body: JSON.stringify(body),
   }),
-  listClusters: (scope?: { tenantId?: string; workspaceId?: string }) => {
+  listClusters: /** listClusters 처리 결과를 조회해 반환한다. */ (scope?: { tenantId?: string; workspaceId?: string }) => {
     const query = new URLSearchParams();
     if (scope?.tenantId) query.set('tenantId', scope.tenantId);
     if (scope?.workspaceId) query.set('workspaceId', scope.workspaceId);
     return request<ClusterResponse[]>(`/api/clusters${query.size ? `?${query}` : ''}`);
   },
-  getCluster: (clusterId: string) => request<ClusterResponse>(`/api/clusters/${encodeURIComponent(clusterId)}`),
-  getClusterReadiness: (clusterId: string, options?: { namespace?: string; targetVersion?: string; refresh?: boolean }) => {
+  getCluster: /** getCluster 처리 결과를 조회해 반환한다. */ (clusterId: string) => request<ClusterResponse>(`/api/clusters/${encodeURIComponent(clusterId)}`),
+  getClusterReadiness: /** getClusterReadiness 처리 결과를 조회해 반환한다. */ (clusterId: string, options?: { namespace?: string; targetVersion?: string; refresh?: boolean }) => {
     const query = new URLSearchParams();
     if (options?.namespace) query.set('namespace', options.namespace);
     if (options?.targetVersion) query.set('targetVersion', options.targetVersion);
@@ -1578,76 +1861,76 @@ export const api = {
       `/api/clusters/${encodeURIComponent(clusterId)}/readiness${query.size ? `?${query.toString()}` : ''}`
     );
   },
-  registerCluster: (body: RegisterClusterRequest) => request<ClusterResponse>('/api/clusters', {
+  registerCluster: /** registerCluster 처리에 필요한 데이터를 생성하거나 저장한다. */ (body: RegisterClusterRequest) => request<ClusterResponse>('/api/clusters', {
     method: 'POST',
     body: JSON.stringify(body)
   }),
-  getClusterCredential: (clusterId: string, reveal = false) => request<ClusterCredentialResponse>(
+  getClusterCredential: /** getClusterCredential 처리 결과를 조회해 반환한다. */ (clusterId: string, reveal = false) => request<ClusterCredentialResponse>(
     `/api/clusters/${encodeURIComponent(clusterId)}/credential?reveal=${String(reveal)}`
   ),
-  getClusterSyncSettings: (clusterId: string) => request<ClusterSyncSettingsResponse>(
+  getClusterSyncSettings: /** getClusterSyncSettings 처리 결과를 조회해 반환한다. */ (clusterId: string) => request<ClusterSyncSettingsResponse>(
     `/api/clusters/${encodeURIComponent(clusterId)}/sync-settings`
   ),
-  getClusterSyncStatus: (clusterId: string) => request<ClusterSyncStatusResponse>(
+  getClusterSyncStatus: /** getClusterSyncStatus 처리 결과를 조회해 반환한다. */ (clusterId: string) => request<ClusterSyncStatusResponse>(
     `/api/clusters/${encodeURIComponent(clusterId)}/sync-status`
   ),
-  testClusterConnection: (clusterId: string) => request<ClusterConnectionTestResponse>(`/api/clusters/${clusterId}/connection-test`, {
+  testClusterConnection: /** testClusterConnection 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (clusterId: string) => request<ClusterConnectionTestResponse>(`/api/clusters/${clusterId}/connection-test`, {
     method: 'POST'
   }),
-  syncCluster: (clusterId: string) => request<StartJobResponse>(`/api/clusters/${clusterId}/sync`, {
+  syncCluster: /** syncCluster 처리의 핵심 작업 흐름을 실행한다. */ (clusterId: string) => request<StartJobResponse>(`/api/clusters/${clusterId}/sync`, {
     method: 'POST'
   }),
-  deleteCluster: (clusterId: string) => request<void>(`/api/clusters/${clusterId}`, {
+  deleteCluster: /** deleteCluster 처리 대상과 관련 상태를 안전하게 정리한다. */ (clusterId: string) => request<void>(`/api/clusters/${clusterId}`, {
     method: 'DELETE'
   }),
-  listNamespaces: (clusterId: string) => request<KubernetesNamespaceResponse[]>(`/api/clusters/${clusterId}/namespaces`),
-  listNodes: (clusterId: string) => request<KubernetesNodeResponse[]>(`/api/clusters/${encodeURIComponent(clusterId)}/nodes`),
-  getCommandCapabilities: (clusterId: string, namespace?: string) => {
+  listNamespaces: /** listNamespaces 처리 결과를 조회해 반환한다. */ (clusterId: string) => request<KubernetesNamespaceResponse[]>(`/api/clusters/${clusterId}/namespaces`),
+  listNodes: /** listNodes 처리 결과를 조회해 반환한다. */ (clusterId: string) => request<KubernetesNodeResponse[]>(`/api/clusters/${encodeURIComponent(clusterId)}/nodes`),
+  getCommandCapabilities: /** getCommandCapabilities 처리 결과를 조회해 반환한다. */ (clusterId: string, namespace?: string) => {
     const query = namespace ? `?namespace=${encodeURIComponent(namespace)}` : '';
     return request<CommandCapabilityResponse>(`/api/clusters/${encodeURIComponent(clusterId)}/command-capabilities${query}`);
   },
-  validateCommand: (clusterId: string, body: { namespace?: string; command: string }) => request<CommandValidationResponse>(
+  validateCommand: /** validateCommand 처리 입력과 현재 상태의 유효성을 검증한다. */ (clusterId: string, body: { namespace?: string; command: string }) => request<CommandValidationResponse>(
     `/api/clusters/${encodeURIComponent(clusterId)}/commands/validate`,
     { method: 'POST', body: JSON.stringify(body) }
   ),
-  executeCommand: (clusterId: string, body: { sourceAnalysisId?: string; namespace?: string; command: string; manifest?: string; confirmed: boolean }) =>
+  executeCommand: /** executeCommand 처리의 핵심 작업 흐름을 실행한다. */ (clusterId: string, body: { sourceAnalysisId?: string; namespace?: string; command: string; manifest?: string; confirmed: boolean }) =>
     request<CommandExecutionResponse>(`/api/clusters/${encodeURIComponent(clusterId)}/command-executions`, {
       method: 'POST', body: JSON.stringify(body)
     }),
-  createTerminalSession: (clusterId: string, body: { sourceAnalysisId?: string; namespace?: string; command: string; confirmed: boolean }) =>
+  createTerminalSession: /** createTerminalSession 처리에 필요한 데이터를 생성하거나 저장한다. */ (clusterId: string, body: { sourceAnalysisId?: string; namespace?: string; command: string; confirmed: boolean }) =>
     request<TerminalSessionResponse>(`/api/clusters/${encodeURIComponent(clusterId)}/command-sessions`, {
       method: 'POST', body: JSON.stringify(body)
     }),
-  getCommandExecution: (clusterId: string, executionId: string) => request<CommandExecutionResponse>(
+  getCommandExecution: /** getCommandExecution 처리 결과를 조회해 반환한다. */ (clusterId: string, executionId: string) => request<CommandExecutionResponse>(
     `/api/clusters/${encodeURIComponent(clusterId)}/command-executions/${encodeURIComponent(executionId)}`
   ),
-  listCommandExecutions: (clusterId: string, namespace?: string, limit = 30) => {
+  listCommandExecutions: /** listCommandExecutions 처리 결과를 조회해 반환한다. */ (clusterId: string, namespace?: string, limit = 30) => {
     const query = new URLSearchParams({ limit: String(limit) });
     if (namespace) query.set('namespace', namespace);
     return request<CommandExecutionResponse[]>(
       `/api/clusters/${encodeURIComponent(clusterId)}/command-executions?${query.toString()}`
     );
   },
-  cancelCommandExecution: (clusterId: string, executionId: string) => request<CommandExecutionResponse>(
+  cancelCommandExecution: /** cancelCommandExecution 처리 조건의 충족 여부를 판단한다. */ (clusterId: string, executionId: string) => request<CommandExecutionResponse>(
     `/api/clusters/${encodeURIComponent(clusterId)}/command-executions/${encodeURIComponent(executionId)}/cancel`,
     { method: 'POST' }
   ),
-  listCommandFavorites: (clusterId: string) => request<CommandFavoriteResponse[]>(
+  listCommandFavorites: /** listCommandFavorites 처리 결과를 조회해 반환한다. */ (clusterId: string) => request<CommandFavoriteResponse[]>(
     `/api/clusters/${encodeURIComponent(clusterId)}/command-favorites`
   ),
-  createCommandFavorite: (clusterId: string, body: CommandFavoriteRequest) => request<CommandFavoriteResponse>(
+  createCommandFavorite: /** createCommandFavorite 처리에 필요한 데이터를 생성하거나 저장한다. */ (clusterId: string, body: CommandFavoriteRequest) => request<CommandFavoriteResponse>(
     `/api/clusters/${encodeURIComponent(clusterId)}/command-favorites`,
     { method: 'POST', body: JSON.stringify(body) }
   ),
-  updateCommandFavorite: (clusterId: string, favoriteId: string, body: CommandFavoriteRequest) => request<CommandFavoriteResponse>(
+  updateCommandFavorite: /** updateCommandFavorite 처리 대상의 상태를 갱신한다. */ (clusterId: string, favoriteId: string, body: CommandFavoriteRequest) => request<CommandFavoriteResponse>(
     `/api/clusters/${encodeURIComponent(clusterId)}/command-favorites/${encodeURIComponent(favoriteId)}`,
     { method: 'PUT', body: JSON.stringify(body) }
   ),
-  deleteCommandFavorite: (clusterId: string, favoriteId: string) => request<void>(
+  deleteCommandFavorite: /** deleteCommandFavorite 처리 대상과 관련 상태를 안전하게 정리한다. */ (clusterId: string, favoriteId: string) => request<void>(
     `/api/clusters/${encodeURIComponent(clusterId)}/command-favorites/${encodeURIComponent(favoriteId)}`,
     { method: 'DELETE' }
   ),
-  listClusterResources: (clusterId: string, filters?: { namespace?: string; resourceType?: string }) => {
+  listClusterResources: /** listClusterResources 처리 결과를 조회해 반환한다. */ (clusterId: string, filters?: { namespace?: string; resourceType?: string }) => {
     const query = new URLSearchParams();
     if (filters?.namespace) {
       query.set('namespace', filters.namespace);
@@ -1658,7 +1941,7 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<KubernetesResourceSnapshotResponse[]>(`/api/clusters/${encodeURIComponent(clusterId)}/resources${suffix}`);
   },
-  pageClusterResources: (clusterId: string, filters?: { namespace?: string; resourceType?: string; page?: number; size?: number }) => {
+  pageClusterResources: /** pageClusterResources 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (clusterId: string, filters?: { namespace?: string; resourceType?: string; page?: number; size?: number }) => {
     const query = new URLSearchParams();
     if (filters?.namespace) query.set('namespace', filters.namespace);
     if (filters?.resourceType) query.set('resourceType', filters.resourceType);
@@ -1668,7 +1951,7 @@ export const api = {
       `/api/clusters/${encodeURIComponent(clusterId)}/resources/page?${query.toString()}`
     );
   },
-  getClusterResourceManifest: (clusterId: string, resourceType: string, resourceName: string, namespace?: string) => {
+  getClusterResourceManifest: /** getClusterResourceManifest 처리 결과를 조회해 반환한다. */ (clusterId: string, resourceType: string, resourceName: string, namespace?: string) => {
     const query = new URLSearchParams();
     if (namespace) {
       query.set('namespace', namespace);
@@ -1678,13 +1961,13 @@ export const api = {
       `/api/clusters/${encodeURIComponent(clusterId)}/resources/${encodeURIComponent(resourceType)}/${encodeURIComponent(resourceName)}/manifest${suffix}`
     );
   },
-  getClusterResourceLogTargets: (clusterId: string, resourceType: string, resourceName: string, namespace: string) => {
+  getClusterResourceLogTargets: /** getClusterResourceLogTargets 처리 결과를 조회해 반환한다. */ (clusterId: string, resourceType: string, resourceName: string, namespace: string) => {
     const query = new URLSearchParams({ namespace });
     return request<ClusterResourceLogTargetsResponse>(
       `/api/clusters/${encodeURIComponent(clusterId)}/resources/${encodeURIComponent(resourceType)}/${encodeURIComponent(resourceName)}/logs/targets?${query.toString()}`
     );
   },
-  getClusterResourceLogs: (
+  getClusterResourceLogs: /** getClusterResourceLogs 처리 결과를 조회해 반환한다. */ (
     clusterId: string,
     resourceType: string,
     resourceName: string,
@@ -1705,7 +1988,7 @@ export const api = {
       `/api/clusters/${encodeURIComponent(clusterId)}/resources/${encodeURIComponent(resourceType)}/${encodeURIComponent(resourceName)}/logs?${query.toString()}`
     );
   },
-  listClusterEvents: (clusterId: string, namespace?: string) => {
+  listClusterEvents: /** listClusterEvents 처리 결과를 조회해 반환한다. */ (clusterId: string, namespace?: string) => {
     const query = new URLSearchParams();
     if (namespace) {
       query.set('namespace', namespace);
@@ -1713,39 +1996,236 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<KubernetesEventSnapshotResponse[]>(`/api/clusters/${encodeURIComponent(clusterId)}/events${suffix}`);
   },
-  cancelJob: (jobId: string) => request<JobResponse>(`/api/jobs/${encodeURIComponent(jobId)}/cancel`, {
+  cancelJob: /** cancelJob 처리 조건의 충족 여부를 판단한다. */ (jobId: string) => request<JobResponse>(`/api/jobs/${encodeURIComponent(jobId)}/cancel`, {
     method: 'POST'
   }),
-  listApplications: () => request<ApplicationResponse[]>('/api/applications'),
-  getApplication: (applicationId: string) => request<ApplicationResponse>(
+  searchChartCatalog: /** searchChartCatalog 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (tenantId: string, query: string, limit = 20) => request<CatalogPackageResponse[]>(
+    `/api/v2/application-delivery/catalog/search?${new URLSearchParams({ tenantId, query, limit: String(limit) })}`
+  ),
+  importChart: /** importChart 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (body: { tenantId: string; repository: string; name: string; version: string }) =>
+    request<{ chart: LibraryChartResponse }>('/api/v2/application-delivery/charts/import', {
+      method: 'POST', body: JSON.stringify(body),
+    }, { timeoutMs: 120_000 }),
+  uploadChart: /** uploadChart 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (tenantId: string, file: File, sourceName = 'manual-upload') => {
+    const body = new FormData();
+    body.set('tenantId', tenantId);
+    body.set('sourceName', sourceName);
+    body.set('file', file);
+    return request<{ chart: LibraryChartResponse }>('/api/v2/application-delivery/charts/upload',
+      { method: 'POST', body }, { timeoutMs: 120_000 });
+  },
+  listLibraryCharts: /** listLibraryCharts 처리 결과를 조회해 반환한다. */ (tenantId: string) => request<LibraryChartResponse[]>(
+    `/api/v2/application-delivery/charts?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  removeLibraryChart: /** removeLibraryChart 처리 대상과 관련 상태를 안전하게 정리한다. */ (tenantId: string, chartId: string, confirmationText: string) => request<void>(
+    `/api/v2/application-delivery/charts/${encodeURIComponent(chartId)}`,
+    { method: 'DELETE', body: JSON.stringify({ tenantId, confirmationText }) }
+  ),
+  listChartSources: /** listChartSources 처리 결과를 조회해 반환한다. */ (tenantId: string) => request<ChartSourceResponse[]>(
+    `/api/v2/application-delivery/sources?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  createChartSource: /** createChartSource 처리에 필요한 데이터를 생성하거나 저장한다. */ (body: { tenantId: string; sourceType: string; name: string; endpoint: string; credential?: string }) =>
+    request<ChartSourceResponse>('/api/v2/application-delivery/sources', { method: 'POST', body: JSON.stringify(body) }),
+  deleteChartSource: /** deleteChartSource 처리 대상과 관련 상태를 안전하게 정리한다. */ (tenantId: string, sourceId: string) => request<void>(
+    `/api/v2/application-delivery/sources/${encodeURIComponent(sourceId)}?tenantId=${encodeURIComponent(tenantId)}`,
+    { method: 'DELETE' }
+  ),
+  listValuesProfiles: /** listValuesProfiles 처리 결과를 조회해 반환한다. */ (tenantId: string, chartVersionId: string) => request<ValuesProfileResponse[]>(
+    `/api/v2/application-delivery/values-profiles?${new URLSearchParams({ tenantId, chartVersionId })}`
+  ),
+  createValuesProfile: /** createValuesProfile 처리에 필요한 데이터를 생성하거나 저장한다. */ (body: { tenantId: string; chartVersionId: string; name: string; description?: string }) =>
+    request<ValuesProfileResponse>('/api/v2/application-delivery/values-profiles', { method: 'POST', body: JSON.stringify(body) }),
+  createValuesRevision: /** createValuesRevision 처리에 필요한 데이터를 생성하거나 저장한다. */ (tenantId: string, profileId: string, valuesYaml: string) => request<ValuesRevisionResponse>(
+    `/api/v2/application-delivery/values-profiles/${encodeURIComponent(profileId)}/revisions`,
+    { method: 'POST', body: JSON.stringify({ tenantId, valuesYaml }) }
+  ),
+  listValuesRevisions: /** listValuesRevisions 처리 결과를 조회해 반환한다. */ (tenantId: string, profileId: string) => request<ValuesRevisionResponse[]>(
+    `/api/v2/application-delivery/values-profiles/${encodeURIComponent(profileId)}/revisions?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  getValuesRevisionValues: /** getValuesRevisionValues 처리 결과를 조회해 반환한다. */ (tenantId: string, revisionId: string) => request<{ valuesYaml: string }>(
+    `/api/v2/application-delivery/values-revisions/${encodeURIComponent(revisionId)}/values?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  getValuesContract: /** Chart의 기본 Values와 JSON Schema 계약을 조회한다. */ (tenantId: string, chartVersionId: string) => request<ValuesContractResponse>(
+    `/api/v2/application-delivery/chart-versions/${encodeURIComponent(chartVersionId)}/values-contract?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  suggestValues: /** suggestValues 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (body: { tenantId: string; chartVersionId: string; currentValuesYaml: string; instruction: string }) =>
+    request<ValuesSuggestionResponse>('/api/v2/application-delivery/values-suggestions', {
+      method: 'POST', body: JSON.stringify(body),
+    }, { timeoutMs: 180_000 }),
+  getDeploymentTargetOptions: /** getDeploymentTargetOptions 처리 결과를 조회해 반환한다. */ (body: {
+    tenantId: string; clusterId: string; chartVersionId: string; valuesRevisionId?: string;
+    namespace: string; releaseName: string; exposureType?: string;
+  }) => request<DeploymentTargetOptionsResponse>('/api/v2/application-delivery/deployment-target-options', {
+    method: 'POST', body: JSON.stringify(body),
+  }, { timeoutMs: 60_000 }),
+  createDeploymentPlan: /** createDeploymentPlan 처리에 필요한 데이터를 생성하거나 저장한다. */ (body: {
+    tenantId: string; applicationId?: string; clusterId: string; chartVersionId: string; valuesRevisionId?: string;
+    namespace: string; releaseName: string; createNamespace: boolean; exposureType: string; hostname?: string;
+    exposurePath?: string; backendServiceNamespace?: string; backendServiceName?: string; backendServicePort?: number;
+    gatewayName?: string; gatewayNamespace?: string;
+  }) => request<DeploymentPlanResponse>('/api/v2/application-delivery/deployment-plans', {
+    method: 'POST', body: JSON.stringify(body),
+  }, { timeoutMs: 60_000 }),
+  executeDeploymentPlan: /** executeDeploymentPlan 처리의 핵심 작업 흐름을 실행한다. */ (planId: string, tenantId: string, confirmationText: string) =>
+    request<DeploymentAcceptedResponse>(`/api/v2/application-delivery/deployment-plans/${encodeURIComponent(planId)}/execute`, {
+      method: 'POST', body: JSON.stringify({ tenantId, confirmationText }),
+    }),
+  listReleaseOperations: /** listReleaseOperations 처리 결과를 조회해 반환한다. */ (tenantId: string, applicationId: string) => request<ReleaseOperationResponse[]>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/operations?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  listApplicationReleases: /** listApplicationReleases 처리 결과를 조회해 반환한다. */ (tenantId: string, applicationId: string) => request<ApplicationReleaseResponse[]>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/releases?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  getRollbackConfirmation: /** getRollbackConfirmation 처리 결과를 조회해 반환한다. */ (tenantId: string, applicationId: string, revision: number) => request<{ confirmationText: string; impactSummary: string }>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/rollback-confirmation?${new URLSearchParams({ tenantId, revision: String(revision) })}`
+  ),
+  rollbackHelmApplication: /** rollbackHelmApplication 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (tenantId: string, applicationId: string, revision: number, confirmationText: string) =>
+    request<DeploymentAcceptedResponse>(`/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/rollback`, {
+      method: 'POST', body: JSON.stringify({ tenantId, revision, confirmationText }),
+    }),
+  getApplicationRuntime: /** getApplicationRuntime 처리 결과를 조회해 반환한다. */ (tenantId: string, applicationId: string) => request<ApplicationRuntimeResponse>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/runtime?tenantId=${encodeURIComponent(tenantId)}`,
+    undefined, { timeoutMs: 20_000 }
+  ),
+  getUninstallConfirmation: /** getUninstallConfirmation 처리 결과를 조회해 반환한다. */ (tenantId: string, applicationId: string) => request<{ confirmationText: string; impactSummary: string }>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/uninstall-confirmation?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  uninstallHelmApplication: /** uninstallHelmApplication 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (tenantId: string, applicationId: string, confirmationText: string, options: { preservePvcs: boolean; preserveDns: boolean; preserveTls: boolean }) => request<DeploymentAcceptedResponse>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/uninstall`,
+    { method: 'POST', body: JSON.stringify({ tenantId, confirmationText, ...options }) }
+  ),
+  retryApplicationCleanup: /** 실패한 uninstall cleanup을 새 Job으로 재시도한다. */ (tenantId: string, applicationId: string, confirmationText: string, options: { preservePvcs: boolean; preserveDns: boolean; preserveTls: boolean }) => request<DeploymentAcceptedResponse>(
+    `/api/v2/application-delivery/applications/${encodeURIComponent(applicationId)}/cleanup-retry`,
+    { method: 'POST', body: JSON.stringify({ tenantId, confirmationText, ...options }) }
+  ),
+  listApplications: /** listApplications 처리 결과를 조회해 반환한다. */ () => request<ApplicationResponse[]>('/api/applications'),
+  listTenantApplications: /** listTenantApplications 처리 결과를 조회해 반환한다. */ (tenantId: string) => request<ApplicationResponse[]>(
+    `/api/v2/application-delivery/applications?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  listAiProviderProfiles: /** listAiProviderProfiles 처리 결과를 조회해 반환한다. */ (tenantId: string) => request<AiProviderProfileResponse[]>(
+    `/api/v2/ai-configuration/providers?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  createAiProviderProfile: /** createAiProviderProfile 처리에 필요한 데이터를 생성하거나 저장한다. */ (body: {
+    tenantId: string; name: string; providerType: string; baseUrl?: string; apiKey?: string;
+    defaultModel: string; allowedModels: string[]; externalDataTransfer: boolean;
+  }) => request<AiProviderProfileResponse>('/api/v2/ai-configuration/providers', {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+  updateAiProviderProfile: /** updateAiProviderProfile 처리 대상의 상태를 갱신한다. */ (profileId: string, body: {
+    tenantId: string; name: string; providerType: string; baseUrl?: string; apiKey?: string;
+    defaultModel: string; allowedModels: string[]; enabled: boolean; externalDataTransfer: boolean;
+  }) => request<AiProviderProfileResponse>(`/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}`, {
+    method: 'PUT', body: JSON.stringify(body),
+  }),
+  validateAiProviderProfile: /** validateAiProviderProfile 처리 입력과 현재 상태의 유효성을 검증한다. */ (tenantId: string, profileId: string) => request<{ valid: boolean; message: string; checkedAt: string }>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/validate?tenantId=${encodeURIComponent(tenantId)}`,
+    { method: 'POST' }, { timeoutMs: 20_000 }
+  ),
+  listLocalAiModels: /** listLocalAiModels 처리 결과를 조회해 반환한다. */ (tenantId: string, profileId: string) => request<LocalAiModelResponse[]>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/models?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  refreshLocalAiModels: /** refreshLocalAiModels 처리의 핵심 작업 흐름을 실행한다. */ (tenantId: string, profileId: string) => request<LocalAiModelResponse[]>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/models/refresh?tenantId=${encodeURIComponent(tenantId)}`,
+    { method: 'POST' }, { timeoutMs: 20_000 }
+  ),
+  pullLocalAiModel: /** pullLocalAiModel 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (tenantId: string, profileId: string, modelTag: string) => request<{ jobId: string; status: string }>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/models/pull`,
+    { method: 'POST', body: JSON.stringify({ tenantId, modelTag }) }
+  ),
+  deleteLocalAiModel: /** 사용 중 보호 확인 뒤 Ollama 모델을 삭제한다. */ (tenantId: string, profileId: string, modelTag: string, confirmationText: string) => request<void>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/models/${encodeURIComponent(modelTag)}`,
+    { method: 'DELETE', body: JSON.stringify({ tenantId, confirmationText }) }, { timeoutMs: 140_000 }
+  ),
+  evaluateLocalAiModel: /** 정식 <=9B 비교 코퍼스를 실제 모델에 실행한다. */ (tenantId: string, profileId: string, modelTag: string) => request<{ score: number; samples: number; averageLatencyMs: number; promotable: boolean }>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/models/${encodeURIComponent(modelTag)}/evaluate?tenantId=${encodeURIComponent(tenantId)}`,
+    { method: 'POST' }, { timeoutMs: 300_000 }
+  ),
+  promoteLocalAiModel: /** 평가 gate를 통과한 모델을 Profile 기본값으로 승격한다. */ (tenantId: string, profileId: string, modelTag: string) => request<AiProviderProfileResponse>(
+    `/api/v2/ai-configuration/providers/${encodeURIComponent(profileId)}/models/${encodeURIComponent(modelTag)}/promote?tenantId=${encodeURIComponent(tenantId)}`,
+    { method: 'POST' }
+  ),
+  listAiRouting: /** listAiRouting 처리 결과를 조회해 반환한다. */ (tenantId: string) => request<AiRoutingResponse[]>(
+    `/api/v2/ai-configuration/routing?tenantId=${encodeURIComponent(tenantId)}`
+  ),
+  saveAiRouting: /** saveAiRouting 처리에 필요한 데이터를 생성하거나 저장한다. */ (purpose: string, body: {
+    tenantId: string; primaryProfileId: string; model: string; fallbackProfileId?: string;
+    fallbackModel?: string; externalTransferAllowed: boolean; maximumContextChars: number; maximumOutputTokens: number;
+  }) => request<AiRoutingResponse>(`/api/v2/ai-configuration/routing/${encodeURIComponent(purpose)}`, {
+    method: 'PUT', body: JSON.stringify(body),
+  }),
+  listTenantMembers: /** listTenantMembers 처리 결과를 조회해 반환한다. */ (tenantId: string) => request<TenantMemberResponse[]>(`/api/tenants/${encodeURIComponent(tenantId)}/members`),
+  inviteTenantMember: /** inviteTenantMember 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (tenantId: string, body: {
+    issuer: string; email?: string; subject?: string; role: string; scopeType: string;
+    workspaceId?: string; clusterId?: string; namespace?: string;
+  }) => request<TenantMemberResponse>(`/api/tenants/${encodeURIComponent(tenantId)}/members`, {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+  setTenantMemberStatus: /** setTenantMemberStatus 처리 대상의 상태를 갱신한다. */ (tenantId: string, membershipId: string, status: 'ACTIVE' | 'SUSPENDED') =>
+    request<TenantMemberResponse>(`/api/tenants/${encodeURIComponent(tenantId)}/members/${encodeURIComponent(membershipId)}`, {
+      method: 'PATCH', body: JSON.stringify({ status }),
+    }),
+  getTenantMemberOffboardPlan: /** getTenantMemberOffboardPlan 처리 결과를 조회해 반환한다. */ (tenantId: string, membershipId: string) => request<TenantMemberOffboardPlanResponse>(
+    `/api/tenants/${encodeURIComponent(tenantId)}/members/${encodeURIComponent(membershipId)}/offboard-plan`,
+    { method: 'POST' }
+  ),
+  offboardTenantMember: /** offboardTenantMember 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (tenantId: string, membershipId: string, confirmationText: string) => request<TenantMemberResponse>(
+    `/api/tenants/${encodeURIComponent(tenantId)}/members/${encodeURIComponent(membershipId)}/offboard`,
+    { method: 'POST', body: JSON.stringify({ confirmationText }) }
+  ),
+  getTenantFeatures: /** getTenantFeatures 처리 결과를 조회해 반환한다. */ (tenantId: string) => request<Record<TenantFeatureKey, boolean>>(
+    `/api/tenants/${encodeURIComponent(tenantId)}/features`
+  ),
+  updateTenantFeature: /** updateTenantFeature 처리 대상의 상태를 갱신한다. */ (tenantId: string, featureKey: TenantFeatureKey, enabled: boolean) =>
+    request<Record<TenantFeatureKey, boolean>>(`/api/tenants/${encodeURIComponent(tenantId)}/features`, {
+      method: 'PATCH', body: JSON.stringify({ featureKey, enabled }),
+    }),
+  listOidcGroupMappings: /** listOidcGroupMappings 처리 결과를 조회해 반환한다. */ (tenantId: string) => request<OidcGroupMappingResponse[]>(
+    `/api/tenants/${encodeURIComponent(tenantId)}/oidc-group-mappings`
+  ),
+  createOidcGroupMapping: /** createOidcGroupMapping 처리에 필요한 데이터를 생성하거나 저장한다. */ (tenantId: string, body: {
+    issuer: string; groupValue: string; role: string; scopeType: string;
+    workspaceId?: string; clusterId?: string; namespace?: string;
+  }) => request<OidcGroupMappingResponse>(`/api/tenants/${encodeURIComponent(tenantId)}/oidc-group-mappings`, {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+  setOidcGroupMappingActive: /** setOidcGroupMappingActive 처리 대상의 상태를 갱신한다. */ (tenantId: string, mappingId: string, active: boolean) =>
+    request<OidcGroupMappingResponse>(
+      `/api/tenants/${encodeURIComponent(tenantId)}/oidc-group-mappings/${encodeURIComponent(mappingId)}`,
+      { method: 'PATCH', body: JSON.stringify({ active }) }
+    ),
+  deleteOidcGroupMapping: /** deleteOidcGroupMapping 처리 대상과 관련 상태를 안전하게 정리한다. */ (tenantId: string, mappingId: string) => request<void>(
+    `/api/tenants/${encodeURIComponent(tenantId)}/oidc-group-mappings/${encodeURIComponent(mappingId)}`,
+    { method: 'DELETE' }
+  ),
+  getApplication: /** getApplication 처리 결과를 조회해 반환한다. */ (applicationId: string) => request<ApplicationResponse>(
     `/api/applications/${encodeURIComponent(applicationId)}`
   ),
-  getApplicationStatus: (applicationId: string) => request<ApplicationStatusResponse>(
+  getApplicationStatus: /** getApplicationStatus 처리 결과를 조회해 반환한다. */ (applicationId: string) => request<ApplicationStatusResponse>(
     `/api/applications/${encodeURIComponent(applicationId)}/status`
   ),
-  syncApplication: (applicationId: string) => request<StartJobResponse>(
+  syncApplication: /** syncApplication 처리의 핵심 작업 흐름을 실행한다. */ (applicationId: string) => request<StartJobResponse>(
     `/api/applications/${encodeURIComponent(applicationId)}/sync`,
     { method: 'POST' }
   ),
-  restartApplication: (applicationId: string) => request<StartJobResponse>(
+  restartApplication: /** restartApplication 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (applicationId: string) => request<StartJobResponse>(
     `/api/applications/${encodeURIComponent(applicationId)}/restart`,
     { method: 'POST' }
   ),
-  previewApplicationRollback: (applicationId: string, targetRevision?: string) => {
+  previewApplicationRollback: /** previewApplicationRollback 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (applicationId: string, targetRevision?: string) => {
     const query = targetRevision ? `?targetRevision=${encodeURIComponent(targetRevision)}` : '';
     return request<ApplicationRollbackPreviewResponse>(
       `/api/applications/${encodeURIComponent(applicationId)}/rollback/preview${query}`
     );
   },
-  rollbackApplication: (applicationId: string, targetRevision: string, confirmText: string) => request<StartJobResponse>(
+  rollbackApplication: /** rollbackApplication 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (applicationId: string, targetRevision: string, confirmText: string) => request<StartJobResponse>(
     `/api/applications/${encodeURIComponent(applicationId)}/rollback`,
     {
       method: 'POST',
       body: JSON.stringify({ targetRevision: Number(targetRevision), confirmText })
     }
   ),
-  getJob: (jobId: string) => request<JobResponse>(`/api/jobs/${encodeURIComponent(jobId)}`),
-  listAnalysisHistory: (filters?: { clusterId?: string; namespace?: string; applicationId?: string }) => {
+  getJob: /** getJob 처리 결과를 조회해 반환한다. */ (jobId: string) => request<JobResponse>(`/api/jobs/${encodeURIComponent(jobId)}`, undefined, { timeoutMs: 10_000 }),
+  listAnalysisHistory: /** listAnalysisHistory 처리 결과를 조회해 반환한다. */ (filters?: { clusterId?: string; namespace?: string; applicationId?: string }) => {
     const query = new URLSearchParams();
     if (filters?.clusterId) {
       query.set('clusterId', filters.clusterId);
@@ -1759,31 +2239,31 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<AnalysisResponse[]>(`/api/analysis/history${suffix}`);
   },
-  getAnalysis: (analysisId: string) => request<AnalysisResponse>(`/api/analysis/${encodeURIComponent(analysisId)}`),
-  deleteAnalysis: (analysisId: string) => request<void>(`/api/analysis/${encodeURIComponent(analysisId)}`, {
+  getAnalysis: /** getAnalysis 처리 결과를 조회해 반환한다. */ (analysisId: string) => request<AnalysisResponse>(`/api/analysis/${encodeURIComponent(analysisId)}`),
+  deleteAnalysis: /** deleteAnalysis 처리 대상과 관련 상태를 안전하게 정리한다. */ (analysisId: string) => request<void>(`/api/analysis/${encodeURIComponent(analysisId)}`, {
     method: 'DELETE'
   }),
-  listAnalysisCommandExecutions: (analysisId: string) => request<AnalysisCommandExecutionResponse[]>(
+  listAnalysisCommandExecutions: /** listAnalysisCommandExecutions 처리 결과를 조회해 반환한다. */ (analysisId: string) => request<AnalysisCommandExecutionResponse[]>(
     `/api/analysis/${encodeURIComponent(analysisId)}/commands`
   ),
-  previewAnalysisCommand: (analysisId: string, command: string) => request<AnalysisCommandPreviewResponse>(
+  previewAnalysisCommand: /** previewAnalysisCommand 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (analysisId: string, command: string) => request<AnalysisCommandPreviewResponse>(
     `/api/analysis/${encodeURIComponent(analysisId)}/commands/preview`,
     {
       method: 'POST',
       body: JSON.stringify({ command })
     }
   ),
-  executeAnalysisCommand: (analysisId: string, command: string, confirmText?: string) => request<AnalysisCommandExecutionResponse>(
+  executeAnalysisCommand: /** executeAnalysisCommand 처리의 핵심 작업 흐름을 실행한다. */ (analysisId: string, command: string, confirmText?: string) => request<AnalysisCommandExecutionResponse>(
     `/api/analysis/${encodeURIComponent(analysisId)}/commands`,
     {
       method: 'POST',
       body: JSON.stringify({ command, confirmText })
     }
   ),
-  listAnalysisWorkflowStates: (analysisId: string) => request<AnalysisWorkflowStateResponse[]>(
+  listAnalysisWorkflowStates: /** listAnalysisWorkflowStates 처리 결과를 조회해 반환한다. */ (analysisId: string) => request<AnalysisWorkflowStateResponse[]>(
     `/api/analysis/${encodeURIComponent(analysisId)}/workflow`
   ),
-  updateAnalysisWorkflowState: (analysisId: string, issueGroupId: string, status: WorkflowStatusValue, note?: string) =>
+  updateAnalysisWorkflowState: /** updateAnalysisWorkflowState 처리 대상의 상태를 갱신한다. */ (analysisId: string, issueGroupId: string, status: WorkflowStatusValue, note?: string) =>
     request<AnalysisWorkflowStateResponse>(
       `/api/analysis/${encodeURIComponent(analysisId)}/workflow/${encodeURIComponent(issueGroupId)}`,
       {
@@ -1791,14 +2271,14 @@ export const api = {
         body: JSON.stringify({ status, note })
       }
     ),
-  retryAnalysis: (analysisId: string) => request<StartAnalysisJobResponse>(`/api/analysis/${encodeURIComponent(analysisId)}/retry`, {
+  retryAnalysis: /** retryAnalysis 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (analysisId: string) => request<StartAnalysisJobResponse>(`/api/analysis/${encodeURIComponent(analysisId)}/retry`, {
     method: 'POST'
   }),
-  getAnalysisByJobId: (jobId: string) => request<AnalysisResponse>(`/api/analysis/jobs/${encodeURIComponent(jobId)}/result`),
-  getNamespaceDiagnostics: (clusterId: string, namespace: string) => request<NamespaceDiagnosticsResponse>(
+  getAnalysisByJobId: /** getAnalysisByJobId 처리 결과를 조회해 반환한다. */ (jobId: string) => request<AnalysisResponse>(`/api/analysis/jobs/${encodeURIComponent(jobId)}/result`),
+  getNamespaceDiagnostics: /** getNamespaceDiagnostics 처리 결과를 조회해 반환한다. */ (clusterId: string, namespace: string) => request<NamespaceDiagnosticsResponse>(
     `/api/analysis/namespaces/${encodeURIComponent(namespace)}/diagnostics?clusterId=${encodeURIComponent(clusterId)}`
   ),
-  getPodLogs: (clusterId: string, namespace: string, podName: string, tailLines: number, containerName?: string) => {
+  getPodLogs: /** getPodLogs 처리 결과를 조회해 반환한다. */ (clusterId: string, namespace: string, podName: string, tailLines: number, containerName?: string) => {
     const query = new URLSearchParams({
       clusterId,
       tailLines: String(tailLines)
@@ -1810,7 +2290,7 @@ export const api = {
       `/api/analysis/namespaces/${encodeURIComponent(namespace)}/pods/${encodeURIComponent(podName)}/logs?${query.toString()}`
     );
   },
-  getResourceLogs: (
+  getResourceLogs: /** getResourceLogs 처리 결과를 조회해 반환한다. */ (
     clusterId: string,
     namespace: string,
     resourceType: string,
@@ -1829,31 +2309,31 @@ export const api = {
       `/api/analysis/namespaces/${encodeURIComponent(namespace)}/resources/${encodeURIComponent(resourceType)}/${encodeURIComponent(resourceName)}/logs?${query.toString()}`
     );
   },
-  analyzeNamespace: (clusterId: string, namespace: string) => request<AnalysisResponse>(
+  analyzeNamespace: /** analyzeNamespace 처리의 핵심 작업 흐름을 실행한다. */ (clusterId: string, namespace: string) => request<AnalysisResponse>(
     `/api/analysis/namespaces/${encodeURIComponent(namespace)}?clusterId=${encodeURIComponent(clusterId)}`,
     { method: 'POST' }
   ),
-  startNamespaceAnalysis: (clusterId: string, namespace: string) => request<StartAnalysisJobResponse>(
+  startNamespaceAnalysis: /** startNamespaceAnalysis 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (clusterId: string, namespace: string) => request<StartAnalysisJobResponse>(
     `/api/analysis/namespaces/${encodeURIComponent(namespace)}/jobs?clusterId=${encodeURIComponent(clusterId)}`,
     { method: 'POST' }
   ),
-  analyzeCluster: (clusterId: string) => request<AnalysisResponse>(`/api/analysis/clusters/${encodeURIComponent(clusterId)}`, {
+  analyzeCluster: /** analyzeCluster 처리의 핵심 작업 흐름을 실행한다. */ (clusterId: string) => request<AnalysisResponse>(`/api/analysis/clusters/${encodeURIComponent(clusterId)}`, {
     method: 'POST'
   }),
-  startClusterAnalysis: (clusterId: string) => request<StartAnalysisJobResponse>(
+  startClusterAnalysis: /** startClusterAnalysis 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (clusterId: string) => request<StartAnalysisJobResponse>(
     `/api/analysis/clusters/${encodeURIComponent(clusterId)}/jobs`,
     { method: 'POST' }
   ),
-  analyzeApplication: (applicationId: string) => request<AnalysisResponse>(`/api/analysis/applications/${applicationId}`, {
+  analyzeApplication: /** analyzeApplication 처리의 핵심 작업 흐름을 실행한다. */ (applicationId: string) => request<AnalysisResponse>(`/api/analysis/applications/${applicationId}`, {
     method: 'POST'
   }),
-  startApplicationAnalysis: (applicationId: string) => request<StartAnalysisJobResponse>(
+  startApplicationAnalysis: /** startApplicationAnalysis 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (applicationId: string) => request<StartAnalysisJobResponse>(
     `/api/analysis/applications/${encodeURIComponent(applicationId)}/jobs`,
     { method: 'POST' }
   ),
-  getOperationsOverview: () => request<OperationsOverviewResponse>('/api/operations/overview'),
-  reconcileOperations: () => request<OperationsOverviewResponse>('/api/operations/reconcile', { method: 'POST' }),
-  listIncidents: (filters?: { clusterId?: string; namespace?: string; state?: string; severity?: string }) => {
+  getOperationsOverview: /** getOperationsOverview 처리 결과를 조회해 반환한다. */ () => request<OperationsOverviewResponse>('/api/operations/overview'),
+  reconcileOperations: /** reconcileOperations 처리에 필요한 화면 또는 업무 로직을 수행한다. */ () => request<OperationsOverviewResponse>('/api/operations/reconcile', { method: 'POST' }),
+  listIncidents: /** listIncidents 처리 결과를 조회해 반환한다. */ (filters?: { clusterId?: string; namespace?: string; state?: string; severity?: string }) => {
     const query = new URLSearchParams();
     if (filters?.clusterId) query.set('clusterId', filters.clusterId);
     if (filters?.namespace) query.set('namespace', filters.namespace);
@@ -1862,29 +2342,29 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<IncidentResponse[]>(`/api/incidents${suffix}`);
   },
-  getIncident: (incidentId: string) => request<IncidentDetailResponse>(`/api/incidents/${encodeURIComponent(incidentId)}`),
-  updateIncidentState: (incidentId: string, state: IncidentState, note?: string) => request<IncidentResponse>(
+  getIncident: /** getIncident 처리 결과를 조회해 반환한다. */ (incidentId: string) => request<IncidentDetailResponse>(`/api/incidents/${encodeURIComponent(incidentId)}`),
+  updateIncidentState: /** updateIncidentState 처리 대상의 상태를 갱신한다. */ (incidentId: string, state: IncidentState, note?: string) => request<IncidentResponse>(
     `/api/incidents/${encodeURIComponent(incidentId)}/state`,
     { method: 'PATCH', body: JSON.stringify({ state, note }) }
   ),
-  listNotifications: (unreadOnly = false) => request<OperationNotificationResponse[]>(
+  listNotifications: /** listNotifications 처리 결과를 조회해 반환한다. */ (unreadOnly = false) => request<OperationNotificationResponse[]>(
     `/api/notifications?unreadOnly=${String(unreadOnly)}`
   ),
-  getUnreadNotificationCount: () => request<{ count: number }>('/api/notifications/unread-count'),
-  readNotification: (notificationId: string) => request<void>(`/api/notifications/${encodeURIComponent(notificationId)}/read`, {
+  getUnreadNotificationCount: /** getUnreadNotificationCount 처리 결과를 조회해 반환한다. */ () => request<{ count: number }>('/api/notifications/unread-count'),
+  readNotification: /** readNotification 처리 결과를 조회해 반환한다. */ (notificationId: string) => request<void>(`/api/notifications/${encodeURIComponent(notificationId)}/read`, {
     method: 'PATCH'
   }),
-  readAllNotifications: () => request<void>('/api/notifications/read-all', { method: 'POST' }),
-  listPolicies: () => request<PolicyDefinitionResponse[]>('/api/policies'),
-  updatePolicy: (policyId: string, enabled: boolean, severity: string) => request<PolicyDefinitionResponse>(
+  readAllNotifications: /** readAllNotifications 처리 결과를 조회해 반환한다. */ () => request<void>('/api/notifications/read-all', { method: 'POST' }),
+  listPolicies: /** listPolicies 처리 결과를 조회해 반환한다. */ () => request<PolicyDefinitionResponse[]>('/api/policies'),
+  updatePolicy: /** updatePolicy 처리 대상의 상태를 갱신한다. */ (policyId: string, enabled: boolean, severity: string) => request<PolicyDefinitionResponse>(
     `/api/policies/${encodeURIComponent(policyId)}`,
     { method: 'PUT', body: JSON.stringify({ enabled, severity }) }
   ),
-  evaluatePolicies: (clusterId: string) => request<PolicyEvaluationResponse[]>(
+  evaluatePolicies: /** evaluatePolicies 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (clusterId: string) => request<PolicyEvaluationResponse[]>(
     `/api/policies/evaluate?clusterId=${encodeURIComponent(clusterId)}`,
     { method: 'POST' }
   ),
-  listPolicyEvaluations: (filters?: { clusterId?: string; namespace?: string; result?: string }) => {
+  listPolicyEvaluations: /** listPolicyEvaluations 처리 결과를 조회해 반환한다. */ (filters?: { clusterId?: string; namespace?: string; result?: string }) => {
     const query = new URLSearchParams();
     if (filters?.clusterId) query.set('clusterId', filters.clusterId);
     if (filters?.namespace) query.set('namespace', filters.namespace);
@@ -1892,21 +2372,21 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<PolicyEvaluationResponse[]>(`/api/policies/evaluations${suffix}`);
   },
-  listResourceChanges: (filters?: { clusterId?: string; namespace?: string }) => {
+  listResourceChanges: /** listResourceChanges 처리 결과를 조회해 반환한다. */ (filters?: { clusterId?: string; namespace?: string }) => {
     const query = new URLSearchParams();
     if (filters?.clusterId) query.set('clusterId', filters.clusterId);
     if (filters?.namespace) query.set('namespace', filters.namespace);
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<ResourceChangeResponse[]>(`/api/changes${suffix}`);
   },
-  listRunbooks: (filters?: { signal?: string; category?: string }) => {
+  listRunbooks: /** listRunbooks 처리 결과를 조회해 반환한다. */ (filters?: { signal?: string; category?: string }) => {
     const query = new URLSearchParams();
     if (filters?.signal) query.set('signal', filters.signal);
     if (filters?.category) query.set('category', filters.category);
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<RunbookTemplateResponse[]>(`/api/runbooks${suffix}`);
   },
-  searchOperatorWorkspace: (q: string, filters?: { clusterId?: string; namespace?: string; types?: string[]; limit?: number }) => {
+  searchOperatorWorkspace: /** searchOperatorWorkspace 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (q: string, filters?: { clusterId?: string; namespace?: string; types?: string[]; limit?: number }) => {
     const query = new URLSearchParams({ q });
     if (filters?.clusterId) query.set('clusterId', filters.clusterId);
     if (filters?.namespace) query.set('namespace', filters.namespace);
@@ -1914,32 +2394,32 @@ export const api = {
     query.set('limit', String(filters?.limit ?? 30));
     return request<OperatorSearchResultResponse[]>(`/api/search?${query.toString()}`);
   },
-  getResourceContext: (clusterId: string, namespace: string | undefined, kind: string, name: string) => {
+  getResourceContext: /** getResourceContext 처리 결과를 조회해 반환한다. */ (clusterId: string, namespace: string | undefined, kind: string, name: string) => {
     const query = namespace ? `?namespace=${encodeURIComponent(namespace)}` : '';
     return request<ResourceContextResponse>(`/api/clusters/${encodeURIComponent(clusterId)}/resources/${encodeURIComponent(kind)}/${encodeURIComponent(name)}/context${query}`);
   },
-  getIncidentCollaboration: (incidentId: string) => request<IncidentCollaborationResponse>(`/api/incidents/${encodeURIComponent(incidentId)}/collaboration`),
-  updateIncidentCollaboration: (incidentId: string, body: { assignee?: string; tags: string[]; acknowledgeDueAt?: string; resolveDueAt?: string }) =>
+  getIncidentCollaboration: /** getIncidentCollaboration 처리 결과를 조회해 반환한다. */ (incidentId: string) => request<IncidentCollaborationResponse>(`/api/incidents/${encodeURIComponent(incidentId)}/collaboration`),
+  updateIncidentCollaboration: /** updateIncidentCollaboration 처리 대상의 상태를 갱신한다. */ (incidentId: string, body: { assignee?: string; tags: string[]; acknowledgeDueAt?: string; resolveDueAt?: string }) =>
     request<IncidentCollaborationResponse>(`/api/incidents/${encodeURIComponent(incidentId)}/collaboration`, { method: 'PATCH', body: JSON.stringify(body) }),
-  addIncidentComment: (incidentId: string, comment: string) => request<void>(`/api/incidents/${encodeURIComponent(incidentId)}/comments`, { method: 'POST', body: JSON.stringify({ comment }) }),
-  createManualIncident: (body: { clusterId: string; namespace?: string; resourceKind?: string; resourceName?: string; severity: string; title: string; summary?: string; nextAction?: string }) =>
+  addIncidentComment: /** addIncidentComment 처리에 필요한 데이터를 생성하거나 저장한다. */ (incidentId: string, comment: string) => request<void>(`/api/incidents/${encodeURIComponent(incidentId)}/comments`, { method: 'POST', body: JSON.stringify({ comment }) }),
+  createManualIncident: /** createManualIncident 처리에 필요한 데이터를 생성하거나 저장한다. */ (body: { clusterId: string; namespace?: string; resourceKind?: string; resourceName?: string; severity: string; title: string; summary?: string; nextAction?: string }) =>
     request<IncidentResponse>('/api/incidents/manual', { method: 'POST', body: JSON.stringify(body) }),
-  linkIncident: (incidentId: string, relatedIncidentId: string, relationType: string) => request<IncidentCollaborationResponse>(`/api/incidents/${encodeURIComponent(incidentId)}/links`, { method: 'POST', body: JSON.stringify({ relatedIncidentId, relationType }) }),
-  unlinkIncident: (incidentId: string, relatedIncidentId: string) => request<void>(`/api/incidents/${encodeURIComponent(incidentId)}/links/${encodeURIComponent(relatedIncidentId)}`, { method: 'DELETE' }),
-  mergeIncidents: (incidentId: string, sourceIncidentIds: string[], note?: string) => request<IncidentCollaborationResponse>(`/api/incidents/${encodeURIComponent(incidentId)}/merge`, { method: 'POST', body: JSON.stringify({ sourceIncidentIds, note }) }),
-  splitIncident: (incidentId: string, evidenceIds: string[], title: string, severity: string) => request<IncidentResponse>(`/api/incidents/${encodeURIComponent(incidentId)}/split`, { method: 'POST', body: JSON.stringify({ evidenceIds, title, severity }) }),
-  listRunbookLibrary: () => request<ManagedRunbookResponse[]>('/api/runbooks/library'),
-  createCustomRunbook: (body: RunbookWriteRequest) => request<ManagedRunbookResponse>('/api/runbooks/custom', { method: 'POST', body: JSON.stringify(body) }),
-  updateCustomRunbook: (id: string, body: RunbookWriteRequest) => request<ManagedRunbookResponse>(`/api/runbooks/custom/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) }),
-  duplicateRunbook: (id: string) => request<ManagedRunbookResponse>(`/api/runbooks/${encodeURIComponent(id)}/duplicate`, { method: 'POST' }),
-  setCustomRunbookEnabled: (id: string, enabled: boolean) => request<ManagedRunbookResponse>(`/api/runbooks/custom/${encodeURIComponent(id)}/enabled`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),
-  listCustomRunbookVersions: (id: string) => request<RunbookVersionResponse[]>(`/api/runbooks/custom/${encodeURIComponent(id)}/versions`),
-  restoreCustomRunbookVersion: (id: string, version: number) => request<ManagedRunbookResponse>(`/api/runbooks/custom/${encodeURIComponent(id)}/versions/${version}/restore`, { method: 'POST' }),
-  deleteCustomRunbook: (id: string) => request<void>(`/api/runbooks/custom/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-  getAnalysisFeedback: (analysisId: string) => request<AnalysisFeedbackResponse | null>(
+  linkIncident: /** linkIncident 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (incidentId: string, relatedIncidentId: string, relationType: string) => request<IncidentCollaborationResponse>(`/api/incidents/${encodeURIComponent(incidentId)}/links`, { method: 'POST', body: JSON.stringify({ relatedIncidentId, relationType }) }),
+  unlinkIncident: /** unlinkIncident 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (incidentId: string, relatedIncidentId: string) => request<void>(`/api/incidents/${encodeURIComponent(incidentId)}/links/${encodeURIComponent(relatedIncidentId)}`, { method: 'DELETE' }),
+  mergeIncidents: /** mergeIncidents 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (incidentId: string, sourceIncidentIds: string[], note?: string) => request<IncidentCollaborationResponse>(`/api/incidents/${encodeURIComponent(incidentId)}/merge`, { method: 'POST', body: JSON.stringify({ sourceIncidentIds, note }) }),
+  splitIncident: /** splitIncident 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (incidentId: string, evidenceIds: string[], title: string, severity: string) => request<IncidentResponse>(`/api/incidents/${encodeURIComponent(incidentId)}/split`, { method: 'POST', body: JSON.stringify({ evidenceIds, title, severity }) }),
+  listRunbookLibrary: /** listRunbookLibrary 처리 결과를 조회해 반환한다. */ () => request<ManagedRunbookResponse[]>('/api/runbooks/library'),
+  createCustomRunbook: /** createCustomRunbook 처리에 필요한 데이터를 생성하거나 저장한다. */ (body: RunbookWriteRequest) => request<ManagedRunbookResponse>('/api/runbooks/custom', { method: 'POST', body: JSON.stringify(body) }),
+  updateCustomRunbook: /** updateCustomRunbook 처리 대상의 상태를 갱신한다. */ (id: string, body: RunbookWriteRequest) => request<ManagedRunbookResponse>(`/api/runbooks/custom/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) }),
+  duplicateRunbook: /** duplicateRunbook 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (id: string) => request<ManagedRunbookResponse>(`/api/runbooks/${encodeURIComponent(id)}/duplicate`, { method: 'POST' }),
+  setCustomRunbookEnabled: /** setCustomRunbookEnabled 처리 대상의 상태를 갱신한다. */ (id: string, enabled: boolean) => request<ManagedRunbookResponse>(`/api/runbooks/custom/${encodeURIComponent(id)}/enabled`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),
+  listCustomRunbookVersions: /** listCustomRunbookVersions 처리 결과를 조회해 반환한다. */ (id: string) => request<RunbookVersionResponse[]>(`/api/runbooks/custom/${encodeURIComponent(id)}/versions`),
+  restoreCustomRunbookVersion: /** restoreCustomRunbookVersion 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (id: string, version: number) => request<ManagedRunbookResponse>(`/api/runbooks/custom/${encodeURIComponent(id)}/versions/${version}/restore`, { method: 'POST' }),
+  deleteCustomRunbook: /** deleteCustomRunbook 처리 대상과 관련 상태를 안전하게 정리한다. */ (id: string) => request<void>(`/api/runbooks/custom/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  getAnalysisFeedback: /** getAnalysisFeedback 처리 결과를 조회해 반환한다. */ (analysisId: string) => request<AnalysisFeedbackResponse | null>(
     `/api/analysis/${encodeURIComponent(analysisId)}/feedback`
   ),
-  saveAnalysisFeedback: (
+  saveAnalysisFeedback: /** saveAnalysisFeedback 처리에 필요한 데이터를 생성하거나 저장한다. */ (
     analysisId: string,
     body: Pick<AnalysisFeedbackResponse, 'accuracy' | 'outcome' | 'dangerousSuggestion' | 'comment'
       | 'actualRootCause' | 'actualResolution' | 'validatedResourceKind' | 'validatedResourceName'
@@ -1948,25 +2428,25 @@ export const api = {
     method: 'PUT',
     body: JSON.stringify(body)
   }),
-  getAiQuality: () => request<AiQualitySummaryResponse>('/api/operations/ai-quality'),
-  getAiCalibration: () => request<AiCalibrationSummaryResponse>('/api/operations/ai-calibration'),
-  getAiTrustSnapshot: () => request<AiTrustSnapshotResponse>('/api/operations/ai-trust'),
-  listProductionEvidenceRuns: (limit = 20) => request<ProductionEvidenceRunResponse[]>(
+  getAiQuality: /** getAiQuality 처리 결과를 조회해 반환한다. */ () => request<AiQualitySummaryResponse>('/api/operations/ai-quality'),
+  getAiCalibration: /** getAiCalibration 처리 결과를 조회해 반환한다. */ () => request<AiCalibrationSummaryResponse>('/api/operations/ai-calibration'),
+  getAiTrustSnapshot: /** getAiTrustSnapshot 처리 결과를 조회해 반환한다. */ () => request<AiTrustSnapshotResponse>('/api/operations/ai-trust'),
+  listProductionEvidenceRuns: /** listProductionEvidenceRuns 처리 결과를 조회해 반환한다. */ (limit = 20) => request<ProductionEvidenceRunResponse[]>(
     `/api/operations/production-evidence/runs?limit=${limit}`
   ),
-  getOperationalTelemetry: () => request<OperationalTelemetryResponse>('/api/operations/telemetry'),
-  getOperationsScorecard: () => request<OperationsScorecardResponse>('/api/operations/scorecard'),
-  getFleetQueue: () => request<FleetQueueResponse>('/api/operations/fleet-queue'),
-  getShiftBriefing: () => request<ShiftBriefingResponse>('/api/operations/shift-briefing'),
-  listValidationScenarios: () => request<ValidationScenarioResponse[]>('/api/operations/validation-lab/scenarios'),
-  runValidationLab: () => request<ValidationLabRunResponse>('/api/operations/validation-lab/runs', { method: 'POST' }),
-  getLiveValidationPolicy: () => request<LiveValidationPolicyResponse>('/api/operations/validation-lab/live/policy'),
-  previewLiveValidation: (body: { clusterId: string; scenarioId: string; ttlSeconds: number }) =>
+  getOperationalTelemetry: /** getOperationalTelemetry 처리 결과를 조회해 반환한다. */ () => request<OperationalTelemetryResponse>('/api/operations/telemetry'),
+  getOperationsScorecard: /** getOperationsScorecard 처리 결과를 조회해 반환한다. */ () => request<OperationsScorecardResponse>('/api/operations/scorecard'),
+  getFleetQueue: /** getFleetQueue 처리 결과를 조회해 반환한다. */ () => request<FleetQueueResponse>('/api/operations/fleet-queue'),
+  getShiftBriefing: /** getShiftBriefing 처리 결과를 조회해 반환한다. */ () => request<ShiftBriefingResponse>('/api/operations/shift-briefing'),
+  listValidationScenarios: /** listValidationScenarios 처리 결과를 조회해 반환한다. */ () => request<ValidationScenarioResponse[]>('/api/operations/validation-lab/scenarios'),
+  runValidationLab: /** runValidationLab 처리의 핵심 작업 흐름을 실행한다. */ () => request<ValidationLabRunResponse>('/api/operations/validation-lab/runs', { method: 'POST' }),
+  getLiveValidationPolicy: /** getLiveValidationPolicy 처리 결과를 조회해 반환한다. */ () => request<LiveValidationPolicyResponse>('/api/operations/validation-lab/live/policy'),
+  previewLiveValidation: /** previewLiveValidation 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (body: { clusterId: string; scenarioId: string; ttlSeconds: number }) =>
     request<LiveValidationPreviewResponse>('/api/operations/validation-lab/live/preview', {
       method: 'POST',
       body: JSON.stringify(body)
     }),
-  runLiveValidation: (body: {
+  runLiveValidation: /** runLiveValidation 처리의 핵심 작업 흐름을 실행한다. */ (body: {
     clusterId: string;
     scenarioId: string;
     ttlSeconds: number;
@@ -1975,20 +2455,20 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(body)
   }),
-  cleanupLiveValidation: (runId: string) => request<LiveValidationRunResponse>(
+  cleanupLiveValidation: /** cleanupLiveValidation 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (runId: string) => request<LiveValidationRunResponse>(
     `/api/operations/validation-lab/live/runs/${encodeURIComponent(runId)}`,
     { method: 'DELETE' }
   ),
-  runAnalysisBenchmark: () => request<AnalysisBenchmarkResponse>(
+  runAnalysisBenchmark: /** runAnalysisBenchmark 처리의 핵심 작업 흐름을 실행한다. */ () => request<AnalysisBenchmarkResponse>(
     '/api/operations/validation-lab/benchmarks', { method: 'POST' }
   ),
-  getLatestAnalysisBenchmark: () => request<AnalysisBenchmarkResponse | undefined>(
+  getLatestAnalysisBenchmark: /** getLatestAnalysisBenchmark 처리 결과를 조회해 반환한다. */ () => request<AnalysisBenchmarkResponse | undefined>(
     '/api/operations/validation-lab/benchmarks/latest'
   ),
-  getRemediationLearning: (incidentId: string) => request<RemediationLearningResponse>(
+  getRemediationLearning: /** getRemediationLearning 처리 결과를 조회해 반환한다. */ (incidentId: string) => request<RemediationLearningResponse>(
     `/api/operations/incidents/${encodeURIComponent(incidentId)}/remediation-learning`
   ),
-  getReliabilityTrend: (filters?: { clusterId?: string; namespace?: string; days?: number }) => {
+  getReliabilityTrend: /** getReliabilityTrend 처리 결과를 조회해 반환한다. */ (filters?: { clusterId?: string; namespace?: string; days?: number }) => {
     const query = new URLSearchParams();
     if (filters?.clusterId) query.set('clusterId', filters.clusterId);
     if (filters?.namespace) query.set('namespace', filters.namespace);
@@ -1996,7 +2476,7 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<ReliabilityTrendResponse>(`/api/operations/reliability-trend${suffix}`);
   },
-  getTriageQueue: (filters?: { clusterId?: string; namespace?: string; state?: string; limit?: number }) => {
+  getTriageQueue: /** getTriageQueue 처리 결과를 조회해 반환한다. */ (filters?: { clusterId?: string; namespace?: string; state?: string; limit?: number }) => {
     const query = new URLSearchParams();
     if (filters?.clusterId) query.set('clusterId', filters.clusterId);
     if (filters?.namespace) query.set('namespace', filters.namespace);
@@ -2005,12 +2485,12 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<TriageQueueResponse>(`/api/operations/triage${suffix}`);
   },
-  updateTriageState: (groupId: string, state: 'OPEN' | 'ACKNOWLEDGED' | 'SUPPRESSED') =>
+  updateTriageState: /** updateTriageState 처리 대상의 상태를 갱신한다. */ (groupId: string, state: 'OPEN' | 'ACKNOWLEDGED' | 'SUPPRESSED') =>
     request<WatchSignalGroupResponse>(`/api/operations/triage/${encodeURIComponent(groupId)}/state`, {
       method: 'PATCH',
       body: JSON.stringify({ state })
     }),
-  listAuditLogs: (filters?: { actor?: string; action?: string; targetType?: string; requestId?: string }) => {
+  listAuditLogs: /** listAuditLogs 처리 결과를 조회해 반환한다. */ (filters?: { actor?: string; action?: string; targetType?: string; requestId?: string }) => {
     const query = new URLSearchParams();
     if (filters?.actor) query.set('actor', filters.actor);
     if (filters?.action) query.set('action', filters.action);
@@ -2019,15 +2499,15 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<AuditLogResponse[]>(`/api/audit-logs${suffix}`);
   },
-  getOperationSettings: () => request<OperationSettingsResponse>('/api/settings/operations'),
-  updateOperationSettings: (body: OperationSettingsResponse) => request<OperationSettingsResponse>('/api/settings/operations', {
+  getOperationSettings: /** getOperationSettings 처리 결과를 조회해 반환한다. */ () => request<OperationSettingsResponse>('/api/settings/operations'),
+  updateOperationSettings: /** updateOperationSettings 처리 대상의 상태를 갱신한다. */ (body: OperationSettingsResponse) => request<OperationSettingsResponse>('/api/settings/operations', {
     method: 'PUT',
     body: JSON.stringify(body)
   }),
-  previewOperationCleanup: () => request<CleanupPreviewResponse>('/api/settings/operations/cleanup-preview', { method: 'POST' }),
-  executeOperationCleanup: () => request<CleanupPreviewResponse>('/api/settings/operations/cleanup', { method: 'POST' }),
-  listWatchStatuses: () => request<WatchRuntimeStatusResponse[]>('/api/operations/watch/status'),
-  listWatchSignals: (filters?: { clusterId?: string; namespace?: string; limit?: number }) => {
+  previewOperationCleanup: /** previewOperationCleanup 처리에 필요한 화면 또는 업무 로직을 수행한다. */ () => request<CleanupPreviewResponse>('/api/settings/operations/cleanup-preview', { method: 'POST' }),
+  executeOperationCleanup: /** executeOperationCleanup 처리의 핵심 작업 흐름을 실행한다. */ () => request<CleanupPreviewResponse>('/api/settings/operations/cleanup', { method: 'POST' }),
+  listWatchStatuses: /** listWatchStatuses 처리 결과를 조회해 반환한다. */ () => request<WatchRuntimeStatusResponse[]>('/api/operations/watch/status'),
+  listWatchSignals: /** listWatchSignals 처리 결과를 조회해 반환한다. */ (filters?: { clusterId?: string; namespace?: string; limit?: number }) => {
     const query = new URLSearchParams();
     if (filters?.clusterId) query.set('clusterId', filters.clusterId);
     if (filters?.namespace) query.set('namespace', filters.namespace);
@@ -2035,44 +2515,44 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request<WatchSignalResponse[]>(`/api/operations/watch/signals${suffix}`);
   },
-  restartWatch: (clusterId: string) => request<WatchRuntimeStatusResponse>(
+  restartWatch: /** restartWatch 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (clusterId: string) => request<WatchRuntimeStatusResponse>(
     `/api/operations/watch/clusters/${encodeURIComponent(clusterId)}/restart`, { method: 'POST' }
   ),
-  pauseWatch: (clusterId: string) => request<WatchRuntimeStatusResponse>(
+  pauseWatch: /** pauseWatch 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (clusterId: string) => request<WatchRuntimeStatusResponse>(
     `/api/operations/watch/clusters/${encodeURIComponent(clusterId)}/pause`, { method: 'POST' }
   ),
-  resumeWatch: (clusterId: string) => request<WatchRuntimeStatusResponse>(
+  resumeWatch: /** resumeWatch 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (clusterId: string) => request<WatchRuntimeStatusResponse>(
     `/api/operations/watch/clusters/${encodeURIComponent(clusterId)}/resume`, { method: 'POST' }
   ),
-  listWatchContinuity: () => request<WatchContinuityResponse[]>('/api/operations/watch/continuity'),
-  listNoisePolicies: () => request<SignalNoisePolicyResponse[]>('/api/operations/noise-policies'),
-  createNoisePolicy: (body: Omit<SignalNoisePolicyResponse, 'id' | 'updatedBy' | 'updatedAt'>) =>
+  listWatchContinuity: /** listWatchContinuity 처리 결과를 조회해 반환한다. */ () => request<WatchContinuityResponse[]>('/api/operations/watch/continuity'),
+  listNoisePolicies: /** listNoisePolicies 처리 결과를 조회해 반환한다. */ () => request<SignalNoisePolicyResponse[]>('/api/operations/noise-policies'),
+  createNoisePolicy: /** createNoisePolicy 처리에 필요한 데이터를 생성하거나 저장한다. */ (body: Omit<SignalNoisePolicyResponse, 'id' | 'updatedBy' | 'updatedAt'>) =>
     request<SignalNoisePolicyResponse>('/api/operations/noise-policies', {
       method: 'POST',
       body: JSON.stringify(body)
     }),
-  updateNoisePolicy: (policyId: string, body: Omit<SignalNoisePolicyResponse, 'id' | 'updatedBy' | 'updatedAt'>) =>
+  updateNoisePolicy: /** updateNoisePolicy 처리 대상의 상태를 갱신한다. */ (policyId: string, body: Omit<SignalNoisePolicyResponse, 'id' | 'updatedBy' | 'updatedAt'>) =>
     request<SignalNoisePolicyResponse>(`/api/operations/noise-policies/${encodeURIComponent(policyId)}`, {
       method: 'PUT',
       body: JSON.stringify(body)
     }),
-  deleteNoisePolicy: (policyId: string) =>
+  deleteNoisePolicy: /** deleteNoisePolicy 처리 대상과 관련 상태를 안전하게 정리한다. */ (policyId: string) =>
     request<void>(`/api/operations/noise-policies/${encodeURIComponent(policyId)}`, { method: 'DELETE' }),
-  listRemediationObservations: (incidentId: string) => request<RemediationObservationResponse[]>(
+  listRemediationObservations: /** listRemediationObservations 처리 결과를 조회해 반환한다. */ (incidentId: string) => request<RemediationObservationResponse[]>(
     `/api/incidents/${encodeURIComponent(incidentId)}/remediation-observations`
   ),
-  startRemediationObservation: (incidentId: string, observationSeconds = 300, analysisId?: string, commandExecutionId?: string) =>
+  startRemediationObservation: /** startRemediationObservation 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (incidentId: string, observationSeconds = 300, analysisId?: string, commandExecutionId?: string) =>
     request<RemediationObservationResponse>(
       `/api/incidents/${encodeURIComponent(incidentId)}/remediation-observations`,
       { method: 'POST', body: JSON.stringify({ observationSeconds, analysisId, commandExecutionId }) }
     ),
-  evaluateRemediationObservation: (observationId: string) => request<RemediationObservationResponse>(
+  evaluateRemediationObservation: /** evaluateRemediationObservation 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (observationId: string) => request<RemediationObservationResponse>(
     `/api/remediation-observations/${encodeURIComponent(observationId)}/evaluate`, { method: 'POST' }
   ),
-  cancelRemediationObservation: (observationId: string) => request<RemediationObservationResponse>(
+  cancelRemediationObservation: /** cancelRemediationObservation 처리 조건의 충족 여부를 판단한다. */ (observationId: string) => request<RemediationObservationResponse>(
     `/api/remediation-observations/${encodeURIComponent(observationId)}/cancel`, { method: 'POST' }
   ),
-  evaluateAiReleaseGate: (body: {
+  evaluateAiReleaseGate: /** evaluateAiReleaseGate 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (body: {
     candidateVersion: string;
     baselineVersion: string;
     minimumRegressionScore: number;
@@ -2082,47 +2562,48 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(body)
   }),
-  listAiReleaseGates: () => request<AiReleaseGateResponse[]>('/api/operations/ai-release-gates'),
-  generateIncidentPostmortem: (incidentId: string) => request<IncidentPostmortemResponse>(
+  listAiReleaseGates: /** listAiReleaseGates 처리 결과를 조회해 반환한다. */ () => request<AiReleaseGateResponse[]>('/api/operations/ai-release-gates'),
+  generateIncidentPostmortem: /** generateIncidentPostmortem 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (incidentId: string) => request<IncidentPostmortemResponse>(
     `/api/incidents/${encodeURIComponent(incidentId)}/postmortem`, { method: 'POST' }
   ),
-  getIncidentPostmortem: (incidentId: string) => request<IncidentPostmortemResponse>(
+  getIncidentPostmortem: /** getIncidentPostmortem 처리 결과를 조회해 반환한다. */ (incidentId: string) => request<IncidentPostmortemResponse>(
     `/api/incidents/${encodeURIComponent(incidentId)}/postmortem`
   ),
-  listRegressionRuns: () => request<RegressionRunResponse[]>('/api/analysis-regression/runs'),
-  getRegressionRun: (runId: string) => request<RegressionRunResponse>(
+  listRegressionRuns: /** listRegressionRuns 처리 결과를 조회해 반환한다. */ () => request<RegressionRunResponse[]>('/api/analysis-regression/runs'),
+  getRegressionRun: /** getRegressionRun 처리 결과를 조회해 반환한다. */ (runId: string) => request<RegressionRunResponse>(
     `/api/analysis-regression/runs/${encodeURIComponent(runId)}`
   ),
-  runAnalysisRegression: () => request<RegressionRunResponse>('/api/analysis-regression/runs', { method: 'POST' }),
-  listConversations: (archived = false) => request<AiChatConversationResponse[]>(
+  runAnalysisRegression: /** runAnalysisRegression 처리의 핵심 작업 흐름을 실행한다. */ () => request<RegressionRunResponse>('/api/analysis-regression/runs', { method: 'POST' }),
+  listConversations: /** listConversations 처리 결과를 조회해 반환한다. */ (archived = false) => request<AiChatConversationResponse[]>(
     `/api/ai-chat/conversations?archived=${archived}`
   ),
-  createConversation: (body: CreateConversationRequest) => request<AiChatConversationResponse>('/api/ai-chat/conversations', {
+  createConversation: /** createConversation 처리에 필요한 데이터를 생성하거나 저장한다. */ (body: CreateConversationRequest) => request<AiChatConversationResponse>('/api/ai-chat/conversations', {
     method: 'POST',
     body: JSON.stringify(body)
   }),
-  listMessages: (conversationId: string) => request<AiChatMessageResponse[]>(`/api/ai-chat/conversations/${conversationId}/messages`),
-  listContextReferences: (messageId: string) => request<AiChatContextReferenceResponse[]>(
+  listMessages: /** listMessages 처리 결과를 조회해 반환한다. */ (conversationId: string) => request<AiChatMessageResponse[]>(`/api/ai-chat/conversations/${conversationId}/messages`),
+  listContextReferences: /** listContextReferences 처리 결과를 조회해 반환한다. */ (messageId: string) => request<AiChatContextReferenceResponse[]>(
     `/api/ai-chat/messages/${messageId}/context-references`
   ),
-  listConversationContextReferences: (conversationId: string) => request<AiChatContextReferenceResponse[]>(
+  listConversationContextReferences: /** listConversationContextReferences 처리 결과를 조회해 반환한다. */ (conversationId: string) => request<AiChatContextReferenceResponse[]>(
     `/api/ai-chat/conversations/${conversationId}/context-references`
   ),
-  updateConversation: (conversationId: string, body: { title?: string; favorite?: boolean; archived?: boolean }) =>
+  updateConversation: /** updateConversation 처리 대상의 상태를 갱신한다. */ (conversationId: string, body: { title?: string; favorite?: boolean; archived?: boolean }) =>
     request<AiChatConversationResponse>(`/api/ai-chat/conversations/${conversationId}`, {
       method: 'PATCH',
       body: JSON.stringify(body)
     }),
-  deleteConversation: (conversationId: string) => request<void>(
+  deleteConversation: /** deleteConversation 처리 대상과 관련 상태를 안전하게 정리한다. */ (conversationId: string) => request<void>(
     `/api/ai-chat/conversations/${conversationId}`, { method: 'DELETE' }
   ),
-  sendMessage: (conversationId: string, body: SendMessageRequest) => request<AiChatSendMessageResponse>(`/api/ai-chat/conversations/${conversationId}/messages`, {
+  sendMessage: /** sendMessage 처리 결과를 지정된 대상에 전달한다. */ (conversationId: string, body: SendMessageRequest) => request<AiChatSendMessageResponse>(`/api/ai-chat/conversations/${conversationId}/messages`, {
     method: 'POST',
     body: JSON.stringify(body)
   })
 };
 
 export class AiChatStreamError extends Error {
+  /** 컴포넌트 또는 서비스 인스턴스를 필요한 초기 상태로 구성한다. */
   constructor(message: string, readonly partial: boolean) {
     super(message);
     this.name = 'AiChatStreamError';
@@ -2130,12 +2611,14 @@ export class AiChatStreamError extends Error {
 }
 
 export class ResourceLogStreamError extends Error {
+  /** 컴포넌트 또는 서비스 인스턴스를 필요한 초기 상태로 구성한다. */
   constructor(message: string, readonly partial: boolean) {
     super(message);
     this.name = 'ResourceLogStreamError';
   }
 }
 
+/** streamClusterResourceLogs 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export async function streamClusterResourceLogs(
   request: ClusterResourceLogStreamRequest,
   onLine: (line: ClusterResourceLogLine) => void,
@@ -2168,7 +2651,7 @@ export async function streamClusterResourceLogs(
   let result: ClusterResourceLogStreamResult | null = null;
   let receivedLine = false;
 
-  const consume = (rawEvent: string) => {
+  const consume = /** consume 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (rawEvent: string) => {
     const event = parseSseEvent(rawEvent);
     if (event.type === 'heartbeat' || event.type === 'meta' || !event.data) return;
     if (event.type === 'error') throw new ResourceLogStreamError(event.data, receivedLine);
@@ -2203,6 +2686,7 @@ export async function streamClusterResourceLogs(
   return result;
 }
 
+/** downloadIncidentReport 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export async function downloadIncidentReport(
   incidentId: string,
   format: 'markdown' | 'json' | 'zip'
@@ -2222,6 +2706,7 @@ export async function downloadIncidentReport(
   };
 }
 
+/** streamCommandExecution 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export async function streamCommandExecution(
   clusterId: string,
   executionId: string,
@@ -2247,6 +2732,7 @@ export async function streamCommandExecution(
   if (buffer) emitCommandEvent(buffer, onEvent);
 }
 
+/** emitCommandEvent 처리 결과를 지정된 대상에 전달한다. */
 function emitCommandEvent(block: string, onEvent: (event: { type: string; data: unknown }) => void): void {
   let type = 'message';
   const data: string[] = [];
@@ -2263,11 +2749,15 @@ function emitCommandEvent(block: string, onEvent: (event: { type: string; data: 
   }
 }
 
+/**
+ * 인증된 BFF 세션으로 AI Chat SSE를 구독하고 상태·heartbeat·답변 조각을 분리해 전달한다.
+ */
 export async function streamAiChatMessage(
   conversationId: string,
   body: SendMessageRequest,
   onDelta: (delta: string) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onHeartbeat?: () => void
 ): Promise<void> {
   const csrfToken = readCookie('XSRF-TOKEN');
   const response = await fetch(`${API_BASE_URL}/api/ai-chat/conversations/${conversationId}/messages/stream`, {
@@ -2293,9 +2783,9 @@ export async function streamAiChatMessage(
   let completed = false;
   let receivedDelta = false;
 
-  const consume = (rawEvent: string) => {
+  const consume = /** consume 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (rawEvent: string) => {
     const event = parseSseEvent(rawEvent);
-    if (event.type === 'heartbeat') return;
+    if (event.type === 'heartbeat' || event.type === 'status') { onHeartbeat?.(); return; }
     if (!event.data && event.type !== 'done') return;
     if (event.type === 'error') throw new AiChatStreamError(event.data || 'AI response stream was interrupted', receivedDelta);
     if (event.type === 'done' || event.data === '[DONE]') {
@@ -2326,6 +2816,7 @@ export async function streamAiChatMessage(
   if (!completed) throw new AiChatStreamError('AI response stream ended before completion', receivedDelta);
 }
 
+/** SSE 원문 블록에서 이벤트 유형과 여러 data 행을 안전하게 추출한다. */
 function parseSseEvent(event: string): { type: string; data: string } {
   const type = event.split('\n').find((line) => line.startsWith('event:'))?.slice(6).trim() ?? 'message';
   const data = event

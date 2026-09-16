@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class KubernetesDiagnosticCollectionGuardTest {
 
+    /** KubernetesDiagnosticCollectionGuardTest의 isolatesOneSourceFailureAndKeepsSuccessfulEvidence 처리 조건의 충족 여부를 판단한다. */
     @Test
     void isolatesOneSourceFailureAndKeepsSuccessfulEvidence() {
         AtomicInteger items = new AtomicInteger();
@@ -26,6 +27,7 @@ class KubernetesDiagnosticCollectionGuardTest {
         assertThat(guard.stages().get(1).detail()).isEqualTo("forbidden");
     }
 
+    /** KubernetesDiagnosticCollectionGuardTest의 stopsCallingKubernetesAfterFailureBudgetIsExhausted 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void stopsCallingKubernetesAfterFailureBudgetIsExhausted() {
         AtomicInteger calls = new AtomicInteger();

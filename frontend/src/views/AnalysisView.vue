@@ -402,6 +402,7 @@ watch(analysisMode, async (mode) => {
   }
 });
 
+/** loadPage 처리 결과를 조회해 반환한다. */
 async function loadPage() {
   loading.value = true;
   errorMessage.value = '';
@@ -425,6 +426,7 @@ async function loadPage() {
   }
 }
 
+/** historyFilters 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function historyFilters() {
   const filters: { clusterId?: string; namespace?: string; applicationId?: string } = {};
   if (selectedClusterId.value) {
@@ -439,6 +441,7 @@ function historyFilters() {
   return filters;
 }
 
+/** loadHistory 처리 결과를 조회해 반환한다. */
 async function loadHistory() {
   if (!selectedClusterId.value) {
     history.value = [];
@@ -470,6 +473,7 @@ async function loadHistory() {
   }
 }
 
+/** syncSelectedApplication 처리의 핵심 작업 흐름을 실행한다. */
 function syncSelectedApplication() {
   if (filteredApplications.value.some((application) => application.id === selectedApplicationId.value)) {
     return;
@@ -477,6 +481,7 @@ function syncSelectedApplication() {
   selectedApplicationId.value = filteredApplications.value[0]?.id ?? '';
 }
 
+/** applyRouteQuerySelection 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function applyRouteQuerySelection() {
   const mode = typeof route.query.mode === 'string' ? route.query.mode : '';
   const applicationId = typeof route.query.applicationId === 'string' ? route.query.applicationId : '';
@@ -509,6 +514,7 @@ function applyRouteQuerySelection() {
   }
 }
 
+/** loadNamespaces 처리 결과를 조회해 반환한다. */
 async function loadNamespaces(clusterId: string) {
   loadingNamespaces.value = true;
   try {
@@ -528,6 +534,7 @@ async function loadNamespaces(clusterId: string) {
   }
 }
 
+/** loadNamespaceDiagnostics 처리 결과를 조회해 반환한다. */
 async function loadNamespaceDiagnostics(clusterId = selectedClusterId.value, namespace = selectedNamespace.value.trim()) {
   if (!clusterId || !namespace) {
     namespaceDiagnostics.value = null;
@@ -549,6 +556,7 @@ async function loadNamespaceDiagnostics(clusterId = selectedClusterId.value, nam
   }
 }
 
+/** applyCompletedAnalysis 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function applyCompletedAnalysis(analysis: AnalysisResponse) {
   if (analysisMatchesCurrentSelection(analysis)) {
     history.value = [analysis, ...history.value.filter((item) => item.id !== analysis.id)];
@@ -558,6 +566,7 @@ function applyCompletedAnalysis(analysis: AnalysisResponse) {
   selectedAnalysis.value = analysis;
 }
 
+/** runNamespaceAnalysis 처리의 핵심 작업 흐름을 실행한다. */
 async function runNamespaceAnalysis() {
   if (!canRunNamespaceAnalysis.value) {
     return;
@@ -599,6 +608,7 @@ async function runNamespaceAnalysis() {
   }
 }
 
+/** runApplicationAnalysis 처리의 핵심 작업 흐름을 실행한다. */
 async function runApplicationAnalysis() {
   if (!canRunApplicationAnalysis.value) {
     return;
@@ -643,6 +653,7 @@ async function runApplicationAnalysis() {
   }
 }
 
+/** runClusterAnalysis 처리의 핵심 작업 흐름을 실행한다. */
 async function runClusterAnalysis() {
   if (!canRunClusterAnalysis.value) {
     return;
@@ -682,6 +693,7 @@ async function runClusterAnalysis() {
   }
 }
 
+/** runSelectedAnalysis 처리의 핵심 작업 흐름을 실행한다. */
 async function runSelectedAnalysis() {
   if (analysisMode.value === 'cluster') {
     await runClusterAnalysis();
@@ -694,6 +706,7 @@ async function runSelectedAnalysis() {
   await runNamespaceAnalysis();
 }
 
+/** retrySelectedAnalysis 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function retrySelectedAnalysis() {
   if (!selectedAnalysis.value?.id || running.value) {
     return;
@@ -734,6 +747,7 @@ async function retrySelectedAnalysis() {
   }
 }
 
+/** openAnalysisDetail 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openAnalysisDetail(analysis: AnalysisResponse) {
   commandSafetyExpanded.value = false;
   selectedAnalysis.value = analysis;
@@ -741,6 +755,7 @@ function openAnalysisDetail(analysis: AnalysisResponse) {
   void loadAnalysisOperationState(analysis);
 }
 
+/** closeAnalysisDetail 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeAnalysisDetail() {
   selectedAnalysis.value = null;
   analysisTextDetail.value = null;
@@ -749,10 +764,12 @@ function closeAnalysisDetail() {
   changeConfirmInput.value = '';
 }
 
+/** setAnalysisUiMode 처리 대상의 상태를 갱신한다. */
 function setAnalysisUiMode(mode: AnalysisUiMode) {
   analysisUiMode.value = mode;
 }
 
+/** loadAnalysisUiMode 처리 결과를 조회해 반환한다. */
 function loadAnalysisUiMode() {
   try {
     const saved = localStorage.getItem('k8s-aiops.analysis-ui-mode');
@@ -764,6 +781,7 @@ function loadAnalysisUiMode() {
   }
 }
 
+/** persistAnalysisUiMode 처리에 필요한 데이터를 생성하거나 저장한다. */
 function persistAnalysisUiMode() {
   try {
     localStorage.setItem('k8s-aiops.analysis-ui-mode', analysisUiMode.value);
@@ -772,6 +790,7 @@ function persistAnalysisUiMode() {
   }
 }
 
+/** loadAnalysisOperationState 처리 결과를 조회해 반환한다. */
 async function loadAnalysisOperationState(analysis: AnalysisResponse) {
   if (!analysis.id) {
     return;
@@ -801,6 +820,7 @@ async function loadAnalysisOperationState(analysis: AnalysisResponse) {
   }
 }
 
+/** openFeedbackDetail 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openFeedbackDetail() {
   if (!runFeedback.value?.detail) {
     return;
@@ -811,10 +831,12 @@ function openFeedbackDetail() {
   };
 }
 
+/** closeFeedbackDetail 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeFeedbackDetail() {
   feedbackDetail.value = null;
 }
 
+/** openAnalysisTextDetail 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openAnalysisTextDetail(title: string, subtitle: string, sections: Array<{ label: string; content: string }>) {
   analysisTextDetail.value = {
     title,
@@ -823,10 +845,12 @@ function openAnalysisTextDetail(title: string, subtitle: string, sections: Array
   };
 }
 
+/** closeAnalysisTextDetail 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeAnalysisTextDetail() {
   analysisTextDetail.value = null;
 }
 
+/** openIssueGroupTextDetail 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openIssueGroupTextDetail(group: AnalysisResult) {
   const evidence = stringArray(group.evidenceSummary);
   const references = arrayValue(group.relatedReferences).map((reference) =>
@@ -846,6 +870,7 @@ function openIssueGroupTextDetail(group: AnalysisResult) {
   );
 }
 
+/** openIssueGroupDeepDiveDetail 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openIssueGroupDeepDiveDetail(group: AnalysisResult) {
   const deepDive = deepDiveForGroup(group);
   const conclusion = conclusionForGroup(group);
@@ -871,10 +896,12 @@ function openIssueGroupDeepDiveDetail(group: AnalysisResult) {
   );
 }
 
+/** analysisInteractionStorageKey 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function analysisInteractionStorageKey(prefix: string, analysisId = selectedAnalysis.value?.id) {
   return `k8s-aiops.${prefix}.${analysisId || 'draft'}`;
 }
 
+/** loadAnalysisInteractionState 처리 결과를 조회해 반환한다. */
 function loadAnalysisInteractionState(analysis: AnalysisResponse) {
   try {
     const workflow = localStorage.getItem(analysisInteractionStorageKey('workflow', analysis.id));
@@ -887,6 +914,7 @@ function loadAnalysisInteractionState(analysis: AnalysisResponse) {
   }
 }
 
+/** persistAnalysisInteractionState 처리에 필요한 데이터를 생성하거나 저장한다. */
 function persistAnalysisInteractionState() {
   try {
     localStorage.setItem(analysisInteractionStorageKey('workflow'), JSON.stringify(issueWorkflowState.value));
@@ -896,6 +924,7 @@ function persistAnalysisInteractionState() {
   }
 }
 
+/** workflowStatusForGroup 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function workflowStatusForGroup(group: AnalysisResult): WorkflowStatus {
   const key = textValue(group.issueGroupId, '');
   const saved = key ? issueWorkflowState.value[key] : undefined;
@@ -903,6 +932,7 @@ function workflowStatusForGroup(group: AnalysisResult): WorkflowStatus {
   return (saved || initial as WorkflowStatus) as WorkflowStatus;
 }
 
+/** setWorkflowStatus 처리 대상의 상태를 갱신한다. */
 async function setWorkflowStatus(group: AnalysisResult, status: unknown) {
   const key = textValue(group.issueGroupId, '');
   if (!key) {
@@ -928,17 +958,20 @@ async function setWorkflowStatus(group: AnalysisResult, status: unknown) {
   }
 }
 
+/** workflowItemForGroup 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function workflowItemForGroup(group: AnalysisResult) {
   const issueGroupId = textValue(group.issueGroupId, '');
   return arrayValue(selectedActionWorkflow.value.items).find((item) => textValue(item.issueGroupId, '') === issueGroupId) ?? {};
 }
 
+/** workflowStatusLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function workflowStatusLabel(status: unknown) {
   const value = textValue(status, '').toUpperCase();
   const found = workflowStatuses.value.find((item) => textValue(item.value, '').toUpperCase() === value);
   return textValue(found?.label, value || 'OPEN');
 }
 
+/** workflowStatusClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function workflowStatusClass(status: unknown) {
   const value = textValue(status, '').toUpperCase();
   return {
@@ -949,20 +982,24 @@ function workflowStatusClass(status: unknown) {
   };
 }
 
+/** deepDiveForGroup 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function deepDiveForGroup(group: AnalysisResult) {
   const issueGroupId = textValue(group.issueGroupId, '');
   return selectedIssueGroupDeepDives.value.find((item) => textValue(item.issueGroupId, '') === issueGroupId) ?? {};
 }
 
+/** conclusionForGroup 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function conclusionForGroup(group: AnalysisResult) {
   const issueGroupId = textValue(group.issueGroupId, '');
   return arrayValue(selectedConclusionValidation.value.conclusions).find((item) => textValue(item.issueGroupId, '') === issueGroupId) ?? {};
 }
 
+/** runbookChecklistKey 처리의 핵심 작업 흐름을 실행한다. */
 function runbookChecklistKey(item: AnalysisResult, index: number) {
   return `${index}-${textValue(item.source, '-')}-${textValue(item.command, '-')}`;
 }
 
+/** toggleRunbookChecklist 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function toggleRunbookChecklist(item: AnalysisResult, index: number) {
   const key = runbookChecklistKey(item, index);
   runbookChecklist.value = {
@@ -972,6 +1009,7 @@ function toggleRunbookChecklist(item: AnalysisResult, index: number) {
   persistAnalysisInteractionState();
 }
 
+/** normalizeNextActionItems 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function normalizeNextActionItems(value: unknown): AnalysisResult[] {
   if (!Array.isArray(value)) {
     return [];
@@ -1015,6 +1053,7 @@ function normalizeNextActionItems(value: unknown): AnalysisResult[] {
   return items;
 }
 
+/** fallbackNextActionItems 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function fallbackNextActionItems(): AnalysisResult[] {
   const actions: AnalysisResult[] = [];
   const firstStage = arrayValue(objectValue(selectedAnalysisResult.value?.remediationPlan).stages)[0];
@@ -1061,15 +1100,18 @@ function fallbackNextActionItems(): AnalysisResult[] {
   return actions.filter((item) => Boolean(cleanActionText(item.action))).slice(0, 4);
 }
 
+/** firstActionText 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function firstActionText(...values: unknown[]) {
   return values.map(cleanActionText).find(Boolean) || '';
 }
 
+/** cleanActionText 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function cleanActionText(value: unknown) {
   const text = textValue(value, '').trim();
   return /^[\s.\-·]+$/.test(text) ? '' : text;
 }
 
+/** severityToPriority 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function severityToPriority(value: unknown) {
   const severity = textValue(value, '').toUpperCase();
   if (severity === 'CRITICAL' || severity === 'HIGH') {
@@ -1081,6 +1123,7 @@ function severityToPriority(value: unknown) {
   return 'P3';
 }
 
+/** openResourceLogs 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openResourceLogs(resource: { resourceType: string; resourceName: string }) {
   selectedLogTarget.value = {
     mode: 'resource',
@@ -1091,6 +1134,7 @@ async function openResourceLogs(resource: { resourceType: string; resourceName: 
   await loadSelectedLogs();
 }
 
+/** openPodLogs 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openPodLogs(log: { podName: string; containerName: string }) {
   selectedLogTarget.value = {
     mode: 'pod',
@@ -1101,6 +1145,7 @@ async function openPodLogs(log: { podName: string; containerName: string }) {
   await loadSelectedLogs();
 }
 
+/** openRunbookLogs 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openRunbookLogs(action: RunbookAction) {
   if (!action.targetKind || !action.targetName || !canOpenRunbookLogs(action)) {
     return;
@@ -1111,6 +1156,7 @@ async function openRunbookLogs(action: RunbookAction) {
   });
 }
 
+/** canOpenRunbookLogs 처리 조건의 충족 여부를 판단한다. */
 function canOpenRunbookLogs(action: RunbookAction) {
   return Boolean(
     action.targetKind
@@ -1119,6 +1165,7 @@ function canOpenRunbookLogs(action: RunbookAction) {
   );
 }
 
+/** loadSelectedLogs 처리 결과를 조회해 반환한다. */
 async function loadSelectedLogs() {
   if (!selectedLogTarget.value || !selectedClusterId.value || !selectedNamespace.value.trim()) {
     return;
@@ -1151,6 +1198,7 @@ async function loadSelectedLogs() {
   }
 }
 
+/** closeLogs 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeLogs() {
   selectedLogTarget.value = null;
   selectedLogs.value = null;
@@ -1158,14 +1206,17 @@ function closeLogs() {
   selectedLogContainerName.value = '';
 }
 
+/** openResourceDetail 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openResourceDetail(resource: NamespaceDiagnosticsResponse['problemResources'][number]) {
   selectedDiagnosticResource.value = resource;
 }
 
+/** closeResourceDetail 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeResourceDetail() {
   selectedDiagnosticResource.value = null;
 }
 
+/** logTargetLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function logTargetLabel() {
   if (!selectedLogTarget.value) {
     return '-';
@@ -1176,6 +1227,7 @@ function logTargetLabel() {
   return `${selectedLogTarget.value.resourceType}/${selectedLogTarget.value.resourceName}`;
 }
 
+/** targetLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function targetLabel(item: AnalysisResponse) {
   if (item.applicationId) {
     const application = applications.value.find((candidate) => candidate.id === item.applicationId);
@@ -1187,6 +1239,7 @@ function targetLabel(item: AnalysisResponse) {
   return item.clusterId ? `Cluster ${item.clusterId}` : 'Target';
 }
 
+/** analysisMatchesCurrentSelection 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function analysisMatchesCurrentSelection(item: AnalysisResponse) {
   if (selectedClusterId.value && item.clusterId !== selectedClusterId.value) {
     return false;
@@ -1203,6 +1256,7 @@ function analysisMatchesCurrentSelection(item: AnalysisResponse) {
   return true;
 }
 
+/** deleteAnalysis 처리 대상과 관련 상태를 안전하게 정리한다. */
 async function deleteAnalysis(item: AnalysisResponse) {
   if (!item.id || deletingAnalysisId.value) {
     return;
@@ -1235,6 +1289,7 @@ async function deleteAnalysis(item: AnalysisResponse) {
   }
 }
 
+/** applicationMatchesAnalysis 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function applicationMatchesAnalysis(application: ApplicationResponse) {
   if (!selectedAnalysis.value) {
     return false;
@@ -1252,6 +1307,7 @@ function applicationMatchesAnalysis(application: ApplicationResponse) {
   return Boolean(application.name && haystack.includes(application.name.toLowerCase()));
 }
 
+/** analysisTextHaystack 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function analysisTextHaystack() {
   const parts = [
     selectedAnalysis.value?.resultSummary,
@@ -1262,6 +1318,7 @@ function analysisTextHaystack() {
   return parts.join(' ').toLowerCase();
 }
 
+/** openApplicationOperations 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openApplicationOperations(application: ApplicationResponse) {
   router.push({
     path: '/applications',
@@ -1269,6 +1326,7 @@ function openApplicationOperations(application: ApplicationResponse) {
   });
 }
 
+/** runApplicationAnalysisFromResult 처리의 핵심 작업 흐름을 실행한다. */
 function runApplicationAnalysisFromResult(application: ApplicationResponse) {
   analysisMode.value = 'application';
   selectedClusterId.value = application.clusterId || selectedClusterId.value;
@@ -1285,22 +1343,27 @@ function runApplicationAnalysisFromResult(application: ApplicationResponse) {
   });
 }
 
+/** modelLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function modelLabel(item: AnalysisResponse) {
   return [item.aiProvider, item.aiModel].filter(Boolean).join(' / ') || '-';
 }
 
+/** formattedResultJson 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function formattedResultJson(item: AnalysisResponse | null) {
   return formattedAnalysisJson(item?.resultJson);
 }
 
+/** textValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function textValue(value: unknown, fallback = '-') {
   return displayText(value, fallback);
 }
 
+/** numberValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function numberValue(value: unknown, fallback = '-') {
   return typeof value === 'number' ? String(value) : fallback;
 }
 
+/** signedNumberValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function signedNumberValue(value: unknown, fallback = '0') {
   if (typeof value !== 'number') {
     return fallback;
@@ -1308,6 +1371,7 @@ function signedNumberValue(value: unknown, fallback = '0') {
   return value > 0 ? `+${value}` : String(value);
 }
 
+/** severityClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function severityClass(severity: unknown) {
   const value = String(severity ?? '').toUpperCase();
   return {
@@ -1319,6 +1383,7 @@ function severityClass(severity: unknown) {
   };
 }
 
+/** applicationStatusClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function applicationStatusClass(status: unknown) {
   const value = String(status ?? '').toUpperCase();
   return {
@@ -1329,10 +1394,12 @@ function applicationStatusClass(status: unknown) {
   };
 }
 
+/** riskLevelClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function riskLevelClass(level: unknown) {
   return severityClass(level);
 }
 
+/** trendClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function trendClass(trend: unknown) {
   const value = textValue(trend, '').toUpperCase();
   return {
@@ -1342,6 +1409,7 @@ function trendClass(trend: unknown) {
   };
 }
 
+/** trendLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function trendLabel(trend: unknown) {
   const value = textValue(trend, '').toUpperCase();
   if (value === 'DEGRADED') {
@@ -1356,6 +1424,7 @@ function trendLabel(trend: unknown) {
   return '유지';
 }
 
+/** matchesSignalFilterForRisk 처리 조건의 충족 여부를 판단한다. */
 function matchesSignalFilterForRisk(prediction: RiskPrediction) {
   if (signalFilter.value === 'all') {
     return true;
@@ -1366,6 +1435,7 @@ function matchesSignalFilterForRisk(prediction: RiskPrediction) {
   return Boolean(prediction.verificationCommand);
 }
 
+/** matchesSignalFilterForTimeline 처리 조건의 충족 여부를 판단한다. */
 function matchesSignalFilterForTimeline(item: TimelineItem) {
   if (signalFilter.value === 'all') {
     return true;
@@ -1376,6 +1446,7 @@ function matchesSignalFilterForTimeline(item: TimelineItem) {
   return Boolean(item.suspectedChange || item.detail);
 }
 
+/** matchesSignalFilterForRunbook 처리 조건의 충족 여부를 판단한다. */
 function matchesSignalFilterForRunbook(action: RunbookAction) {
   if (signalFilter.value === 'all') {
     return true;
@@ -1386,16 +1457,19 @@ function matchesSignalFilterForRunbook(action: RunbookAction) {
   return Boolean(action.command);
 }
 
+/** isHighSignal 처리 조건의 충족 여부를 판단한다. */
 function isHighSignal(value: unknown) {
   return ['CRITICAL', 'HIGH', 'ERROR', 'WARN', 'WARNING'].includes(String(value ?? '').toUpperCase());
 }
 
+/** predictionTargetLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function predictionTargetLabel(prediction: RiskPrediction) {
   const kind = prediction.resourceKind || 'Resource';
   const name = prediction.resourceName && prediction.resourceName !== '-' ? prediction.resourceName : 'namespace';
   return `${kind}/${name}`;
 }
 
+/** executeAnalysisCommand 처리의 핵심 작업 흐름을 실행한다. */
 async function executeAnalysisCommand(command?: string, confirmText?: string) {
   if (!selectedAnalysis.value?.id || !command) {
     return;
@@ -1432,6 +1506,7 @@ async function executeAnalysisCommand(command?: string, confirmText?: string) {
   }
 }
 
+/** previewChangeCommand 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function previewChangeCommand(command?: string) {
   if (!selectedAnalysis.value?.id || !command?.trim()) {
     return;
@@ -1460,6 +1535,7 @@ async function previewChangeCommand(command?: string) {
   }
 }
 
+/** executePendingChangeCommand 처리의 핵심 작업 흐름을 실행한다. */
 async function executePendingChangeCommand() {
   if (!pendingChangeCommand.value) {
     return;
@@ -1469,19 +1545,23 @@ async function executePendingChangeCommand() {
   changeConfirmInput.value = '';
 }
 
+/** closeChangeCommandModal 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeChangeCommandModal() {
   pendingChangeCommand.value = null;
   changeConfirmInput.value = '';
 }
 
+/** openCommandExecutionDetail 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openCommandExecutionDetail(execution: AnalysisCommandExecutionResponse) {
   commandExecutionDetail.value = execution;
 }
 
+/** closeCommandExecutionDetail 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeCommandExecutionDetail() {
   commandExecutionDetail.value = null;
 }
 
+/** collectedAtLabel 처리의 핵심 작업 흐름을 실행한다. */
 function collectedAtLabel(value?: string) {
   if (!value) {
     return '-';
@@ -1489,6 +1569,7 @@ function collectedAtLabel(value?: string) {
   return new Date(value).toLocaleString();
 }
 
+/** resourceMatchesEvent 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function resourceMatchesEvent(
   resource: NamespaceDiagnosticsResponse['problemResources'][number],
   event: NamespaceDiagnosticsResponse['warningEvents'][number]
@@ -1497,10 +1578,12 @@ function resourceMatchesEvent(
     || event.involvedName === resource.resourceName;
 }
 
+/** timestampValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function timestampValue(value?: string) {
   return value ? new Date(value).getTime() : 0;
 }
 
+/** formattedResourceSummary 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function formattedResourceSummary(resource: NamespaceDiagnosticsResponse['problemResources'][number] | null) {
   if (!resource?.summaryJson) {
     return '';
@@ -1512,6 +1595,7 @@ function formattedResourceSummary(resource: NamespaceDiagnosticsResponse['proble
   }
 }
 
+/** logAvailabilityMessage 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function logAvailabilityMessage(resource: NamespaceDiagnosticsResponse['problemResources'][number] | null) {
   if (!resource) {
     return '';
@@ -1522,6 +1606,7 @@ function logAvailabilityMessage(resource: NamespaceDiagnosticsResponse['problemR
   return '이 리소스는 직접 로그를 갖지 않습니다. 관련 Event와 참조 Pod 상태를 우선 확인하세요.';
 }
 
+/** resourceTargetFromAnalysisItem 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function resourceTargetFromAnalysisItem(item: AnalysisResult) {
   const resourceType = displayText(
     item.resourceKind || item.representativeResourceKind || item.targetKind || item.kind || item.involvedKind,
@@ -1544,6 +1629,7 @@ function resourceTargetFromAnalysisItem(item: AnalysisResult) {
   return { resourceType, resourceName };
 }
 
+/** extractResourceTargetFromText 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function extractResourceTargetFromText(values: unknown[]) {
   const text = values.map((value) => String(value ?? '')).join(' ');
   const match = text.match(/\b(Pod|Deployment|StatefulSet|DaemonSet|ReplicaSet|Job|Service|ConfigMap|Secret|PersistentVolumeClaim|PVC)\/([A-Za-z0-9_.:-]+)/);
@@ -1556,6 +1642,7 @@ function extractResourceTargetFromText(values: unknown[]) {
   };
 }
 
+/** findDiagnosticResource 처리 결과를 조회해 반환한다. */
 function findDiagnosticResource(resourceType?: string, resourceName?: string) {
   if (!resourceType || !resourceName || !namespaceDiagnostics.value) {
     return null;
@@ -1565,6 +1652,7 @@ function findDiagnosticResource(resourceType?: string, resourceName?: string) {
   ) ?? null;
 }
 
+/** openAnalysisResourceDrillDown 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openAnalysisResourceDrillDown(item: AnalysisResult) {
   const target = resourceTargetFromAnalysisItem(item);
   if (!target) {
@@ -1585,6 +1673,7 @@ async function openAnalysisResourceDrillDown(item: AnalysisResult) {
   await openResourceLogs(target);
 }
 
+/** openAnalysisLogDrillDown 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openAnalysisLogDrillDown(item: AnalysisResult) {
   const podName = displayText(item.podName || item.resourceName || item.representativeResourceName || item.targetName, '');
   const containerName = displayText(item.containerName, '');
@@ -1595,6 +1684,7 @@ async function openAnalysisLogDrillDown(item: AnalysisResult) {
   await openPodLogs({ podName, containerName });
 }
 
+/** openRunbookDrillDown 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openRunbookDrillDown(item: AnalysisResult) {
   if (isRunbookDestructive(item)) {
     runFeedback.value = {
@@ -1607,10 +1697,12 @@ async function openRunbookDrillDown(item: AnalysisResult) {
   await openAnalysisResourceDrillDown(item);
 }
 
+/** isRunbookDestructive 처리 조건의 충족 여부를 판단한다. */
 function isRunbookDestructive(item: AnalysisResult) {
   return Boolean(item.destructive) || textValue(item.commandType, '').toLowerCase() === 'destructive';
 }
 
+/** relatedReferencesForResource 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function relatedReferencesForResource(resource: NamespaceDiagnosticsResponse['problemResources'][number] | null) {
   if (!resource) {
     return [];
@@ -1649,6 +1741,7 @@ function relatedReferencesForResource(resource: NamespaceDiagnosticsResponse['pr
   );
 }
 
+/** parseJsonObject 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function parseJsonObject(value?: string): AnalysisResult {
   if (!value) {
     return {};
@@ -1661,6 +1754,7 @@ function parseJsonObject(value?: string): AnalysisResult {
   }
 }
 
+/** runbookCategoryLabel 처리의 핵심 작업 흐름을 실행한다. */
 function runbookCategoryLabel(item: AnalysisResult) {
   const category = textValue(item.category, '').toLowerCase();
   if (category === 'diagnosis') {
@@ -1675,6 +1769,7 @@ function runbookCategoryLabel(item: AnalysisResult) {
   return '검증';
 }
 
+/** fixReadinessLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function fixReadinessLabel(value: unknown) {
   const readiness = textValue(value, '').toUpperCase();
   if (readiness === 'READY_TO_FIX') {
@@ -1689,6 +1784,7 @@ function fixReadinessLabel(value: unknown) {
   return textValue(value, '상태 확인');
 }
 
+/** confidenceClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function confidenceClass(value: unknown) {
   const level = textValue(value, '').toUpperCase();
   return {
@@ -1698,6 +1794,7 @@ function confidenceClass(value: unknown) {
   };
 }
 
+/** validationStatusClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function validationStatusClass(value: unknown) {
   const status = textValue(value, '').toUpperCase();
   return {
@@ -1708,6 +1805,7 @@ function validationStatusClass(value: unknown) {
   };
 }
 
+/** safetyClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function safetyClass(value: unknown) {
   const level = textValue(value, '').toUpperCase();
   return {
@@ -1718,6 +1816,7 @@ function safetyClass(value: unknown) {
   };
 }
 
+/** safetyLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function safetyLabel(value: unknown) {
   const level = textValue(value, '').toUpperCase();
   if (level === 'READ_ONLY') {
@@ -1732,6 +1831,7 @@ function safetyLabel(value: unknown) {
   return '검토 필요';
 }
 
+/** guardStateClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function guardStateClass(value: unknown) {
   if (value === true) {
     return 'success';
@@ -1742,6 +1842,7 @@ function guardStateClass(value: unknown) {
   return 'muted';
 }
 
+/** guardStateLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function guardStateLabel(value: unknown, neutralLabel = '대상 아님') {
   if (value === true) {
     return '통과';
@@ -1752,10 +1853,12 @@ function guardStateLabel(value: unknown, neutralLabel = '대상 아님') {
   return neutralLabel;
 }
 
+/** isRollbackCommand 처리 조건의 충족 여부를 판단한다. */
 function isRollbackCommand(command?: string) {
   return textValue(command, '').toLowerCase().includes(' rollout undo ');
 }
 
+/** readinessClass 처리 결과를 조회해 반환한다. */
 function readinessClass(value: unknown) {
   const readiness = textValue(value, '').toUpperCase();
   return {
@@ -1765,10 +1868,12 @@ function readinessClass(value: unknown) {
   };
 }
 
+/** safeRunbookActions 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function safeRunbookActions(value: unknown) {
   return arrayValue(value).filter((item) => !isRunbookDestructive(item));
 }
 
+/** destructiveRunbookActions 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function destructiveRunbookActions(value: unknown) {
   return arrayValue(value).filter(isRunbookDestructive);
 }

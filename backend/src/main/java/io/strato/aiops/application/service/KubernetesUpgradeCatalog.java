@@ -12,11 +12,13 @@ public record KubernetesUpgradeCatalog(String version, List<RemovedApiRule> remo
 
     private static final String RESOURCE = "readiness/kubernetes-upgrade-catalog.yml";
 
+    /** KubernetesUpgradeCatalog 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public KubernetesUpgradeCatalog {
         removedApis = removedApis == null ? List.of() : List.copyOf(removedApis);
         addons = addons == null ? List.of() : List.copyOf(addons);
     }
 
+    /** KubernetesUpgradeCatalog의 loadDefault 처리 결과를 조회해 반환한다. */
     public static KubernetesUpgradeCatalog loadDefault() {
         try (var input = new ClassPathResource(RESOURCE).getInputStream()) {
             KubernetesUpgradeCatalog value = new ObjectMapper(new YAMLFactory())

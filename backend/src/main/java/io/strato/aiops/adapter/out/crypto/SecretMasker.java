@@ -26,12 +26,14 @@ public class SecretMasker implements SensitiveDataMaskingPort {
             "credential"
     );
 
+    /** SecretMasker의 isSensitiveKey 처리 조건의 충족 여부를 판단한다. */
     @Override
     public boolean isSensitiveKey(String key) {
         String normalized = key.replace("-", "").replace("_", "").toLowerCase();
         return SENSITIVE_TOKENS.stream().anyMatch(normalized::contains);
     }
 
+    /** SecretMasker의 maskValue 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public String maskValue(String value) {
         if (value == null || value.isBlank()) {
@@ -40,6 +42,7 @@ public class SecretMasker implements SensitiveDataMaskingPort {
         return "***";
     }
 
+    /** SecretMasker의 maskText 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public String maskText(String value) {
         if (value == null || value.isBlank()) return value;

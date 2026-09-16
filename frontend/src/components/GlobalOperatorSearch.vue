@@ -45,6 +45,7 @@ watch(query, () => {
 });
 watch(selectedType, () => { selectedIndex.value = 0; });
 
+/** search 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function search() {
   const sequence = ++requestSequence;
   loading.value = true;
@@ -59,21 +60,25 @@ async function search() {
   }
 }
 
+/** openResult 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openResult(result: OperatorSearchResultResponse) {
   emit('close');
   await router.push(result.targetPath);
 }
 
+/** moveSelection 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function moveSelection(delta: number) {
   if (!visibleResults.value.length) return;
   selectedIndex.value = (selectedIndex.value + delta + visibleResults.value.length) % visibleResults.value.length;
 }
 
+/** openSelected 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openSelected() {
   const result = visibleResults.value[selectedIndex.value];
   if (result) void openResult(result);
 }
 
+/** icon 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function icon(type: string) {
   return ({ CLUSTER: 'pi-cloud', RESOURCE: 'pi-box', INCIDENT: 'pi-exclamation-circle', ANALYSIS: 'pi-chart-line', RUNBOOK: 'pi-book' } as Record<string, string>)[type] || 'pi-search';
 }

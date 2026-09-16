@@ -14,6 +14,7 @@ class SpaCsrfTokenRequestHandlerTest {
     private final SpaCsrfTokenRequestHandler handler = new SpaCsrfTokenRequestHandler();
     private final DefaultCsrfToken token = new DefaultCsrfToken("X-XSRF-TOKEN", "_csrf", "plain-token");
 
+    /** SpaCsrfTokenRequestHandlerTest의 resolvesThePlainTokenFromTheSpaHeader 처리에 필요한 결과를 조합해 반환한다. */
     @Test
     void resolvesThePlainTokenFromTheSpaHeader() {
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -22,6 +23,7 @@ class SpaCsrfTokenRequestHandlerTest {
         assertThat(handler.resolveCsrfTokenValue(request, token)).isEqualTo("plain-token");
     }
 
+    /** SpaCsrfTokenRequestHandlerTest의 resolvesThePlainTokenFromTheTopLevelLogoutForm 처리에 필요한 결과를 조합해 반환한다. */
     @Test
     void resolvesThePlainTokenFromTheTopLevelLogoutForm() {
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -31,6 +33,7 @@ class SpaCsrfTokenRequestHandlerTest {
         assertThat(handler.resolveCsrfTokenValue(request, token)).isEqualTo("plain-token");
     }
 
+    /** SpaCsrfTokenRequestHandlerTest의 loadsTheDeferredTokenSoTheCookieRepositoryCanIssueAFreshCookie 처리 결과를 조회해 반환한다. */
     @Test
     void loadsTheDeferredTokenSoTheCookieRepositoryCanIssueAFreshCookie() {
         AtomicBoolean loaded = new AtomicBoolean();

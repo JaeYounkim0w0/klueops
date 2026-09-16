@@ -15,6 +15,7 @@ public record UpdateClusterSyncSettingsRequest(
         @Max(3600)
         Integer syncIntervalSeconds
 ) {
+    /** UpdateClusterSyncSettingsRequest의 toCommand 처리 데이터를 필요한 표현으로 변환한다. */
     public UpdateClusterSyncSettingsCommand toCommand() {
         return new UpdateClusterSyncSettingsCommand(autoSyncEnabled, syncIntervalSeconds);
     }

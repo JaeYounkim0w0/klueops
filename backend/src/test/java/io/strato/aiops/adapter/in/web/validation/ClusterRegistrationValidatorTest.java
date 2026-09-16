@@ -12,6 +12,7 @@ class ClusterRegistrationValidatorTest {
 
     private final ClusterRegistrationValidator validator = new ClusterRegistrationValidator();
 
+    /** ClusterRegistrationValidatorTest의 acceptsKubeconfigCredential 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void acceptsKubeconfigCredential() {
         validator.validate(baseRequest(
@@ -21,6 +22,7 @@ class ClusterRegistrationValidatorTest {
         ));
     }
 
+    /** ClusterRegistrationValidatorTest의 rejectsExecPluginKubeconfig 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsExecPluginKubeconfig() {
         RegisterClusterRequest request = baseRequest(
@@ -34,6 +36,7 @@ class ClusterRegistrationValidatorTest {
                 .hasMessageContaining("exec plugin kubeconfig is not supported");
     }
 
+    /** ClusterRegistrationValidatorTest의 acceptsServiceAccountTokenCredential 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void acceptsServiceAccountTokenCredential() {
         validator.validate(baseRequest(
@@ -47,6 +50,7 @@ class ClusterRegistrationValidatorTest {
         ));
     }
 
+    /** ClusterRegistrationValidatorTest의 rejectsMissingServiceAccountTokenCredential 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsMissingServiceAccountTokenCredential() {
         RegisterClusterRequest request = baseRequest(
@@ -60,6 +64,7 @@ class ClusterRegistrationValidatorTest {
                 .hasMessageContaining("serviceAccount credential is required");
     }
 
+    /** ClusterRegistrationValidatorTest의 baseRequest 처리에 필요한 업무 로직을 수행한다. */
     private RegisterClusterRequest baseRequest(
             ClusterCredentialType credentialType,
             String kubeconfig,

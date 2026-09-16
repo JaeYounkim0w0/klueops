@@ -49,6 +49,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
     private final KubernetesMutationPort kubernetesMutationPort;
     private final KubernetesResourceSnapshotRepositoryPort resourceSnapshotRepositoryPort;
 
+    /** ApplicationApplicationService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ApplicationApplicationService(ClusterRepositoryPort clusterRepositoryPort,
                                          ManagedApplicationRepositoryPort applicationRepositoryPort,
                                          AsyncJobRepositoryPort asyncJobRepositoryPort,
@@ -67,6 +68,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         this.resourceSnapshotRepositoryPort = resourceSnapshotRepositoryPort;
     }
 
+    /** ApplicationApplicationService의 deployDocker 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public ApplicationDeploymentResult deployDocker(DeployDockerApplicationCommand command, String actor, String requestId) {
@@ -78,6 +80,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         return new ApplicationDeploymentResult(application, jobId);
     }
 
+    /** ApplicationApplicationService의 deployHelm 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public ApplicationDeploymentResult deployHelm(DeployHelmApplicationCommand command, String actor, String requestId) {
@@ -89,18 +92,21 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         return new ApplicationDeploymentResult(application, jobId);
     }
 
+    /** ApplicationApplicationService의 listApplications 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public List<ManagedApplication> listApplications() {
         return applicationRepositoryPort.findRecent(RECENT_APPLICATION_LIMIT);
     }
 
+    /** ApplicationApplicationService의 getApplication 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public ManagedApplication getApplication(UUID applicationId) {
         return requireApplication(applicationId);
     }
 
+    /** ApplicationApplicationService의 getApplicationStatus 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public ApplicationStatusResult getApplicationStatus(UUID applicationId) {
@@ -109,6 +115,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
                 application.status(), application.lastSyncedAt(), application.lastSyncStatus(), application.lastSyncError());
     }
 
+    /** ApplicationApplicationService의 startApplicationSync 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public UUID startApplicationSync(UUID applicationId, String actor, String requestId) {
@@ -120,6 +127,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         return jobId;
     }
 
+    /** ApplicationApplicationService의 requestRestart 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public UUID requestRestart(UUID applicationId, String actor, String requestId) {
@@ -145,6 +153,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         return jobId;
     }
 
+    /** ApplicationApplicationService의 previewRollback 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional(readOnly = true)
     public ApplicationRollbackPreviewResult previewRollback(UUID applicationId, Integer targetRevision) {
@@ -166,6 +175,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
                 plan.confirmationText(), plan.currentState(), plan.targetState(), revisions, plan.plannedAt());
     }
 
+    /** ApplicationApplicationService의 requestRollback 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public UUID requestRollback(UUID applicationId, Integer targetRevision, String confirmText, String actor, String requestId) {
@@ -202,11 +212,13 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         return jobId;
     }
 
+    /** ApplicationApplicationService의 toRollbackRevision 처리 데이터를 필요한 표현으로 변환한다. */
     private ApplicationRollbackRevisionResult toRollbackRevision(KubernetesDeploymentRevision revision) {
         return new ApplicationRollbackRevisionResult(revision.revision(), revision.current(), revision.replicaSetName(),
                 revision.replicas(), revision.image(), revision.state(), revision.createdAt());
     }
 
+    /** ApplicationApplicationService의 resolveApplicationStatus 처리에 필요한 결과를 조합해 반환한다. */
     private ManagedApplication resolveApplicationStatus(ManagedApplication application, Instant syncedAt) {
         return resourceSnapshotRepositoryPort
                 .findLatest(application.clusterId(), application.namespace(), "Deployment", RECENT_APPLICATION_LIMIT)
@@ -227,6 +239,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
                 ));
     }
 
+    /** ApplicationApplicationService의 deploymentApplicationStatus 처리에 필요한 업무 로직을 수행한다. */
     private ApplicationStatus deploymentApplicationStatus(KubernetesResourceSnapshot snapshot) {
         ReplicaState replicas = parseReplicaState(snapshot.status());
         if (replicas.desired() > 0 && replicas.available() >= replicas.desired()) {
@@ -238,6 +251,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         return ApplicationStatus.UNKNOWN;
     }
 
+    /** ApplicationApplicationService의 parseReplicaState 처리 데이터를 필요한 표현으로 변환한다. */
     private ReplicaState parseReplicaState(String status) {
         if (status == null || !status.contains("/")) {
             return new ReplicaState(0, 0);
@@ -246,6 +260,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         return new ReplicaState(parseInt(parts[0]), parseInt(parts[1]));
     }
 
+    /** ApplicationApplicationService의 parseInt 처리 데이터를 필요한 표현으로 변환한다. */
     private int parseInt(String value) {
         try {
             return Integer.parseInt(value.trim());
@@ -254,21 +269,25 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         }
     }
 
+    /** ApplicationApplicationService의 requireCluster 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void requireCluster(UUID clusterId) {
         clusterRepositoryPort.findById(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster not found: " + clusterId));
     }
 
+    /** ApplicationApplicationService의 requireApplication 처리 입력과 현재 상태의 유효성을 검증한다. */
     private ManagedApplication requireApplication(UUID applicationId) {
         return applicationRepositoryPort.findById(applicationId)
                 .orElseThrow(() -> new NoSuchElementException("Application not found: " + applicationId));
     }
 
+    /** ApplicationApplicationService의 createJob 처리에 필요한 데이터를 생성하거나 저장한다. */
     private UUID createJob(AsyncJobType type) {
         AsyncJob job = asyncJobRepositoryPort.save(AsyncJob.pending(type));
         return job.id();
     }
 
+    /** ApplicationApplicationService의 markJobSucceeded 처리에 필요한 업무 로직을 수행한다. */
     private void markJobSucceeded(UUID jobId) {
         AsyncJob job = asyncJobRepositoryPort.findById(jobId)
                 .orElseThrow(() -> new NoSuchElementException("Job not found: " + jobId));
@@ -278,6 +297,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         asyncJobRepositoryPort.save(job);
     }
 
+    /** ApplicationApplicationService의 markJobFailed 처리에 필요한 업무 로직을 수행한다. */
     private void markJobFailed(UUID jobId, String errorCode, String errorMessage) {
         AsyncJob job = asyncJobRepositoryPort.findById(jobId)
                 .orElseThrow(() -> new NoSuchElementException("Job not found: " + jobId));
@@ -287,6 +307,7 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         asyncJobRepositoryPort.save(job);
     }
 
+    /** ApplicationApplicationService의 credential 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesConnectionCredential credential(UUID clusterId) {
         EncryptedClusterCredential credential = clusterCredentialRepositoryPort.findByClusterId(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster credential not found: " + clusterId));
@@ -299,14 +320,17 @@ public class ApplicationApplicationService implements ApplicationUseCase {
         return new KubernetesConnectionCredential(credential.credentialType(), payload);
     }
 
+    /** ApplicationApplicationService의 message 처리에 필요한 업무 로직을 수행한다. */
     private String message(RuntimeException exception) {
         return exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
     }
 
+    /** ApplicationApplicationService의 valueOrBlank 처리에 필요한 업무 로직을 수행한다. */
     private String valueOrBlank(String value) {
         return value == null ? "" : value;
     }
 
+    /** ApplicationApplicationService의 audit 처리에 필요한 업무 로직을 수행한다. */
     private void audit(String action, UUID applicationId, String actor, String requestId) {
         auditLogRepositoryPort.save(AuditLog.create(action, "APPLICATION", applicationId.toString(), actor, requestId));
     }

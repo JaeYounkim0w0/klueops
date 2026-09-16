@@ -26,6 +26,7 @@ class RuntimeReadinessApiTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /** RuntimeReadinessApiTest의 reportsPilotModeWithActionableRuntimeChecks 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void reportsPilotModeWithActionableRuntimeChecks() throws Exception {
         mockMvc.perform(get("/api/operations/runtime-readiness"))
@@ -40,6 +41,7 @@ class RuntimeReadinessApiTest {
                 .andExpect(jsonPath("$.checks[*].code", hasItem("CREDENTIAL_REVEAL")));
     }
 
+    /** RuntimeReadinessApiTest의 deniesPlaintextCredentialRevealWhenFeatureIsDisabled 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void deniesPlaintextCredentialRevealWhenFeatureIsDisabled() throws Exception {
         String response = mockMvc.perform(post("/api/clusters")

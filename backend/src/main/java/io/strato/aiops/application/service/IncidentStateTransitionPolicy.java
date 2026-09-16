@@ -20,6 +20,7 @@ public class IncidentStateTransitionPolicy {
             IncidentState.REOPENED, Set.of(IncidentState.ACKNOWLEDGED, IncidentState.INVESTIGATING, IncidentState.RESOLVED)
     );
 
+    /** IncidentStateTransitionPolicy의 validate 처리 입력과 현재 상태의 유효성을 검증한다. */
     public void validate(IncidentState from, IncidentState to) {
         if (from == to) {
             return;

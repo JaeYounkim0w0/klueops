@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class KubernetesWatchCoordinatorTest {
 
+    /** KubernetesWatchCoordinatorTest의 startsWatchDeduplicatesSignalsAndClosesFailedRegistration 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void startsWatchDeduplicatesSignalsAndClosesFailedRegistration() {
         Cluster cluster = Cluster.register("watch-test", "test", ClusterEnvironment.DEV, ClusterProvider.KIND,
@@ -61,6 +62,7 @@ class KubernetesWatchCoordinatorTest {
         });
     }
 
+    /** KubernetesWatchCoordinatorTest의 disabledWatchNeverOpensClusterConnection 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void disabledWatchNeverOpensClusterConnection() {
         Cluster cluster = Cluster.register("watch-disabled", "test", ClusterEnvironment.DEV, ClusterProvider.KIND,
@@ -76,6 +78,7 @@ class KubernetesWatchCoordinatorTest {
         assertThat(coordinator.statuses().get(0).state()).isEqualTo("DISABLED");
     }
 
+    /** KubernetesWatchCoordinatorTest의 exposesFailedStateWhenWatchStartupExceedsTimeout 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesFailedStateWhenWatchStartupExceedsTimeout() {
         Cluster cluster = Cluster.register("watch-timeout", "test", ClusterEnvironment.DEV, ClusterProvider.KIND,
@@ -100,6 +103,7 @@ class KubernetesWatchCoordinatorTest {
         }
     }
 
+    /** KubernetesWatchCoordinatorTest의 fallsBackToPollingAfterConfiguredWatchFailureThreshold 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void fallsBackToPollingAfterConfiguredWatchFailureThreshold() {
         Cluster cluster = Cluster.register("watch-polling", "test", ClusterEnvironment.DEV, ClusterProvider.KIND,
@@ -125,6 +129,7 @@ class KubernetesWatchCoordinatorTest {
         }
     }
 
+    /** KubernetesWatchCoordinatorTest의 awaitState 처리에 필요한 업무 로직을 수행한다. */
     private static void awaitState(KubernetesWatchCoordinator coordinator, String expected) {
         long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(2);
         while (System.nanoTime() < deadline) {
@@ -142,20 +147,24 @@ class KubernetesWatchCoordinatorTest {
     private static final class FakeClusterRepository implements ClusterRepositoryPort {
         private final Cluster cluster;
 
+        /** FakeClusterRepository 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private FakeClusterRepository(Cluster cluster) {
             this.cluster = cluster;
         }
 
+        /** FakeClusterRepository의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override
         public Cluster save(Cluster value) {
             return value;
         }
 
+        /** FakeClusterRepository의 findById 처리 결과를 조회해 반환한다. */
         @Override
         public Optional<Cluster> findById(UUID clusterId) {
             return cluster.id().equals(clusterId) ? Optional.of(cluster) : Optional.empty();
         }
 
+        /** FakeClusterRepository의 findAll 처리 결과를 조회해 반환한다. */
         @Override
         public List<Cluster> findAll() {
             return List.of(cluster);
@@ -165,15 +174,18 @@ class KubernetesWatchCoordinatorTest {
     private static final class FakeCredentialRepository implements ClusterCredentialRepositoryPort {
         private final EncryptedClusterCredential credential;
 
+        /** FakeCredentialRepository 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private FakeCredentialRepository(EncryptedClusterCredential credential) {
             this.credential = credential;
         }
 
+        /** FakeCredentialRepository의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override
         public EncryptedClusterCredential save(EncryptedClusterCredential value) {
             return value;
         }
 
+        /** FakeCredentialRepository의 findByClusterId 처리 결과를 조회해 반환한다. */
         @Override
         public Optional<EncryptedClusterCredential> findByClusterId(UUID clusterId) {
             return Optional.ofNullable(credential);
@@ -181,11 +193,13 @@ class KubernetesWatchCoordinatorTest {
     }
 
     private static final class PlaintextCrypto implements SecretCryptoPort {
+        /** PlaintextCrypto의 encrypt 처리에 필요한 업무 로직을 수행한다. */
         @Override
         public EncryptedSecret encrypt(String plaintext) {
             return new EncryptedSecret(plaintext, "key", "NONE", "nonce");
         }
 
+        /** PlaintextCrypto의 decrypt 처리에 필요한 업무 로직을 수행한다. */
         @Override
         public String decrypt(EncryptedSecret encryptedSecret) {
             return "apiVersion: v1";
@@ -197,6 +211,7 @@ class KubernetesWatchCoordinatorTest {
         private int openCount;
         private boolean closed;
 
+        /** FakeWatchPort의 watch 처리에 필요한 업무 로직을 수행한다. */
         @Override
         public WatchRegistration watch(UUID clusterId, KubernetesConnectionCredential credential,
                                        WatchListener listener) {
@@ -209,6 +224,7 @@ class KubernetesWatchCoordinatorTest {
     private static final class SlowWatchPort implements KubernetesWatchPort {
         private final CountDownLatch release = new CountDownLatch(1);
 
+        /** SlowWatchPort의 watch 처리에 필요한 업무 로직을 수행한다. */
         @Override
         public WatchRegistration watch(UUID clusterId, KubernetesConnectionCredential credential,
                                        WatchListener listener) {
@@ -224,6 +240,7 @@ class KubernetesWatchCoordinatorTest {
     }
 
     private static final class FailingWatchPort implements KubernetesWatchPort {
+        /** FailingWatchPort의 watch 처리에 필요한 업무 로직을 수행한다. */
         @Override
         public WatchRegistration watch(UUID clusterId, KubernetesConnectionCredential credential,
                                        WatchListener listener) {
@@ -235,16 +252,19 @@ class KubernetesWatchCoordinatorTest {
         private final List<WatchSignal> signals = new ArrayList<>();
         private final List<WatchSignalGroup> groups = new ArrayList<>();
 
+        /** FakeAssuranceRepository의 saveWatchSignal 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override
         public void saveWatchSignal(WatchSignal signal) {
             signals.add(signal);
         }
 
+        /** FakeAssuranceRepository의 findWatchSignals 처리 결과를 조회해 반환한다. */
         @Override
         public List<WatchSignal> findWatchSignals(UUID clusterId, String namespace, int limit) {
             return List.copyOf(signals);
         }
 
+        /** FakeAssuranceRepository의 saveWatchSignalGroup 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override
         public WatchSignalGroup saveWatchSignalGroup(WatchSignalGroup group) {
             groups.removeIf(item -> item.id().equals(group.id()));
@@ -252,31 +272,37 @@ class KubernetesWatchCoordinatorTest {
             return group;
         }
 
+        /** FakeAssuranceRepository의 findWatchSignalGroup 처리 결과를 조회해 반환한다. */
         @Override
         public Optional<WatchSignalGroup> findWatchSignalGroup(UUID groupId) {
             return groups.stream().filter(item -> item.id().equals(groupId)).findFirst();
         }
 
+        /** FakeAssuranceRepository의 findWatchSignalGroupByFingerprint 처리 결과를 조회해 반환한다. */
         @Override
         public Optional<WatchSignalGroup> findWatchSignalGroupByFingerprint(String fingerprint) {
             return groups.stream().filter(item -> item.fingerprint().equals(fingerprint)).findFirst();
         }
 
+        /** FakeAssuranceRepository의 findWatchSignalGroups 처리 결과를 조회해 반환한다. */
         @Override
         public List<WatchSignalGroup> findWatchSignalGroups(UUID clusterId, String namespace, String state, int limit) {
             return List.copyOf(groups);
         }
 
+        /** FakeAssuranceRepository의 saveRegressionRun 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override
         public RegressionRun saveRegressionRun(RegressionRun run) {
             return run;
         }
 
+        /** FakeAssuranceRepository의 findRegressionRun 처리 결과를 조회해 반환한다. */
         @Override
         public Optional<RegressionRun> findRegressionRun(UUID runId) {
             return Optional.empty();
         }
 
+        /** FakeAssuranceRepository의 findRegressionRuns 처리 결과를 조회해 반환한다. */
         @Override
         public List<RegressionRun> findRegressionRuns(int limit) {
             return List.of();

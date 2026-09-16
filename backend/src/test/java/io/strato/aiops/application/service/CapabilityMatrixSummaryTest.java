@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class CapabilityMatrixSummaryTest {
 
+    /** CapabilityMatrixSummaryTest의 distinguishesDeniedUnknownAndPartialCapabilityCoverage 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void distinguishesDeniedUnknownAndPartialCapabilityCoverage() {
         var summary = CapabilityMatrixSummary.from(List.of("ALLOWED", "DENIED", "UNKNOWN"));

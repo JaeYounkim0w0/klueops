@@ -10,10 +10,12 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Fallback;
 
 import java.util.Locale;
 
 @Component
+@Fallback
 public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
 
     private final ChatClient chatClient;
@@ -21,6 +23,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
     private final String model;
     private final double temperature;
 
+    /** OllamaAiAnalysisAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OllamaAiAnalysisAdapter(ChatClient.Builder chatClientBuilder,
                                    ObjectMapper objectMapper,
                                    @Value("${aiops.ai.model:qwen2.5-coder:7b}") String model,
@@ -31,6 +34,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         this.temperature = temperature;
     }
 
+    /** OllamaAiAnalysisAdapter의 analyze 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public String analyze(String sanitizedKubernetesContext) {
         String systemPrompt = """
@@ -204,6 +208,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         }
     }
 
+    /** OllamaAiAnalysisAdapter의 analyzeSection 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public String analyzeSection(String sectionName, String sectionInstruction, String sanitizedKubernetesContext) {
         String systemPrompt = """
@@ -230,6 +235,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         }
     }
 
+    /** OllamaAiAnalysisAdapter의 callJson 처리에 필요한 업무 로직을 수행한다. */
     private String callJson(String systemPrompt, String context) {
         ChatResponse response = chatClient.prompt()
                 .system(systemPrompt)
@@ -244,6 +250,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         return extractContent(response);
     }
 
+    /** OllamaAiAnalysisAdapter의 extractContent 처리에 필요한 업무 로직을 수행한다. */
     private String extractContent(ChatResponse response) {
         if (response == null || response.getResult() == null || response.getResult().getOutput() == null
                 || response.getResult().getOutput().getText() == null
@@ -253,6 +260,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         return response.getResult().getOutput().getText();
     }
 
+    /** OllamaAiAnalysisAdapter의 normalizeAndValidateJsonResponse 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeAndValidateJsonResponse(String content) {
         String trimmed = content == null ? "" : content.trim();
         if (trimmed.startsWith("```")) {
@@ -273,6 +281,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         }
     }
 
+    /** OllamaAiAnalysisAdapter의 normalizeSectionJsonResponse 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeSectionJsonResponse(String content) {
         String trimmed = content == null ? "" : content.trim();
         if (trimmed.startsWith("```")) {
@@ -295,6 +304,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         }
     }
 
+    /** OllamaAiAnalysisAdapter의 repairAnalysisShape 처리에 필요한 업무 로직을 수행한다. */
     private JsonNode repairAnalysisShape(JsonNode root) {
         if (!root.isObject()) {
             return root;
@@ -326,6 +336,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         return objectNode;
     }
 
+    /** OllamaAiAnalysisAdapter의 ensureTopLevelShape 처리에 필요한 업무 로직을 수행한다. */
     private void ensureTopLevelShape(ObjectNode root) {
         if (!hasText(root, "summary")) {
             String summary = firstText(root.path("findings"), "title");
@@ -350,11 +361,13 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         }
     }
 
+    /** OllamaAiAnalysisAdapter의 hasText 처리 조건의 충족 여부를 판단한다. */
     private boolean hasText(ObjectNode root, String fieldName) {
         return root.hasNonNull(fieldName) && root.get(fieldName).isTextual()
                 && !root.get(fieldName).asText().isBlank();
     }
 
+    /** OllamaAiAnalysisAdapter의 firstText 처리에 필요한 업무 로직을 수행한다. */
     private String firstText(JsonNode array, String fieldName) {
         if (!array.isArray()) {
             return "";
@@ -368,6 +381,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         return "";
     }
 
+    /** OllamaAiAnalysisAdapter의 severityFromRiskScore 처리에 필요한 업무 로직을 수행한다. */
     private String severityFromRiskScore(int riskScore) {
         if (riskScore >= 80) {
             return "CRITICAL";
@@ -384,18 +398,21 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         return "INFO";
     }
 
+    /** OllamaAiAnalysisAdapter의 putMissingArray 처리에 필요한 업무 로직을 수행한다. */
     private void putMissingArray(ObjectNode objectNode, String fieldName) {
         if (!objectNode.has(fieldName) || objectNode.get(fieldName).isNull() || !objectNode.get(fieldName).isArray()) {
             objectNode.putArray(fieldName);
         }
     }
 
+    /** OllamaAiAnalysisAdapter의 putMissingObject 처리에 필요한 업무 로직을 수행한다. */
     private void putMissingObject(ObjectNode objectNode, String fieldName) {
         if (!objectNode.has(fieldName) || objectNode.get(fieldName).isNull() || !objectNode.get(fieldName).isObject()) {
             objectNode.putObject(fieldName);
         }
     }
 
+    /** OllamaAiAnalysisAdapter의 ensurePerformanceShape 처리에 필요한 업무 로직을 수행한다. */
     private void ensurePerformanceShape(ObjectNode root) {
         ObjectNode performance = objectNode(root, "performance");
         if (!performance.hasNonNull("summary")) {
@@ -405,6 +422,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         putMissingArray(performance, "improvements");
     }
 
+    /** OllamaAiAnalysisAdapter의 ensureScalingShape 처리에 필요한 업무 로직을 수행한다. */
     private void ensureScalingShape(ObjectNode root) {
         ObjectNode scaling = objectNode(root, "scaling");
         if (!scaling.hasNonNull("summary")) {
@@ -415,6 +433,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         putMissingArray(scaling, "capacityNotes");
     }
 
+    /** OllamaAiAnalysisAdapter의 ensureRiskForecastShape 처리에 필요한 업무 로직을 수행한다. */
     private void ensureRiskForecastShape(ObjectNode root) {
         ObjectNode riskForecast = objectNode(root, "riskForecast");
         if (!riskForecast.hasNonNull("summary")) {
@@ -423,6 +442,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         putMissingArray(riskForecast, "predictions");
     }
 
+    /** OllamaAiAnalysisAdapter의 ensureOperationsGuideShape 처리에 필요한 업무 로직을 수행한다. */
     private void ensureOperationsGuideShape(ObjectNode root) {
         ObjectNode operationsGuide = objectNode(root, "operationsGuide");
         if (!operationsGuide.hasNonNull("summary")) {
@@ -433,6 +453,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         putMissingArray(operationsGuide, "questionsForOperator");
     }
 
+    /** OllamaAiAnalysisAdapter의 ensureEvidenceShape 처리에 필요한 업무 로직을 수행한다. */
     private void ensureEvidenceShape(ObjectNode root) {
         ObjectNode evidence = objectNode(root, "evidence");
         putMissingArray(evidence, "resources");
@@ -440,6 +461,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         putMissingArray(evidence, "logs");
     }
 
+    /** OllamaAiAnalysisAdapter의 objectNode 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode objectNode(ObjectNode root, String fieldName) {
         JsonNode node = root.get(fieldName);
         if (node instanceof ObjectNode objectNode) {
@@ -450,6 +472,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         return replacement;
     }
 
+    /** OllamaAiAnalysisAdapter의 validateRequiredAnalysisShape 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void validateRequiredAnalysisShape(JsonNode root) {
         if (!root.isObject()) {
             throw new AiAnalysisResponseFormatException("Ollama analysis response must be a JSON object");
@@ -472,6 +495,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         requireArray(root, "nextActions");
     }
 
+    /** OllamaAiAnalysisAdapter의 requireText 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void requireText(JsonNode root, String fieldName) {
         JsonNode value = root.get(fieldName);
         if (value == null || !value.isTextual() || value.asText().isBlank()) {
@@ -479,6 +503,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         }
     }
 
+    /** OllamaAiAnalysisAdapter의 requireArray 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void requireArray(JsonNode root, String fieldName) {
         JsonNode value = root.get(fieldName);
         if (value == null || !value.isArray()) {
@@ -486,6 +511,7 @@ public class OllamaAiAnalysisAdapter implements AiAnalysisPort {
         }
     }
 
+    /** OllamaAiAnalysisAdapter의 requireObject 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void requireObject(JsonNode root, String fieldName) {
         JsonNode value = root.get(fieldName);
         if (value == null || !value.isObject()) {

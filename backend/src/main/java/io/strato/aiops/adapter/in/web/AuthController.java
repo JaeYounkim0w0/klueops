@@ -37,6 +37,7 @@ public class AuthController {
     private final OidcIdentityMapper identityMapper;
     private final Duration absoluteSessionTimeout;
 
+    /** AuthController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AuthController(IdentityAccessService identityAccessService, Environment environment,
                           OidcIdentityMapper identityMapper,
                           @Value("${aiops.security.session.absolute-timeout:8h}") Duration absoluteSessionTimeout) {
@@ -46,6 +47,7 @@ public class AuthController {
         this.absoluteSessionTimeout = absoluteSessionTimeout;
     }
 
+    /** AuthController의 me 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get current browser session and platform capabilities")
     @GetMapping("/me")
     public AuthSessionResponse me(HttpServletRequest request, CsrfToken csrfToken) {
@@ -63,20 +65,24 @@ public class AuthController {
         return AuthSessionResponse.anonymous();
     }
 
+    /** AuthController의 extend 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Extend the active browser session after verified operator activity")
     @PostMapping("/session/extend")
     public BrowserSessionResponse extend(HttpServletRequest request) {
         return sessionStatus(request);
     }
 
+    /** AuthController의 sessionStatus 처리에 필요한 업무 로직을 수행한다. */
     private BrowserSessionResponse sessionStatus(HttpServletRequest request) {
         HttpSession session = request.getSession(true);
         Instant now = Instant.now();
         Instant absoluteExpiresAt = Instant.ofEpochMilli(session.getCreationTime()).plus(absoluteSessionTimeout);
         int idleTimeoutSeconds = session.getMaxInactiveInterval();
-        Instant expiresAt = now.plusSeconds(Math.max(0, idleTimeoutSeconds));
+        Instant idleExpiresAt = now.plusSeconds(Math.max(0, idleTimeoutSeconds));
+        // 절대 만료 한도를 넘는 연장 시각을 반환하지 않아 UI가 실제보다 길게 표시하지 않도록 한다.
+        Instant expiresAt = idleExpiresAt.isBefore(absoluteExpiresAt) ? idleExpiresAt : absoluteExpiresAt;
         return new BrowserSessionResponse(expiresAt, absoluteExpiresAt, idleTimeoutSeconds,
-                now.isBefore(absoluteExpiresAt));
+                idleTimeoutSeconds > 0 && idleExpiresAt.isBefore(absoluteExpiresAt));
     }
 
     public record AuthSessionResponse(
@@ -89,11 +95,13 @@ public class AuthController {
             String logoutUrl,
             BrowserSessionResponse session
     ) {
+        /** AuthSessionResponse의 anonymous 처리에 필요한 업무 로직을 수행한다. */
         static AuthSessionResponse anonymous() {
             return new AuthSessionResponse(false, false, null, List.of(), List.of(),
                     "/oauth2/authorization/aiops", "/logout", null);
         }
 
+        /** AuthSessionResponse의 localSession 처리에 필요한 업무 로직을 수행한다. */
         static AuthSessionResponse localSession() {
             List<String> capabilities = java.util.Arrays.stream(Capability.values()).map(Capability::value).sorted().toList();
             return new AuthSessionResponse(true, true,
@@ -102,6 +110,7 @@ public class AuthController {
                     "/oauth2/authorization/aiops", "/logout", null);
         }
 
+        /** AuthSessionResponse의 authenticatedSession 처리에 필요한 업무 로직을 수행한다. */
         static AuthSessionResponse authenticatedSession(UserAccount user, ResolvedAccess access,
                                                          BrowserSessionResponse session) {
             return new AuthSessionResponse(true, false, UserResponse.from(user),
@@ -120,12 +129,14 @@ public class AuthController {
     }
 
     public record UserResponse(String id, String username, String displayName, String email, boolean active) {
+        /** UserResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
         static UserResponse from(UserAccount user) {
             return new UserResponse(user.id().toString(), user.username(), user.displayName(), user.email(), user.active());
         }
     }
 
     public record ScopeResponse(String type, String tenantId, String workspaceId, String clusterId, String namespace, String role) {
+        /** ScopeResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
         static ScopeResponse from(RoleBinding binding) {
             return new ScopeResponse(binding.scope().type().name(),
                     binding.scope().tenantId() == null ? null : binding.scope().tenantId().toString(),

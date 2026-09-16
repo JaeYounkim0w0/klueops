@@ -114,8 +114,9 @@
   overflow-wrap: anywhere;
 }
 
-.analysis-command-safety-item span:not(.analysis-chip),
-.analysis-command-safety-item small {
+/* 설명 텍스트에만 보조 색상을 적용해 버튼 내부 글자색을 덮어쓰지 않는다. */
+.analysis-command-safety-item > span:not(.analysis-chip),
+.analysis-command-safety-item > small {
   color: #5d6f82;
 }
 

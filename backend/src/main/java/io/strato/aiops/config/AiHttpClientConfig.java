@@ -12,6 +12,7 @@ import java.time.Duration;
 @Configuration
 public class AiHttpClientConfig {
 
+    /** AiHttpClientConfig의 aiRestClientTimeoutCustomizer 처리에 필요한 업무 로직을 수행한다. */
     @Bean
     RestClientCustomizer aiRestClientTimeoutCustomizer(
             @Value("${aiops.ai.connect-timeout-ms:10000}") long connectTimeoutMs,

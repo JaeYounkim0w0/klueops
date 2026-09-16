@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class KubernetesDiagnosticSummaryMapperTest {
     private final KubernetesDiagnosticSummaryMapper mapper = new KubernetesDiagnosticSummaryMapper(new ObjectMapper());
 
+    /** KubernetesDiagnosticSummaryMapperTest의 createsNullSafeBoundariesForKubernetesSummaries 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Test
     void createsNullSafeBoundariesForKubernetesSummaries() {
         var summary = mapper.replicaSummary(null, 3, mapper.summary("phase", "Progressing"));

@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public final class OperationsEvolutionModels {
 
+    /** OperationsEvolutionModels 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private OperationsEvolutionModels() {
     }
 
@@ -35,6 +36,7 @@ public final class OperationsEvolutionModels {
             String updatedBy,
             Instant updatedAt
     ) {
+        /** SignalNoisePolicy의 applies 처리에 필요한 업무 로직을 수행한다. */
         public boolean applies(UUID candidateClusterId, String namespace, Instant now) {
             if (!enabled || clusterId != null && !clusterId.equals(candidateClusterId)) return false;
             String pattern = namespacePattern == null || namespacePattern.isBlank() ? "*" : namespacePattern.trim();
@@ -44,6 +46,7 @@ public final class OperationsEvolutionModels {
                     || pattern.equals(value);
         }
 
+        /** SignalNoisePolicy의 suppressionActive 처리에 필요한 업무 로직을 수행한다. */
         public boolean suppressionActive(Instant now) {
             return snoozeUntil != null && snoozeUntil.isAfter(now)
                     || maintenanceStart != null && maintenanceEnd != null

@@ -24,7 +24,8 @@ AI Chat은 다음 구조화 event를 동일한 `requestId`, `conversationId`로 
 
 질문, 답변, 로그, manifest 원문은 운영 로그에 기록하지 않는다. UI의 응답 처리 정보는 메시지에 저장된 `firstTokenLatencyMs`, `latencyMs`, `totalLatencyMs`, `contextChars`를 사용하므로 재접속 후에도 확인할 수 있다.
 
-SSE는 기본 15초 heartbeat를 보내 프록시 idle disconnect를 방지한다. heartbeat는 전체 요청 제한시간을 늘리지 않으므로 `Ollama read timeout < Servlet async timeout < reverse proxy timeout` 순서를 유지한다.
+SSE는 요청 접수 직후 `status: accepted`를 보내고 기본 15초 heartbeat를 이어서 전송해 프록시 idle disconnect를 방지한다. heartbeat는 전체 요청 제한시간을 늘리지 않으므로 `Ollama read timeout < Servlet async timeout < reverse proxy timeout` 순서를 유지한다.
+Frontend는 첫 delta가 도착하기 전 경과 시간과 status/heartbeat 수신 여부를 표시한다. status 또는 heartbeat가 수신되면 연결은 유지 중이고 모델의 첫 응답을 기다리는 상태이며, 연결 신호 없이 stream 오류가 발생하면 중단 상태와 저장된 부분 응답을 표시한다.
 
 ## RC 관측 증적
 

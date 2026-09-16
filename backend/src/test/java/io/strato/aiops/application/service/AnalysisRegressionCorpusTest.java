@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AnalysisRegressionCorpusTest {
 
+    /** AnalysisRegressionCorpusTest의 corpusContainsDistinctOperationalScenariosAcrossCoreCategories 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void corpusContainsDistinctOperationalScenariosAcrossCoreCategories() {
         AnalysisRegressionCorpus corpus = new AnalysisRegressionCorpus(new ObjectMapper());

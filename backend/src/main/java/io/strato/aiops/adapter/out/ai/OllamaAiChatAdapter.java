@@ -11,18 +11,21 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Fallback;
 
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 @Component
+@Fallback
 public class OllamaAiChatAdapter implements AiChatPort {
 
     private final ChatClient chatClient;
     private final String model;
     private final double temperature;
 
+    /** OllamaAiChatAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OllamaAiChatAdapter(ChatClient.Builder chatClientBuilder,
                                AiChatMessageBackedChatMemoryRepository chatMemoryRepository,
                                @Value("${aiops.ai.model:qwen2.5-coder:7b}") String model,
@@ -39,6 +42,7 @@ public class OllamaAiChatAdapter implements AiChatPort {
         this.temperature = temperature;
     }
 
+    /** OllamaAiChatAdapter의 complete 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public AiChatCompletion complete(AiChatPrompt prompt) {
         String systemPrompt = systemPrompt(prompt);
@@ -78,6 +82,7 @@ public class OllamaAiChatAdapter implements AiChatPort {
         }
     }
 
+    /** OllamaAiChatAdapter의 stream 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public AiChatCompletion stream(AiChatPrompt prompt, Consumer<String> onDelta) {
         String context = prompt.sanitizedContext() == null ? "" : prompt.sanitizedContext();
@@ -112,6 +117,7 @@ public class OllamaAiChatAdapter implements AiChatPort {
         }
     }
 
+    /** OllamaAiChatAdapter의 systemPrompt 처리에 필요한 업무 로직을 수행한다. */
     private String systemPrompt(AiChatPrompt prompt) {
         if (prompt.sanitizedContext() != null && prompt.sanitizedContext().startsWith("mode=GENERAL")) {
             return """

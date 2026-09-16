@@ -10,11 +10,13 @@ public record KubernetesNamespaceDiagnostics(
         Instant collectedAt,
         List<CollectionStage> collectionStages
 ) {
+    /** KubernetesNamespaceDiagnostics 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public KubernetesNamespaceDiagnostics(List<DiagnosticResource> resources, List<DiagnosticEvent> events,
                                           List<DiagnosticPodLog> podLogs, Instant collectedAt) {
         this(resources, events, podLogs, collectedAt, List.of());
     }
 
+    /** KubernetesNamespaceDiagnostics 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public KubernetesNamespaceDiagnostics {
         resources = resources == null ? List.of() : List.copyOf(resources);
         events = events == null ? List.of() : List.copyOf(events);
@@ -22,6 +24,7 @@ public record KubernetesNamespaceDiagnostics(
         collectionStages = collectionStages == null ? List.of() : List.copyOf(collectionStages);
     }
 
+    /** KubernetesNamespaceDiagnostics의 partial 처리에 필요한 업무 로직을 수행한다. */
     public boolean partial() {
         return collectionStages.stream().anyMatch(stage -> !"SUCCEEDED".equals(stage.status()));
     }

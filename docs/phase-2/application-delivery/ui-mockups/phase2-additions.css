@@ -30,6 +30,12 @@
 .choice-grid button.selected { border-color: #6ea7f4; background: #eef5ff; box-shadow: 0 0 0 1px #bcd7fb; }
 .choice-grid b { font-size: 10px; }
 .choice-grid span { color: #778496; font-size: 9px; }
+.route-discovery-title { align-items: center; border-top: 1px solid #e7ebf1; display: flex; justify-content: space-between; margin-top: 14px; padding-top: 14px; }
+.route-discovery-title div { display: flex; flex-direction: column; gap: 3px; }
+.route-discovery-title span { color: #778496; font-size: 9px; }
+.route-port-note { background: #eff6ff; border: 1px solid #cfe1fb; border-radius: 7px; display: flex; flex-direction: column; gap: 4px; margin-top: 12px; padding: 10px 12px; }
+.route-port-note b { color: #205eae; font-size: 10px; }
+.route-port-note span { color: #65768c; font-size: 9px; }
 .route-fields { padding-top: 12px; }
 .capability-panel { box-shadow: var(--shadow); }
 .endpoint-preview { display: flex; flex-direction: column; gap: 5px; background: #eaf8f1; border-radius: 7px; margin-top: 16px; padding: 13px; }
@@ -86,6 +92,7 @@
 .state-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
 .state-card h2, .state-card h3 { margin: 0 0 8px; }
 .state-card p { color: var(--muted); line-height: 1.6; }
+.discover-empty { margin-top: 16px; min-height: 220px; display: grid; place-content: center; text-align: center; }
 .state-card.error { border-color: #efc5c7; background: #fffafa; }
 .state-card.warning { border-color: #efd8aa; background: #fffdf8; }
 .state-icon { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 15px; border-radius: 50%; background: var(--blue-50); color: var(--blue); font-weight: 800; }

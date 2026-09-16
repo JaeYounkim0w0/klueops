@@ -5,10 +5,12 @@ import java.util.UUID;
 
 public record AccessScope(ScopeType type, UUID tenantId, UUID workspaceId, UUID clusterId, String namespace) {
 
+    /** AccessScope 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AccessScope(ScopeType type, UUID clusterId, String namespace) {
         this(type, null, null, clusterId, namespace);
     }
 
+    /** AccessScope 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AccessScope {
         Objects.requireNonNull(type, "type is required");
         if (type == ScopeType.PLATFORM && (tenantId != null || workspaceId != null || clusterId != null || namespace != null)) {
@@ -28,26 +30,32 @@ public record AccessScope(ScopeType type, UUID tenantId, UUID workspaceId, UUID 
         }
     }
 
+    /** AccessScope의 platform 처리에 필요한 업무 로직을 수행한다. */
     public static AccessScope platform() {
         return new AccessScope(ScopeType.PLATFORM, null, null, null, null);
     }
 
+    /** AccessScope의 tenant 처리에 필요한 업무 로직을 수행한다. */
     public static AccessScope tenant(UUID tenantId) {
         return new AccessScope(ScopeType.TENANT, tenantId, null, null, null);
     }
 
+    /** AccessScope의 workspace 처리에 필요한 업무 로직을 수행한다. */
     public static AccessScope workspace(UUID tenantId, UUID workspaceId) {
         return new AccessScope(ScopeType.WORKSPACE, tenantId, workspaceId, null, null);
     }
 
+    /** AccessScope의 cluster 처리에 필요한 업무 로직을 수행한다. */
     public static AccessScope cluster(UUID clusterId) {
         return new AccessScope(ScopeType.CLUSTER, null, null, clusterId, null);
     }
 
+    /** AccessScope의 namespace 처리에 필요한 업무 로직을 수행한다. */
     public static AccessScope namespace(UUID clusterId, String namespace) {
         return new AccessScope(ScopeType.NAMESPACE, null, null, clusterId, namespace);
     }
 
+    /** AccessScope의 includes 처리에 필요한 업무 로직을 수행한다. */
     public boolean includes(UUID targetClusterId, String targetNamespace) {
         return switch (type) {
             case PLATFORM -> true;
@@ -57,6 +65,7 @@ public record AccessScope(ScopeType type, UUID tenantId, UUID workspaceId, UUID 
         };
     }
 
+    /** AccessScope의 includes 처리에 필요한 업무 로직을 수행한다. */
     public boolean includes(AccessTarget target) {
         Objects.requireNonNull(target, "target is required");
         return switch (type) {

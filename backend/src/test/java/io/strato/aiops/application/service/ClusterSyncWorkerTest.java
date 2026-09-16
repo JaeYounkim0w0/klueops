@@ -54,6 +54,7 @@ class ClusterSyncWorkerTest {
     @Autowired
     private KubernetesEventSnapshotRepositoryPort eventSnapshotRepositoryPort;
 
+    /** ClusterSyncWorkerTest의 storesResourceAndEventSnapshotsWhenClusterSyncRuns 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Test
     void storesResourceAndEventSnapshotsWhenClusterSyncRuns() throws Exception {
         String clusterId = registerCluster("sync-worker-cluster");
@@ -94,6 +95,7 @@ class ClusterSyncWorkerTest {
                 .andExpect(jsonPath("$.eventCount").value(1));
     }
 
+    /** ClusterSyncWorkerTest의 resourceAndEventApisReturnOnlyLatestSucceededSyncSnapshot 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void resourceAndEventApisReturnOnlyLatestSucceededSyncSnapshot() throws Exception {
         String clusterId = registerCluster("sync-latest-snapshot-cluster");
@@ -123,6 +125,7 @@ class ClusterSyncWorkerTest {
                 .andExpect(jsonPath("$[0].reason").value("Started"));
     }
 
+    /** ClusterSyncWorkerTest의 registerCluster 처리에 필요한 데이터를 생성하거나 저장한다. */
     private String registerCluster(String name) throws Exception {
         String response = mockMvc.perform(post("/api/clusters")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -148,6 +151,7 @@ class ClusterSyncWorkerTest {
         return JsonPath.read(response, "$.id");
     }
 
+    /** ClusterSyncWorkerTest의 startSync 처리에 필요한 업무 로직을 수행한다. */
     private UUID startSync(String clusterId) throws Exception {
         String response = mockMvc.perform(post("/api/clusters/{clusterId}/sync", clusterId)
                         .header(RequestAttributes.HEADER_REQUEST_ID, "sync-worker-request"))
@@ -161,6 +165,7 @@ class ClusterSyncWorkerTest {
     @TestConfiguration
     static class ClusterSyncWorkerTestConfig {
 
+        /** ClusterSyncWorkerTestConfig의 clusterSyncExecutorPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         ClusterSyncExecutorPort clusterSyncExecutorPort() {
@@ -168,6 +173,7 @@ class ClusterSyncWorkerTest {
             };
         }
 
+        /** ClusterSyncWorkerTestConfig의 kubernetesStateSyncPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         KubernetesStateSyncPort kubernetesStateSyncPort() {

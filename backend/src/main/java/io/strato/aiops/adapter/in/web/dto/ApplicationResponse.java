@@ -24,12 +24,17 @@ public record ApplicationResponse(
         Instant updatedAt,
         Instant lastSyncedAt,
         String lastSyncStatus,
-        String lastSyncError
+        String lastSyncError,
+        Integer currentReleaseRevision,
+        UUID chartVersionId,
+        UUID valuesRevisionId
 ) {
+    /** ApplicationResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static ApplicationResponse from(ManagedApplication application) {
         return new ApplicationResponse(application.id(), application.clusterId(), application.namespace(), application.name(),
                 application.deploymentType(), application.image(), application.helmReleaseName(), application.helmChart(),
                 application.status(), application.createdBy(), application.createdAt(), application.updatedAt(),
-                application.lastSyncedAt(), application.lastSyncStatus(), application.lastSyncError());
+                application.lastSyncedAt(), application.lastSyncStatus(), application.lastSyncError(),
+                application.currentReleaseRevision(), application.chartVersionId(), application.valuesRevisionId());
     }
 }

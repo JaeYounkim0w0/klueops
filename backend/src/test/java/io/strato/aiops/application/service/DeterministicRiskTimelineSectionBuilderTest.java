@@ -15,6 +15,7 @@ class DeterministicRiskTimelineSectionBuilderTest {
     private final DeterministicRiskTimelineSectionBuilder builder =
             new DeterministicRiskTimelineSectionBuilder(new ObjectMapper());
 
+    /** DeterministicRiskTimelineSectionBuilderTest의 buildsStableRiskAndTimelineContract 처리에 필요한 결과를 조합해 반환한다. */
     @Test
     void buildsStableRiskAndTimelineContract() {
         NamespaceDiagnosticsResult.RiskForecast forecast = new NamespaceDiagnosticsResult.RiskForecast(
@@ -37,6 +38,7 @@ class DeterministicRiskTimelineSectionBuilderTest {
                 .isEqualTo("2026-09-07T00:00:00Z");
     }
 
+    /** DeterministicRiskTimelineSectionBuilderTest의 limitsLargeInputsAndNormalizesNullableValues 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void limitsLargeInputsAndNormalizesNullableValues() {
         NamespaceDiagnosticsResult.RiskForecast forecast = new NamespaceDiagnosticsResult.RiskForecast(

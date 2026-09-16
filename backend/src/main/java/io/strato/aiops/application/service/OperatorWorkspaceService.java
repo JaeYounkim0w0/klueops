@@ -53,6 +53,7 @@ public class OperatorWorkspaceService {
     private final IdentityAccessService accessService;
     private final ObjectMapper objectMapper;
 
+    /** OperatorWorkspaceService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperatorWorkspaceService(OperatorWorkspaceRepositoryPort workspaceRepository,
                                     OperationsRepositoryPort operationsRepository,
                                     ClusterRepositoryPort clusterRepository,
@@ -67,6 +68,7 @@ public class OperatorWorkspaceService {
         this.objectMapper = objectMapper;
     }
 
+    /** OperatorWorkspaceService의 search 처리에 필요한 업무 로직을 수행한다. */
     public List<SearchResult> search(String query, UUID clusterId, String namespace, Set<String> types,
                                      int limit, ResolvedAccess access) {
         String cleaned = clean(query, 200);
@@ -85,6 +87,7 @@ public class OperatorWorkspaceService {
                 .toList();
     }
 
+    /** OperatorWorkspaceService의 resourceContext 처리에 필요한 업무 로직을 수행한다. */
     public ResourceContext resourceContext(UUID clusterId, String namespace, String kind, String name,
                                            ResolvedAccess access) {
         require(access, Capability.CLUSTER_READ, clusterId, namespace);
@@ -108,12 +111,14 @@ public class OperatorWorkspaceService {
                 current.collectedAt(), relations, changes, fieldDiffs, incidents);
     }
 
+    /** OperatorWorkspaceService의 collaboration 처리에 필요한 업무 로직을 수행한다. */
     public IncidentCollaboration collaboration(UUID incidentId, ResolvedAccess access) {
         Incident incident = incident(incidentId);
         require(access, Capability.ANALYSIS_READ, incident.clusterId(), incident.namespace());
         return workspaceRepository.findCollaboration(incidentId);
     }
 
+    /** OperatorWorkspaceService의 updateCollaboration 처리 대상의 상태를 갱신한다. */
     @Transactional
     public IncidentCollaboration updateCollaboration(UUID incidentId, String assignee, List<String> tags,
                                                      Instant acknowledgeDueAt, Instant resolveDueAt,
@@ -132,6 +137,7 @@ public class OperatorWorkspaceService {
         return saved;
     }
 
+    /** OperatorWorkspaceService의 addComment 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Transactional
     public void addComment(UUID incidentId, String comment, String actor, String requestId, ResolvedAccess access) {
         Incident incident = incident(incidentId);
@@ -142,6 +148,7 @@ public class OperatorWorkspaceService {
         audit("INCIDENT_COMMENT_ADDED", "INCIDENT", incidentId.toString(), actor, requestId);
     }
 
+    /** OperatorWorkspaceService의 createManualIncident 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Transactional
     public Incident createManualIncident(UUID clusterId, String namespace, String resourceKind, String resourceName,
                                          String severity, String title, String summary, String nextAction,
@@ -161,6 +168,7 @@ public class OperatorWorkspaceService {
         return saved;
     }
 
+    /** OperatorWorkspaceService의 linkIncident 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public IncidentCollaboration linkIncident(UUID incidentId, UUID relatedIncidentId, String relationType,
                                               String actor, String requestId, ResolvedAccess access) {
@@ -180,6 +188,7 @@ public class OperatorWorkspaceService {
         return workspaceRepository.findCollaboration(incidentId);
     }
 
+    /** OperatorWorkspaceService의 unlinkIncident 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public void unlinkIncident(UUID incidentId, UUID relatedIncidentId, String actor, String requestId, ResolvedAccess access) {
         Incident source = incident(incidentId);
@@ -189,6 +198,7 @@ public class OperatorWorkspaceService {
         audit("INCIDENT_UNLINKED", "INCIDENT", incidentId.toString(), actor, requestId);
     }
 
+    /** OperatorWorkspaceService의 merge 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public IncidentCollaboration merge(UUID targetId, List<UUID> sourceIds, String note, String actor,
                                        String requestId, ResolvedAccess access) {
@@ -208,6 +218,7 @@ public class OperatorWorkspaceService {
         return workspaceRepository.findCollaboration(targetId);
     }
 
+    /** OperatorWorkspaceService의 split 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public Incident split(UUID incidentId, List<UUID> evidenceIds, String title, String severity, String actor,
                           String requestId, ResolvedAccess access) {
@@ -231,11 +242,13 @@ public class OperatorWorkspaceService {
         return created;
     }
 
+    /** OperatorWorkspaceService의 runbookLibrary 처리의 핵심 작업 흐름을 실행한다. */
     public List<ManagedRunbook> runbookLibrary(ResolvedAccess access) {
         requireAny(access, Capability.ANALYSIS_READ);
         return workspaceRepository.findRunbookLibrary();
     }
 
+    /** OperatorWorkspaceService의 createRunbook 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Transactional
     public ManagedRunbook createRunbook(RunbookInput input, String actor, String requestId, ResolvedAccess access) {
         requireAny(access, Capability.OPERATION_EXECUTE);
@@ -248,6 +261,7 @@ public class OperatorWorkspaceService {
         return saved;
     }
 
+    /** OperatorWorkspaceService의 updateRunbook 처리 대상의 상태를 갱신한다. */
     @Transactional
     public ManagedRunbook updateRunbook(String id, RunbookInput input, String actor, String requestId, ResolvedAccess access) {
         requireAny(access, Capability.OPERATION_EXECUTE);
@@ -259,6 +273,7 @@ public class OperatorWorkspaceService {
         return saved;
     }
 
+    /** OperatorWorkspaceService의 duplicateRunbook 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public ManagedRunbook duplicateRunbook(String id, String actor, String requestId, ResolvedAccess access) {
         requireAny(access, Capability.OPERATION_EXECUTE);
@@ -271,6 +286,7 @@ public class OperatorWorkspaceService {
         return createRunbook(copy, actor, requestId, access);
     }
 
+    /** OperatorWorkspaceService의 setRunbookEnabled 처리 대상의 상태를 갱신한다. */
     @Transactional
     public ManagedRunbook setRunbookEnabled(String id, boolean enabled, String actor, String requestId, ResolvedAccess access) {
         ManagedRunbook current = customRunbook(id);
@@ -281,12 +297,14 @@ public class OperatorWorkspaceService {
         return updateRunbook(id, input, actor, requestId, access);
     }
 
+    /** OperatorWorkspaceService의 runbookVersions 처리의 핵심 작업 흐름을 실행한다. */
     public List<RunbookVersion> runbookVersions(String id, ResolvedAccess access) {
         requireAny(access, Capability.ANALYSIS_READ);
         customRunbook(id);
         return workspaceRepository.findRunbookVersions(id);
     }
 
+    /** OperatorWorkspaceService의 restoreRunbook 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public ManagedRunbook restoreRunbook(String id, int version, String actor, String requestId, ResolvedAccess access) {
         requireAny(access, Capability.OPERATION_EXECUTE);
@@ -300,6 +318,7 @@ public class OperatorWorkspaceService {
         return updateRunbook(id, input, actor, requestId, access);
     }
 
+    /** OperatorWorkspaceService의 deleteRunbook 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Transactional
     public void deleteRunbook(String id, String actor, String requestId, ResolvedAccess access) {
         requireAny(access, Capability.OPERATION_EXECUTE);
@@ -308,6 +327,7 @@ public class OperatorWorkspaceService {
         audit("RUNBOOK_DELETED", "RUNBOOK", id, actor, requestId);
     }
 
+    /** OperatorWorkspaceService의 customRunbook 처리에 필요한 업무 로직을 수행한다. */
     private ManagedRunbook customRunbook(String id) {
         ManagedRunbook value = workspaceRepository.findManagedRunbook(id)
                 .orElseThrow(() -> new NoSuchElementException("Runbook not found: " + id));
@@ -315,6 +335,7 @@ public class OperatorWorkspaceService {
         return value;
     }
 
+    /** OperatorWorkspaceService의 validate 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void validate(RunbookInput input) {
         required(input.signal(), "Signal", 100);
         required(input.category(), "Category", 100);
@@ -333,11 +354,13 @@ public class OperatorWorkspaceService {
         }
     }
 
+    /** OperatorWorkspaceService의 mutating 처리에 필요한 업무 로직을 수행한다. */
     private boolean mutating(String command) {
         String value = " " + command.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ") + " ";
         return MUTATING_COMMANDS.stream().anyMatch(value::contains);
     }
 
+    /** OperatorWorkspaceService의 relation 처리에 필요한 업무 로직을 수행한다. */
     private ResourceRelation relation(KubernetesResourceSnapshot current, KubernetesResourceSnapshot candidate) {
         String currentJson = safe(current.rawJson()) + " " + safe(current.summaryJson());
         String candidateJson = safe(candidate.rawJson()) + " " + safe(candidate.summaryJson());
@@ -354,11 +377,13 @@ public class OperatorWorkspaceService {
         return null;
     }
 
+    /** OperatorWorkspaceService의 changeItem 처리 대상의 상태를 갱신한다. */
     private ResourceChangeItem changeItem(ResourceChange value) {
         return new ResourceChangeItem(value.id(), value.changeType(), value.previousStatus(), value.currentStatus(),
                 value.summary(), value.detectedAt());
     }
 
+    /** OperatorWorkspaceService의 fieldDiffs 처리에 필요한 업무 로직을 수행한다. */
     private List<ResourceFieldDiff> fieldDiffs(String previousJson, String currentJson) {
         try {
             JsonNode previous = objectMapper.readTree(previousJson == null ? "{}" : previousJson);
@@ -379,6 +404,7 @@ public class OperatorWorkspaceService {
         }
     }
 
+    /** OperatorWorkspaceService의 flattenSummary 처리에 필요한 업무 로직을 수행한다. */
     private void flattenSummary(String prefix, JsonNode node, java.util.Map<String, String> target, int depth) {
         if (node == null || node.isNull()) return;
         if (node.isValueNode() || depth >= 3) {
@@ -395,15 +421,18 @@ public class OperatorWorkspaceService {
         }
     }
 
+    /** OperatorWorkspaceService의 abbreviate 처리에 필요한 업무 로직을 수행한다. */
     private static String abbreviate(String value, int max) {
         return value != null && value.length() > max ? value.substring(0, max) + "..." : value;
     }
 
+    /** OperatorWorkspaceService의 incident 처리에 필요한 업무 로직을 수행한다. */
     private Incident incident(UUID id) {
         return operationsRepository.findIncidentById(id)
                 .orElseThrow(() -> new NoSuchElementException("Incident not found: " + id));
     }
 
+    /** OperatorWorkspaceService의 copyState 처리에 필요한 업무 로직을 수행한다. */
     private Incident copyState(Incident value, IncidentState state, String actor) {
         return new Incident(value.id(), value.fingerprint(), value.clusterId(), value.clusterName(), value.namespace(),
                 value.resourceKind(), value.resourceName(), value.category(), value.severity(), state, value.title(),
@@ -411,37 +440,44 @@ public class OperatorWorkspaceService {
                 value.firstDetectedAt(), value.lastDetectedAt(), actor);
     }
 
+    /** OperatorWorkspaceService의 activity 처리에 필요한 업무 로직을 수행한다. */
     private void activity(UUID incidentId, String type, String note, String actor) {
         operationsRepository.saveIncidentActivity(new IncidentActivity(UUID.randomUUID(), incidentId, type,
                 null, null, clean(note, 2000), actor, Instant.now()));
     }
 
+    /** OperatorWorkspaceService의 audit 처리에 필요한 업무 로직을 수행한다. */
     private void audit(String action, String type, String id, String actor, String requestId) {
         auditRepository.save(AuditLog.create(action, type, id, actor, requestId));
     }
 
+    /** OperatorWorkspaceService의 allowed 처리에 필요한 업무 로직을 수행한다. */
     private boolean allowed(ResolvedAccess access, Capability capability, UUID clusterId, String namespace) {
         return access == null || accessService.allows(access, capability, clusterId, namespace);
     }
 
+    /** OperatorWorkspaceService의 require 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void require(ResolvedAccess access, Capability capability, UUID clusterId, String namespace) {
         if (!allowed(access, capability, clusterId, namespace)) {
             throw new AccessDeniedException(capability.value() + " capability is not granted for this scope");
         }
     }
 
+    /** OperatorWorkspaceService의 requireAny 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void requireAny(ResolvedAccess access, Capability capability) {
         if (access != null && !accessService.hasAccessAtAnyScope(access, capability)) {
             throw new AccessDeniedException(capability.value() + " capability is not granted");
         }
     }
 
+    /** OperatorWorkspaceService의 normalizeTags 처리 데이터를 필요한 표현으로 변환한다. */
     private List<String> normalizeTags(List<String> tags) {
         if (tags == null) return List.of();
         if (tags.size() > 20) throw new IllegalArgumentException("At most 20 tags are allowed");
         return tags.stream().map(value -> clean(value, 50)).filter(java.util.Objects::nonNull).distinct().toList();
     }
 
+    /** OperatorWorkspaceService의 normalizeSeverity 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeSeverity(String value) {
         String severity = value == null ? "MEDIUM" : value.toUpperCase(Locale.ROOT);
         if (!Set.of("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO").contains(severity)) {
@@ -450,6 +486,7 @@ public class OperatorWorkspaceService {
         return severity;
     }
 
+    /** OperatorWorkspaceService의 inverse 처리에 필요한 업무 로직을 수행한다. */
     private String inverse(String relation) {
         return switch (relation) {
             case "MERGED_FROM" -> "MERGED_INTO";
@@ -458,26 +495,31 @@ public class OperatorWorkspaceService {
         };
     }
 
+    /** OperatorWorkspaceService의 required 처리 입력과 현재 상태의 유효성을 검증한다. */
     private static String required(String value, String label, int max) {
         String cleaned = clean(value, max);
         if (cleaned == null) throw new IllegalArgumentException(label + " is required");
         return cleaned;
     }
 
+    /** OperatorWorkspaceService의 clean 처리에 필요한 업무 로직을 수행한다. */
     private static String clean(String value, int max) {
         if (value == null || value.isBlank()) return null;
         String cleaned = value.trim();
         return cleaned.length() <= max ? cleaned : cleaned.substring(0, max);
     }
 
+    /** OperatorWorkspaceService의 safe 처리에 필요한 업무 로직을 수행한다. */
     private static String safe(String value) {
         return value == null ? "" : value;
     }
 
+    /** OperatorWorkspaceService의 equalsIgnoreCase 처리에 필요한 업무 로직을 수행한다. */
     private static boolean equalsIgnoreCase(String left, String right) {
         return left != null && right != null && left.equalsIgnoreCase(right);
     }
 
+    /** OperatorWorkspaceService의 hash 처리 조건의 충족 여부를 판단한다. */
     private static String hash(String value) {
         try {
             byte[] bytes = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
@@ -492,6 +534,7 @@ public class OperatorWorkspaceService {
             String verificationCommand, String expectedResult, String safeAction, String validationCommand,
             String rollbackGuidance, String safetyLevel, boolean enabled, String changeNote
     ) {
+        /** RunbookInput의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
         ManagedRunbook toDomain(String id, int version, String owner, Instant createdAt, Instant updatedAt) {
             return new ManagedRunbook(id, "CUSTOM", signal, category, resourceKind, title, beginnerExplanation,
                     verificationCommand, expectedResult, safeAction, validationCommand, rollbackGuidance,

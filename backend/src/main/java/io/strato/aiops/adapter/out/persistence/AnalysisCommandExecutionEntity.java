@@ -45,9 +45,11 @@ class AnalysisCommandExecutionEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    /** AnalysisCommandExecutionEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected AnalysisCommandExecutionEntity() {
     }
 
+    /** AnalysisCommandExecutionEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private AnalysisCommandExecutionEntity(UUID id, UUID analysisId, UUID clusterId, String namespace, String command,
                                            AnalysisCommandSafety safety, AnalysisCommandStatus status, String reason,
                                            String stdoutText, String stderrText, Integer exitCode, Long durationMs,
@@ -68,6 +70,7 @@ class AnalysisCommandExecutionEntity {
         this.createdAt = createdAt;
     }
 
+    /** AnalysisCommandExecutionEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static AnalysisCommandExecutionEntity fromDomain(AnalysisCommandExecution execution) {
         return new AnalysisCommandExecutionEntity(execution.id(), execution.analysisId(), execution.clusterId(),
                 execution.namespace(), execution.command(), execution.safety(), execution.status(), execution.reason(),
@@ -75,6 +78,7 @@ class AnalysisCommandExecutionEntity {
                 execution.createdBy(), execution.createdAt());
     }
 
+    /** AnalysisCommandExecutionEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     AnalysisCommandExecution toDomain() {
         return new AnalysisCommandExecution(id, analysisId, clusterId, namespace, command, safety, status, reason,
                 stdoutText, stderrText, exitCode, durationMs, createdBy, createdAt);

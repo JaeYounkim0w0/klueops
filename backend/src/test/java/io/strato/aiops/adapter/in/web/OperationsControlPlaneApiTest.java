@@ -58,6 +58,7 @@ class OperationsControlPlaneApiTest {
     @Autowired
     private IncidentReportExportService incidentReportExportService;
 
+    /** OperationsControlPlaneApiTest의 exposesConsistentAiTrustSnapshot 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesConsistentAiTrustSnapshot() throws Exception {
         mockMvc.perform(get("/api/operations/ai-trust"))
@@ -70,6 +71,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$.recentReleaseGates").isArray());
     }
 
+    /** OperationsControlPlaneApiTest의 incidentReconciliationDeduplicatesEvidenceAndReopensResolvedIncident 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void incidentReconciliationDeduplicatesEvidenceAndReopensResolvedIncident() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("operations-" + UUID.randomUUID(), "test",
@@ -146,6 +148,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$.evidence.length()").value(2));
     }
 
+    /** OperationsControlPlaneApiTest의 exposesPoliciesRunbooksSettingsAndAuditContracts 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesPoliciesRunbooksSettingsAndAuditContracts() throws Exception {
         mockMvc.perform(get("/api/policies"))
@@ -174,6 +177,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(status().isOk());
     }
 
+    /** OperationsControlPlaneApiTest의 groupsWatchSignalsPromotesHighRiskAndExposesScorecardAndCalibration 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void groupsWatchSignalsPromotesHighRiskAndExposesScorecardAndCalibration() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("triage-" + UUID.randomUUID(), "test",
@@ -204,6 +208,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$.groundTruthCoverageRate").isNumber());
     }
 
+    /** OperationsControlPlaneApiTest의 exposesGuardedValidationBenchmarkReliabilityTrendAndOutcomeLearning 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesGuardedValidationBenchmarkReliabilityTrendAndOutcomeLearning() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("readiness-" + UUID.randomUUID(), "test",
@@ -258,6 +263,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$.evidenceNotice").exists());
     }
 
+    /** OperationsControlPlaneApiTest의 cleanupRemovesExpiredSyncDataButRetainsLatestClusterSnapshot 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void cleanupRemovesExpiredSyncDataButRetainsLatestClusterSnapshot() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("cleanup-" + UUID.randomUUID(), "test",
@@ -297,6 +303,7 @@ class OperationsControlPlaneApiTest {
         org.assertj.core.api.Assertions.assertThat(countRows("async_jobs", latestJobId)).isEqualTo(1);
     }
 
+    /** OperationsControlPlaneApiTest의 evaluatesReferencesPortsAndResilienceOnlyFromAvailableEvidence 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void evaluatesReferencesPortsAndResilienceOnlyFromAvailableEvidence() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("policy-" + UUID.randomUUID(), "test",
@@ -327,6 +334,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$[?(@.policyId == 'PDB_COVERAGE')].result", hasItem("WARN")));
     }
 
+    /** OperationsControlPlaneApiTest의 autoResolvesIncidentOnlyAfterTwoDistinctHealthySnapshots 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void autoResolvesIncidentOnlyAfterTwoDistinctHealthySnapshots() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("recovery-" + UUID.randomUUID(), "test",
@@ -371,6 +379,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$.timeline[?(@.activityType == 'AUTO_RESOLVED')]").exists());
     }
 
+    /** OperationsControlPlaneApiTest의 pagesLatestResourceInventoryWithServerSideFacets 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void pagesLatestResourceInventoryWithServerSideFacets() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("paging-" + UUID.randomUUID(), "test",
@@ -396,6 +405,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$.resourceTypeFacets[?(@.value == 'Pod')].count", hasItem(20)));
     }
 
+    /** OperationsControlPlaneApiTest의 incidentDetailExplainsBlastRadiusChangeCandidatesConfidenceAndSafeVerification 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void incidentDetailExplainsBlastRadiusChangeCandidatesConfidenceAndSafeVerification() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("intelligence-" + UUID.randomUUID(), "test",
@@ -455,6 +465,7 @@ class OperationsControlPlaneApiTest {
                         "kubectl describe pod/configmap-db-pod -n default"));
     }
 
+    /** OperationsControlPlaneApiTest의 regressionCertificationPersistsDetailedSafetyAssertions 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void regressionCertificationPersistsDetailedSafetyAssertions() throws Exception {
         String body = mockMvc.perform(post("/api/analysis-regression/runs"))
@@ -483,6 +494,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$.cases[0].failures.length()").value(0));
     }
 
+    /** OperationsControlPlaneApiTest의 noisePolicySuppressesLowSignalAndCanBeRemoved 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void noisePolicySuppressesLowSignalAndCanBeRemoved() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("noise-" + UUID.randomUUID(), "test",
@@ -517,6 +529,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(status().isNoContent());
     }
 
+    /** OperationsControlPlaneApiTest의 closedLoopObservationUsesLatestSnapshotAndGeneratesFactualPostmortem 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Test
     void closedLoopObservationUsesLatestSnapshotAndGeneratesFactualPostmortem() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("closed-loop-" + UUID.randomUUID(), "test",
@@ -553,6 +566,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$.prevention.length()", greaterThanOrEqualTo(3)));
     }
 
+    /** OperationsControlPlaneApiTest의 exposesContinuityAndBlocksOrPassesAiCandidateFromExplicitThresholds 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesContinuityAndBlocksOrPassesAiCandidateFromExplicitThresholds() throws Exception {
         Cluster cluster = clusterRepository.save(Cluster.register("continuity-" + UUID.randomUUID(), "test",
@@ -597,6 +611,7 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$.reasons.length()", greaterThanOrEqualTo(1)));
     }
 
+    /** OperationsControlPlaneApiTest의 exposesFleetShiftBriefingAndSafeValidationLab 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesFleetShiftBriefingAndSafeValidationLab() throws Exception {
         mockMvc.perform(get("/api/operations/fleet-queue"))
@@ -623,12 +638,14 @@ class OperationsControlPlaneApiTest {
                 .andExpect(jsonPath("$.cases[?(@.scenarioId == 'capacity-oom')].status", hasItem("PASSED")));
     }
 
+    /** OperationsControlPlaneApiTest의 insertJob 처리에 필요한 업무 로직을 수행한다. */
     private void insertJob(UUID jobId, Instant createdAt) {
         jdbcTemplate.update("insert into async_jobs (id, type, status, created_at, started_at, completed_at) "
                         + "values (?, 'CLUSTER_SYNC', 'SUCCEEDED', ?, ?, ?)",
                 jobId, Timestamp.from(createdAt), Timestamp.from(createdAt), Timestamp.from(createdAt));
     }
 
+    /** OperationsControlPlaneApiTest의 insertSync 처리에 필요한 업무 로직을 수행한다. */
     private void insertSync(UUID syncId, UUID jobId, UUID clusterId, Instant createdAt) {
         jdbcTemplate.update("""
                 insert into sync_jobs
@@ -639,11 +656,13 @@ class OperationsControlPlaneApiTest {
                 Timestamp.from(createdAt));
     }
 
+    /** OperationsControlPlaneApiTest의 insertResource 처리에 필요한 업무 로직을 수행한다. */
     private void insertResource(UUID clusterId, UUID syncId, String kind, String name, String status,
                                 String summaryJson) {
         insertResource(clusterId, syncId, kind, name, status, summaryJson, Instant.now());
     }
 
+    /** OperationsControlPlaneApiTest의 insertResource 처리에 필요한 업무 로직을 수행한다. */
     private void insertResource(UUID clusterId, UUID syncId, String kind, String name, String status,
                                 String summaryJson, Instant collectedAt) {
         jdbcTemplate.update("""
@@ -654,11 +673,13 @@ class OperationsControlPlaneApiTest {
                 """, UUID.randomUUID(), clusterId, syncId, kind, name, status, summaryJson, Timestamp.from(collectedAt));
     }
 
+    /** OperationsControlPlaneApiTest의 countRows 처리에 필요한 업무 로직을 수행한다. */
     private long countRows(String table, UUID id) {
         Long count = jdbcTemplate.queryForObject("select count(*) from " + table + " where id=?", Long.class, id);
         return count == null ? 0 : count;
     }
 
+    /** OperationsControlPlaneApiTest의 analysis 처리에 필요한 업무 로직을 수행한다. */
     private AnalysisSession analysis(UUID clusterId, String namespace) {
         return AnalysisSession.succeeded(clusterId, null, namespace, """
                 {

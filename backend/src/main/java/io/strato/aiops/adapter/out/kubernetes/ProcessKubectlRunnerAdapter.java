@@ -40,6 +40,7 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
     private final Map<UUID, Process> running = new ConcurrentHashMap<>();
     private final Set<UUID> canceledExecutions = ConcurrentHashMap.newKeySet();
 
+    /** ProcessKubectlRunnerAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ProcessKubectlRunnerAdapter(
             ObjectMapper objectMapper,
             @Value("${aiops.command-console.kubectl-path:kubectl}") String kubectlPath
@@ -48,6 +49,7 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
         this.kubectlPath = kubectlPath;
     }
 
+    /** ProcessKubectlRunnerAdapter의 run 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public KubectlRunResult run(KubectlRunRequest request, KubectlOutputListener listener) {
         long started = System.nanoTime();
@@ -107,6 +109,7 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
         }
     }
 
+    /** ProcessKubectlRunnerAdapter의 cancel 처리 조건의 충족 여부를 판단한다. */
     @Override
     public boolean cancel(UUID executionId) {
         Process process = running.remove(executionId);
@@ -116,6 +119,7 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
         return true;
     }
 
+    /** ProcessKubectlRunnerAdapter의 clientVersion 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public String clientVersion() {
         try {
@@ -131,11 +135,13 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
         }
     }
 
+    /** ProcessKubectlRunnerAdapter의 available 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public boolean available() {
         return !"unavailable".equals(clientVersion());
     }
 
+    /** ProcessKubectlRunnerAdapter의 kubeconfig 처리에 필요한 업무 로직을 수행한다. */
     private String kubeconfig(KubectlRunRequest request) throws IOException {
         if (request.credential().credentialType() == ClusterCredentialType.KUBECONFIG) {
             return request.credential().payload();
@@ -168,6 +174,7 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
                 """.formatted(jsonString(server), jsonString(certificateData), jsonString(token));
     }
 
+    /** ProcessKubectlRunnerAdapter의 materializeManifest 처리에 필요한 업무 로직을 수행한다. */
     private List<String> materializeManifest(List<String> original, String manifest, Path directory) throws IOException {
         List<String> values = new ArrayList<>(original);
         if (manifest == null || manifest.isBlank()) return values;
@@ -183,11 +190,13 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
         return values;
     }
 
+    /** ProcessKubectlRunnerAdapter의 hasNamespace 처리 조건의 충족 여부를 판단한다. */
     private boolean hasNamespace(List<String> arguments) {
         return arguments.stream().anyMatch(value -> value.equals("-n") || value.equals("--namespace")
                 || value.startsWith("--namespace="));
     }
 
+    /** ProcessKubectlRunnerAdapter의 isolateEnvironment 처리 조건의 충족 여부를 판단한다. */
     private void isolateEnvironment(ProcessBuilder builder, Path directory) {
         String path = System.getenv().getOrDefault("PATH", "/usr/local/bin:/usr/bin:/bin");
         builder.environment().clear();
@@ -198,6 +207,7 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
         builder.environment().put("LC_ALL", "C.UTF-8");
     }
 
+    /** ProcessKubectlRunnerAdapter의 read 처리 결과를 조회해 반환한다. */
     private CompletableFuture<Void> read(InputStream input, BoundedOutput output) {
         return CompletableFuture.runAsync(() -> {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
@@ -209,6 +219,7 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
         });
     }
 
+    /** ProcessKubectlRunnerAdapter의 destroy 처리에 필요한 업무 로직을 수행한다. */
     private void destroy(Process process) {
         process.descendants().forEach(ProcessHandle::destroyForcibly);
         process.destroy();
@@ -220,6 +231,7 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
         }
     }
 
+    /** ProcessKubectlRunnerAdapter의 restrict 처리에 필요한 업무 로직을 수행한다. */
     private void restrict(Path path) {
         try {
             Files.setPosixFilePermissions(path, PosixFilePermissions.fromString(Files.isDirectory(path) ? "rwx------" : "rw-------"));
@@ -228,18 +240,22 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
         }
     }
 
+    /** ProcessKubectlRunnerAdapter의 jsonString 처리에 필요한 업무 로직을 수행한다. */
     private String jsonString(String value) throws IOException {
         return objectMapper.writeValueAsString(value);
     }
 
+    /** ProcessKubectlRunnerAdapter의 elapsedMs 처리에 필요한 업무 로직을 수행한다. */
     private long elapsedMs(long started) {
         return Duration.ofNanos(System.nanoTime() - started).toMillis();
     }
 
+    /** ProcessKubectlRunnerAdapter의 conciseMessage 처리에 필요한 업무 로직을 수행한다. */
     private String conciseMessage(Exception exception) {
         return exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
     }
 
+    /** ProcessKubectlRunnerAdapter의 deleteRecursively 처리 대상과 관련 상태를 안전하게 정리한다. */
     private void deleteRecursively(Path directory) {
         if (directory == null) return;
         try (var paths = Files.walk(directory)) {
@@ -263,12 +279,14 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
         private final AtomicInteger bytes = new AtomicInteger();
         private final AtomicBoolean truncated = new AtomicBoolean();
 
+        /** BoundedOutput 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private BoundedOutput(int limit, KubectlOutputListener listener, String channel) {
             this.limit = limit;
             this.listener = listener;
             this.channel = channel;
         }
 
+        /** BoundedOutput의 append 처리에 필요한 업무 로직을 수행한다. */
         synchronized void append(String text) {
             int nextBytes = text.getBytes(StandardCharsets.UTF_8).length;
             if (bytes.get() + nextBytes <= limit) {
@@ -280,10 +298,12 @@ public class ProcessKubectlRunnerAdapter implements KubectlRunnerPort {
             }
         }
 
+        /** BoundedOutput의 value 처리에 필요한 업무 로직을 수행한다. */
         synchronized String value() {
             return value.toString();
         }
 
+        /** BoundedOutput의 truncated 처리에 필요한 업무 로직을 수행한다. */
         boolean truncated() {
             return truncated.get();
         }

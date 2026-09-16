@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AnalysisCollectionDiagnosticsWriterTest {
 
+    /** AnalysisCollectionDiagnosticsWriterTest의 marksPartialCollectionAndCapsConfidence 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void marksPartialCollectionAndCapsConfidence() {
         ObjectNode root = new ObjectMapper().createObjectNode().put("confidence", 0.82);
@@ -30,6 +31,7 @@ class AnalysisCollectionDiagnosticsWriterTest {
         assertThat(root.path("analysisDiagnostics").path("collection").path("stages")).hasSize(2);
     }
 
+    /** AnalysisCollectionDiagnosticsWriterTest의 leavesLegacyDiagnosticsUntouchedWhenStageMetadataIsUnavailable 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void leavesLegacyDiagnosticsUntouchedWhenStageMetadataIsUnavailable() {
         ObjectNode root = new ObjectMapper().createObjectNode().put("confidence", 0.72);

@@ -35,6 +35,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
     private final int requestTimeoutMs;
     private final int runtimeLookupTimeoutMs;
 
+    /** Fabric8KubernetesClusterAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public Fabric8KubernetesClusterAdapter(
             ObjectMapper objectMapper,
             @Value("${aiops.kubernetes.connect-timeout-ms:5000}") int connectTimeoutMs,
@@ -47,6 +48,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         this.runtimeLookupTimeoutMs = runtimeLookupTimeoutMs;
     }
 
+    /** Fabric8KubernetesClusterAdapter의 testConnection 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public KubernetesConnectionTestResult testConnection(KubernetesConnectionCredential credential) {
         try (KubernetesClient client = createClient(credential)) {
@@ -61,6 +63,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         }
     }
 
+    /** Fabric8KubernetesClusterAdapter의 listNamespaces 처리 결과를 조회해 반환한다. */
     @Override
     public List<KubernetesNamespace> listNamespaces(KubernetesConnectionCredential credential) {
         try (KubernetesClient client = createClient(credential)) {
@@ -79,6 +82,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         }
     }
 
+    /** Fabric8KubernetesClusterAdapter의 listNodes 처리 결과를 조회해 반환한다. */
     @Override
     public List<KubernetesNode> listNodes(KubernetesConnectionCredential credential) {
         try (KubernetesClient client = createClient(credential)) {
@@ -104,6 +108,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         }
     }
 
+    /** Fabric8KubernetesClusterAdapter의 metricsApiAvailable 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public boolean metricsApiAvailable(KubernetesConnectionCredential credential) {
         try (KubernetesClient client = createClient(credential)) {
@@ -121,6 +126,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         }
     }
 
+    /** Fabric8KubernetesClusterAdapter의 callWithTimeout 처리에 필요한 업무 로직을 수행한다. */
     private <T> T callWithTimeout(KubernetesClient client, Supplier<T> supplier, String label) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
@@ -142,6 +148,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         }
     }
 
+    /** Fabric8KubernetesClusterAdapter의 createClient 처리에 필요한 데이터를 생성하거나 저장한다. */
     private KubernetesClient createClient(KubernetesConnectionCredential credential) {
         if (credential.credentialType() == ClusterCredentialType.KUBECONFIG) {
             Config config = Config.fromKubeconfig(credential.payload());
@@ -160,11 +167,13 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         return new KubernetesClientBuilder().withConfig(config).build();
     }
 
+    /** Fabric8KubernetesClusterAdapter의 applyTimeouts 처리에 필요한 업무 로직을 수행한다. */
     private void applyTimeouts(Config config) {
         config.setConnectionTimeout(connectTimeoutMs);
         config.setRequestTimeout(requestTimeoutMs);
     }
 
+    /** Fabric8KubernetesClusterAdapter의 safeKubernetesVersion 처리에 필요한 업무 로직을 수행한다. */
     private String safeKubernetesVersion(KubernetesClient client) {
         try {
             var versionInfo = client.getKubernetesVersion();
@@ -174,6 +183,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         }
     }
 
+    /** Fabric8KubernetesClusterAdapter의 connectionFailureMessage 처리에 필요한 업무 로직을 수행한다. */
     private String connectionFailureMessage(RuntimeException exception) {
         Throwable rootCause = rootCause(exception);
         String detail = rootCause.getMessage();
@@ -187,6 +197,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         return "Kubernetes API connection failed: " + detail;
     }
 
+    /** Fabric8KubernetesClusterAdapter의 rootCause 처리에 필요한 업무 로직을 수행한다. */
     private Throwable rootCause(Throwable throwable) {
         Throwable current = throwable;
         while (current.getCause() != null && current.getCause() != current) {
@@ -195,6 +206,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         return current;
     }
 
+    /** Fabric8KubernetesClusterAdapter의 parseServiceAccountPayload 처리 데이터를 필요한 표현으로 변환한다. */
     private ServiceAccountPayload parseServiceAccountPayload(String payload) {
         try {
             return objectMapper.readValue(payload, ServiceAccountPayload.class);
@@ -203,6 +215,7 @@ public class Fabric8KubernetesClusterAdapter implements KubernetesClusterPort {
         }
     }
 
+    /** Fabric8KubernetesClusterAdapter의 normalizeCertificateAuthority 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeCertificateAuthority(String caCertificate) {
         if (caCertificate == null || caCertificate.isBlank()) {
             return null;

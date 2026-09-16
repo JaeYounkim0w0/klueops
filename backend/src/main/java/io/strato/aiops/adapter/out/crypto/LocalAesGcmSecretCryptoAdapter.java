@@ -25,10 +25,12 @@ public class LocalAesGcmSecretCryptoAdapter implements SecretCryptoPort {
     private final SecureRandom secureRandom = new SecureRandom();
     private final SecretKeySpec secretKeySpec;
 
+    /** LocalAesGcmSecretCryptoAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public LocalAesGcmSecretCryptoAdapter(@Value("${aiops.crypto.local-master-key:local-development-master-key}") String localMasterKey) {
         this.secretKeySpec = new SecretKeySpec(sha256(localMasterKey), "AES");
     }
 
+    /** LocalAesGcmSecretCryptoAdapter의 encrypt 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public EncryptedSecret encrypt(String plaintext) {
         try {
@@ -50,6 +52,7 @@ public class LocalAesGcmSecretCryptoAdapter implements SecretCryptoPort {
         }
     }
 
+    /** LocalAesGcmSecretCryptoAdapter의 decrypt 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public String decrypt(EncryptedSecret encryptedSecret) {
         try {
@@ -68,6 +71,7 @@ public class LocalAesGcmSecretCryptoAdapter implements SecretCryptoPort {
         }
     }
 
+    /** LocalAesGcmSecretCryptoAdapter의 sha256 처리에 필요한 업무 로직을 수행한다. */
     private byte[] sha256(String value) {
         try {
             return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));

@@ -17,6 +17,7 @@ public record AiChatContextSelectionRequest(
         Boolean includeLogs,
         Integer logLineLimit
 ) {
+    /** AiChatContextSelectionRequest의 toCommand 처리 데이터를 필요한 표현으로 변환한다. */
     public AiChatContextSelection toCommand() {
         int boundedLogLines = logLineLimit == null ? 80 : Math.max(10, Math.min(logLineLimit, 200));
         return new AiChatContextSelection(clusterId, namespace, applicationId, includeRecentEvents == null || includeRecentEvents,

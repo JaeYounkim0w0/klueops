@@ -28,6 +28,7 @@ public class Fabric8KubernetesTerminalAdapter implements KubernetesTerminalPort 
     private final int connectTimeoutMs;
     private final int requestTimeoutMs;
 
+    /** Fabric8KubernetesTerminalAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public Fabric8KubernetesTerminalAdapter(ObjectMapper objectMapper,
             @Value("${aiops.kubernetes.connect-timeout-ms:5000}") int connectTimeoutMs,
             @Value("${aiops.kubernetes.request-timeout-ms:10000}") int requestTimeoutMs) {
@@ -36,6 +37,7 @@ public class Fabric8KubernetesTerminalAdapter implements KubernetesTerminalPort 
         this.requestTimeoutMs = requestTimeoutMs;
     }
 
+    /** Fabric8KubernetesTerminalAdapter의 open 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public KubernetesTerminalSession open(KubernetesTerminalRequest request, KubernetesTerminalListener listener) {
         KubernetesClient client = createClient(request);
@@ -58,6 +60,7 @@ public class Fabric8KubernetesTerminalAdapter implements KubernetesTerminalPort 
         }
     }
 
+    /** Fabric8KubernetesTerminalAdapter의 createClient 처리에 필요한 데이터를 생성하거나 저장한다. */
     private KubernetesClient createClient(KubernetesTerminalRequest request) {
         var credential = request.credential();
         if (credential.credentialType() == ClusterCredentialType.KUBECONFIG) {
@@ -79,15 +82,19 @@ public class Fabric8KubernetesTerminalAdapter implements KubernetesTerminalPort 
         }
     }
 
+    /** Fabric8KubernetesTerminalAdapter의 output 처리에 필요한 업무 로직을 수행한다. */
     private OutputStream output(KubernetesTerminalListener listener, String channel) {
         return new OutputStream() {
+            /** 익명 구현체의 write 처리에 필요한 업무 로직을 수행한다. */
             @Override public void write(int value) { listener.onOutput(channel, String.valueOf((char) value)); }
+            /** 익명 구현체의 write 처리에 필요한 업무 로직을 수행한다. */
             @Override public void write(byte[] values, int offset, int length) {
                 listener.onOutput(channel, new String(values, offset, length, StandardCharsets.UTF_8));
             }
         };
     }
 
+    /** Fabric8KubernetesTerminalAdapter의 concise 처리에 필요한 업무 로직을 수행한다. */
     private String concise(RuntimeException exception) {
         String message = exception.getMessage();
         return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
@@ -101,6 +108,7 @@ public class Fabric8KubernetesTerminalAdapter implements KubernetesTerminalPort 
         private final ExecWatch watch;
         private final OutputStream input;
 
+        /** Fabric8TerminalSession 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private Fabric8TerminalSession(KubernetesClient client, ExecWatch watch) {
             this.client = client;
             this.watch = watch;
@@ -115,6 +123,7 @@ public class Fabric8KubernetesTerminalAdapter implements KubernetesTerminalPort 
             }
         }
 
+        /** Fabric8TerminalSession의 input 처리에 필요한 업무 로직을 수행한다. */
         @Override public void input(String data) {
             try {
                 input.write(data.getBytes(StandardCharsets.UTF_8));
@@ -124,8 +133,11 @@ public class Fabric8KubernetesTerminalAdapter implements KubernetesTerminalPort 
             }
         }
 
+        /** Fabric8TerminalSession의 resize 처리에 필요한 업무 로직을 수행한다. */
         @Override public void resize(int columns, int rows) { watch.resize(columns, rows); }
+        /** Fabric8TerminalSession의 exitCode 처리에 필요한 업무 로직을 수행한다. */
         @Override public CompletableFuture<Integer> exitCode() { return watch.exitCode(); }
+        /** Fabric8TerminalSession의 close 처리 대상과 관련 상태를 안전하게 정리한다. */
         @Override public void close() { try { watch.close(); } finally { client.close(); } }
     }
 }

@@ -16,10 +16,12 @@ public class DeterministicRiskTimelineSectionBuilder {
 
     private final ObjectMapper objectMapper;
 
+    /** DeterministicRiskTimelineSectionBuilder 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public DeterministicRiskTimelineSectionBuilder(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /** DeterministicRiskTimelineSectionBuilder의 build 처리에 필요한 결과를 조합해 반환한다. */
     public ObjectNode build(NamespaceDiagnosticsResult.RiskForecast forecast,
                             List<NamespaceDiagnosticsResult.ChangeTimelineItem> timeline) {
         ObjectNode result = objectMapper.createObjectNode();
@@ -66,10 +68,12 @@ public class DeterministicRiskTimelineSectionBuilder {
         return result;
     }
 
+    /** DeterministicRiskTimelineSectionBuilder의 safeList 처리에 필요한 업무 로직을 수행한다. */
     private static <T> List<T> safeList(List<T> values) {
         return values == null ? List.of() : values.stream().filter(java.util.Objects::nonNull).toList();
     }
 
+    /** DeterministicRiskTimelineSectionBuilder의 valueOrBlank 처리에 필요한 업무 로직을 수행한다. */
     private static String valueOrBlank(String value) {
         return value == null ? "" : value;
     }

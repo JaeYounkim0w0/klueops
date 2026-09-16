@@ -53,6 +53,14 @@ describe('auth session store', () => {
     expect(auth.session.session?.expiresAt).toBe('2026-09-02T06:45:00Z');
   });
 
+  it('keeps the shell session countdown on a one-second display timer', async () => {
+    const shell = await import('@/../src/App.vue?raw');
+
+    expect(shell.default).toContain('window.setInterval(refreshSessionCountdown, 1_000)');
+    expect(shell.default).toContain('sessionExtensionError.value = error instanceof Error');
+    expect(shell.default).toContain("role=\"alert\"");
+  });
+
   it('submits logout as a browser navigation so the identity provider session is closed', () => {
     const submit = vi.fn();
     const appendChild = vi.fn();
@@ -77,9 +85,9 @@ describe('auth session store', () => {
     const storage = new Map<string, string>();
     vi.stubGlobal('window', {
       sessionStorage: {
-        getItem: (key: string) => storage.get(key) ?? null,
-        setItem: (key: string, value: string) => storage.set(key, value),
-        removeItem: (key: string) => storage.delete(key),
+        getItem: /** getItem 처리 결과를 조회해 반환한다. */ (key: string) => storage.get(key) ?? null,
+        setItem: /** setItem 처리 대상의 상태를 갱신한다. */ (key: string, value: string) => storage.set(key, value),
+        removeItem: /** removeItem 처리 대상과 관련 상태를 안전하게 정리한다. */ (key: string) => storage.delete(key),
       },
       location: { assign: vi.fn() },
     });
@@ -104,7 +112,7 @@ describe('auth session store', () => {
     const assign = vi.fn();
     vi.stubGlobal('window', {
       sessionStorage: {
-        getItem: () => null,
+        getItem: /** getItem 처리 결과를 조회해 반환한다. */ () => null,
         setItem: vi.fn(),
         removeItem: vi.fn(),
       },

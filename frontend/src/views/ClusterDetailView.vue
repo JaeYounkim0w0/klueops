@@ -26,6 +26,7 @@ import {
 } from '@/api/client';
 import { useJobCenterStore } from '@/stores/jobCenter';
 import { useAuthStore } from '@/stores/auth';
+import { ApiError } from '@/api/http';
 
 const route = useRoute();
 const router = useRouter();
@@ -36,6 +37,9 @@ const { t } = useI18n();
 const clusterId = computed(() => String(route.params.clusterId || ''));
 const cluster = ref<ClusterResponse | null>(null);
 const credential = ref<ClusterCredentialResponse | null>(null);
+const credentialRevealOpen = ref(false);
+const credentialBusy = ref(false);
+let credentialMaskTimer: ReturnType<typeof setTimeout> | null = null;
 const syncSettings = ref<ClusterSyncSettingsResponse | null>(null);
 const syncStatus = ref<ClusterSyncStatusResponse | null>(null);
 const namespaces = ref<KubernetesNamespaceResponse[]>([]);
@@ -93,6 +97,7 @@ const readinessLoading = ref(false);
 const readinessError = ref('');
 const readinessTab = ref<'capabilities' | 'credential' | 'upgrade'>('capabilities');
 const readinessTargetVersion = ref('');
+const canRevealCredential = computed(() => auth.hasCapability('cluster:manage'));
 
 type ResourceInsight = {
   label: string;
@@ -500,8 +505,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopResourceLogStream();
+  clearCredentialMaskTimer();
 });
 
+/** loadDetail 처리 결과를 조회해 반환한다. */
 async function loadDetail() {
   loading.value = true;
   errorMessage.value = '';
@@ -512,6 +519,7 @@ async function loadDetail() {
   }
 }
 
+/** refreshDetail 처리의 핵심 작업 흐름을 실행한다. */
 async function refreshDetail() {
   refreshing.value = true;
   feedback.value = null;
@@ -523,6 +531,7 @@ async function refreshDetail() {
   }
 }
 
+/** loadAll 처리 결과를 조회해 반환한다. */
 async function loadAll() {
   const id = clusterId.value;
   const results = await Promise.allSettled([
@@ -554,6 +563,7 @@ async function loadAll() {
   void loadOperationsInfo(id);
 }
 
+/** loadRuntimeInfo 처리 결과를 조회해 반환한다. */
 async function loadRuntimeInfo(id: string) {
   runtimeLoading.value = true;
   runtimeError.value = '';
@@ -582,10 +592,12 @@ async function loadRuntimeInfo(id: string) {
   }
 }
 
+/** refreshRuntimeInfo 처리의 핵심 작업 흐름을 실행한다. */
 async function refreshRuntimeInfo() {
   await loadRuntimeInfo(clusterId.value);
 }
 
+/** loadOperationsInfo 처리 결과를 조회해 반환한다. */
 async function loadOperationsInfo(id: string) {
   operationsLoading.value = true;
   operationsError.value = '';
@@ -612,6 +624,7 @@ async function loadOperationsInfo(id: string) {
   }
 }
 
+/** loadClusterReadiness 처리 결과를 조회해 반환한다. */
 async function loadClusterReadiness(refresh = false) {
   if (readinessLoading.value) return;
   readinessLoading.value = true;
@@ -629,6 +642,7 @@ async function loadClusterReadiness(refresh = false) {
   }
 }
 
+/** assignResult 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function assignResult<T>(
   result: PromiseSettledResult<T>,
   setter: (value: T) => void,
@@ -643,15 +657,76 @@ function assignResult<T>(
   }
 }
 
+/** openCredentialReveal 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+function openCredentialReveal() {
+  feedback.value = null;
+  if (!canRevealCredential.value) {
+    feedback.value = {
+      tone: 'error',
+      message: '원문 인증 정보 조회 권한이 없습니다.',
+      detail: 'Cluster Admin 또는 Platform Manager의 cluster:manage 권한이 필요합니다.'
+    };
+    return;
+  }
+  credentialRevealOpen.value = true;
+}
+
+/** revealCredential 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function revealCredential() {
   feedback.value = null;
-  credential.value = await api.getClusterCredential(clusterId.value, true);
+  credentialBusy.value = true;
+  try {
+    credential.value = await api.getClusterCredential(clusterId.value, true);
+    credentialRevealOpen.value = false;
+    feedback.value = {
+      tone: 'info',
+      message: '등록 인증 정보 원문을 표시합니다.',
+      detail: '조회 행위는 Audit에 기록되며 60초 후 자동으로 다시 마스킹됩니다.'
+    };
+    clearCredentialMaskTimer();
+    credentialMaskTimer = setTimeout(() => void maskCredential(true), 60_000);
+  } catch (error) {
+    const policyDisabled = error instanceof ApiError
+      && typeof error.body === 'object'
+      && error.body?.code === 'CREDENTIAL_REVEAL_DISABLED';
+    feedback.value = {
+      tone: 'error',
+      message: policyDisabled ? '현재 실행 환경에서 원문 보기가 비활성화되어 있습니다.' : '등록 인증 정보 원문을 불러오지 못했습니다.',
+      detail: policyDisabled
+        ? '운영 환경에서는 비활성화가 기본입니다. 격리된 로컬 환경에서만 portal.security.credentialRevealEnabled=true를 사용하세요.'
+        : error instanceof Error ? error.message : '잠시 후 다시 시도해주세요.'
+    };
+  } finally {
+    credentialBusy.value = false;
+  }
 }
 
-async function maskCredential() {
-  credential.value = await api.getClusterCredential(clusterId.value, false);
+/** maskCredential 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+async function maskCredential(automatic = false) {
+  clearCredentialMaskTimer();
+  try {
+    credential.value = await api.getClusterCredential(clusterId.value, false);
+    if (automatic) {
+      feedback.value = { tone: 'info', message: '등록 인증 정보를 자동으로 다시 마스킹했습니다.' };
+    }
+  } catch (error) {
+    feedback.value = {
+      tone: 'error',
+      message: '등록 인증 정보를 다시 마스킹하지 못했습니다.',
+      detail: '화면을 즉시 새로고침하거나 Clusters 목록으로 이동하세요.'
+    };
+  }
 }
 
+/** clearCredentialMaskTimer 처리 대상과 관련 상태를 안전하게 정리한다. */
+function clearCredentialMaskTimer() {
+  if (credentialMaskTimer !== null) {
+    clearTimeout(credentialMaskTimer);
+    credentialMaskTimer = null;
+  }
+}
+
+/** syncCluster 처리의 핵심 작업 흐름을 실행한다. */
 async function syncCluster() {
   if (syncInProgress.value) {
     feedback.value = {
@@ -702,6 +777,7 @@ async function syncCluster() {
   }
 }
 
+/** hydrateRunningSyncJob 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function hydrateRunningSyncJob() {
   const status = (syncStatus.value?.status || '').toUpperCase();
   const jobId = syncStatus.value?.asyncJobId;
@@ -718,11 +794,13 @@ function hydrateRunningSyncJob() {
   });
 }
 
+/** testConnection 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function testConnection() {
   const result = await api.testClusterConnection(clusterId.value);
   feedback.value = connectionFeedback(result);
 }
 
+/** connectionFeedback 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function connectionFeedback(result: ClusterConnectionTestResponse) {
   return {
     tone: result.reachable ? 'success' as const : 'error' as const,
@@ -735,6 +813,7 @@ function connectionFeedback(result: ClusterConnectionTestResponse) {
   };
 }
 
+/** isProblemResource 처리 조건의 충족 여부를 판단한다. */
 function isProblemResource(resource: KubernetesResourceSnapshotResponse) {
   const status = (resource.status || '').toLowerCase();
   if (!status) {
@@ -743,6 +822,7 @@ function isProblemResource(resource: KubernetesResourceSnapshotResponse) {
   return ['pending', 'failed', 'error', 'crash', '0/'].some((signal) => status.includes(signal));
 }
 
+/** selectNamespace 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function selectNamespace(namespace: string) {
   if (selectedNamespace.value === namespace) return;
   selectedNamespace.value = namespace;
@@ -750,11 +830,13 @@ async function selectNamespace(namespace: string) {
   await loadResourcePage(true);
 }
 
+/** selectResourceType 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function selectResourceType(type: string) {
   selectedResourceType.value = type;
   await loadResourcePage(true);
 }
 
+/** loadResourcePage 처리 결과를 조회해 반환한다. */
 async function loadResourcePage(reset: boolean) {
   const sequence = ++resourceRequestSequence;
   resourceLoading.value = true;
@@ -779,6 +861,7 @@ async function loadResourcePage(reset: boolean) {
   }
 }
 
+/** openResourceDetail 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openResourceDetail(resource: KubernetesResourceSnapshotResponse) {
   stopResourceLogStream();
   selectedResource.value = resource;
@@ -798,6 +881,7 @@ async function openResourceDetail(resource: KubernetesResourceSnapshotResponse) 
   }
 }
 
+/** loadResourceManifest 처리 결과를 조회해 반환한다. */
 async function loadResourceManifest() {
   const resource = selectedResource.value;
   if (!resource || selectedResourceManifest.value || resourceManifestLoading.value) return;
@@ -818,6 +902,7 @@ async function loadResourceManifest() {
   }
 }
 
+/** closeResourceDetail 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeResourceDetail() {
   stopResourceLogStream();
   selectedResource.value = null;
@@ -829,6 +914,7 @@ function closeResourceDetail() {
   resetResourceLogs();
 }
 
+/** changeResourceDetailTab 처리 대상의 상태를 갱신한다. */
 async function changeResourceDetailTab(tab: 'overview' | 'logs' | 'yaml') {
   if (tab !== 'logs') stopResourceLogStream();
   resourceDetailTab.value = tab;
@@ -836,6 +922,7 @@ async function changeResourceDetailTab(tab: 'overview' | 'logs' | 'yaml') {
   if (tab === 'logs' && !resourceLogTargets.value) await loadResourceLogTargets();
 }
 
+/** resetResourceLogs 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function resetResourceLogs() {
   resourceLogTargetSequence++;
   resourceLogRecentSequence++;
@@ -851,6 +938,7 @@ function resetResourceLogs() {
   resourceLogLines.value = [];
 }
 
+/** loadResourceLogTargets 처리 결과를 조회해 반환한다. */
 async function loadResourceLogTargets() {
   const resource = selectedResource.value;
   if (!resource?.namespace) return;
@@ -881,12 +969,14 @@ async function loadResourceLogTargets() {
   }
 }
 
+/** preferredContainerName 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function preferredContainerName(pod?: ClusterResourceLogTargetsResponse['pods'][number]) {
   return pod?.containers.find((container) => !container.initContainer)?.containerName
     || pod?.containers[0]?.containerName
     || '';
 }
 
+/** selectResourceLogPod 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function selectResourceLogPod() {
   stopResourceLogStream();
   selectedLogContainer.value = preferredContainerName(selectedLogPodTarget.value);
@@ -895,6 +985,7 @@ async function selectResourceLogPod() {
   if (resourceLogMode.value === 'recent' && selectedLogContainer.value) await loadRecentResourceLogs();
 }
 
+/** selectResourceLogContainer 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function selectResourceLogContainer() {
   stopResourceLogStream();
   resourceRecentLog.value = null;
@@ -902,6 +993,7 @@ async function selectResourceLogContainer() {
   if (resourceLogMode.value === 'recent') await loadRecentResourceLogs();
 }
 
+/** changeResourceLogMode 처리 대상의 상태를 갱신한다. */
 async function changeResourceLogMode(mode: 'recent' | 'stream') {
   stopResourceLogStream();
   resourceLogMode.value = mode;
@@ -909,6 +1001,7 @@ async function changeResourceLogMode(mode: 'recent' | 'stream') {
   if (mode === 'recent') await loadRecentResourceLogs();
 }
 
+/** loadRecentResourceLogs 처리 결과를 조회해 반환한다. */
 async function loadRecentResourceLogs() {
   const resource = selectedResource.value;
   if (!resource?.namespace || !selectedLogPod.value || !selectedLogContainer.value) return;
@@ -939,6 +1032,7 @@ async function loadRecentResourceLogs() {
   }
 }
 
+/** startResourceLogStream 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function startResourceLogStream() {
   const resource = selectedResource.value;
   if (!resource?.namespace || !selectedLogPod.value || !selectedLogContainer.value) return;
@@ -985,6 +1079,7 @@ async function startResourceLogStream() {
   }
 }
 
+/** stopResourceLogStream 처리 대상과 관련 상태를 안전하게 정리한다. */
 function stopResourceLogStream() {
   resourceLogStreamSequence++;
   resourceLogAbortController?.abort();
@@ -992,12 +1087,14 @@ function stopResourceLogStream() {
   resourceLogStreaming.value = false;
 }
 
+/** clearResourceLogs 처리 대상과 관련 상태를 안전하게 정리한다. */
 function clearResourceLogs() {
   resourceRecentLog.value = null;
   resourceLogLines.value = [];
   resourceLogError.value = '';
 }
 
+/** openRelatedResource 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openRelatedResource(relation: ResourceRelation) {
   const candidate = resources.value.find((resource) => (
     resource.resourceType === relation.kind
@@ -1009,14 +1106,17 @@ async function openRelatedResource(relation: ResourceRelation) {
   }
 }
 
+/** openCommandExecution 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openCommandExecution(execution: AnalysisCommandExecutionResponse) {
   selectedCommandExecution.value = execution;
 }
 
+/** closeCommandExecution 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeCommandExecution() {
   selectedCommandExecution.value = null;
 }
 
+/** parseJson 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function parseJson(value?: string) {
   if (!value) {
     return {};
@@ -1028,23 +1128,28 @@ function parseJson(value?: string) {
   }
 }
 
+/** prettyJson 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function prettyJson(value?: string) {
   const parsed = parseJson(value);
   return JSON.stringify(parsed, null, 2);
 }
 
+/** objectValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function objectValue(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
+/** arrayValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function arrayValue(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+/** firstPresent 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function firstPresent(...values: unknown[]) {
   return values.find((value) => value !== undefined && value !== null && value !== '');
 }
 
+/** valueLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function valueLabel(value: unknown, fallback = '-') {
   if (value === undefined || value === null || value === '') {
     return fallback;
@@ -1058,15 +1163,18 @@ function valueLabel(value: unknown, fallback = '-') {
   return String(value);
 }
 
+/** numberValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function numberValue(value: unknown, fallback = 0) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
 }
 
+/** sameNamespace 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function sameNamespace(left?: string, right?: string) {
   return (left || '') === (right || '');
 }
 
+/** appendResourceSpecificInsights 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function appendResourceSpecificInsights(
   resource: KubernetesResourceSnapshotResponse,
   summary: Record<string, unknown>,
@@ -1163,6 +1271,7 @@ function appendResourceSpecificInsights(
   }
 }
 
+/** appendResourceSpecificRisks 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function appendResourceSpecificRisks(
   resource: KubernetesResourceSnapshotResponse,
   summary: Record<string, unknown>,
@@ -1244,6 +1353,7 @@ function appendResourceSpecificRisks(
   }
 }
 
+/** resourcePurpose 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function resourcePurpose(kind: string) {
   const purpose: Record<string, string> = {
     Pod: '컨테이너가 실제 실행되는 최소 실행 단위입니다.',
@@ -1265,6 +1375,7 @@ function resourcePurpose(kind: string) {
   return purpose[kind] || 'Kubernetes 리소스입니다. YAML과 관련 이벤트를 함께 확인하세요.';
 }
 
+/** toRelation 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function toRelation(resource: KubernetesResourceSnapshotResponse, reason: string, tone: ResourceRelation['tone']): ResourceRelation {
   return {
     kind: resource.resourceType,
@@ -1275,6 +1386,7 @@ function toRelation(resource: KubernetesResourceSnapshotResponse, reason: string
   };
 }
 
+/** dedupeRelations 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function dedupeRelations(relations: ResourceRelation[]) {
   const seen = new Set<string>();
   return relations.filter((relation) => {
@@ -1287,6 +1399,7 @@ function dedupeRelations(relations: ResourceRelation[]) {
   });
 }
 
+/** goToAnalysisForScope 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function goToAnalysisForScope() {
   const namespace = selectedResource.value?.namespace || (selectedNamespace.value === '__ALL__' ? undefined : selectedNamespace.value);
   router.push({
@@ -1299,6 +1412,7 @@ function goToAnalysisForScope() {
   });
 }
 
+/** riskClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function riskClass(level?: string) {
   const normalized = (level || '').toUpperCase();
   if (normalized === 'HIGH') {
@@ -1310,6 +1424,7 @@ function riskClass(level?: string) {
   return 'low';
 }
 
+/** toneClass 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function toneClass(tone?: string) {
   if (tone === 'danger') {
     return 'critical';
@@ -1323,6 +1438,7 @@ function toneClass(tone?: string) {
   return '';
 }
 
+/** readinessTone 처리 결과를 조회해 반환한다. */
 function readinessTone(status?: string) {
   const normalized = (status || '').toUpperCase();
   if (['CRITICAL', 'BLOCKED', 'DENIED'].includes(normalized)) return 'critical';
@@ -1330,10 +1446,12 @@ function readinessTone(status?: string) {
   return 'low';
 }
 
+/** timeLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function timeLabel(value?: string) {
   return value ? new Date(value).toLocaleString() : '-';
 }
 
+/** durationLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function durationLabel(value?: number | null) {
   if (value == null || !Number.isFinite(value)) return '-';
   if (value < 1_000) return `${Math.round(value)}ms`;
@@ -1343,10 +1461,12 @@ function durationLabel(value?: number | null) {
   return `${minutes}분 ${seconds}초`;
 }
 
+/** shortId 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function shortId(value?: string) {
   return value ? value.slice(0, 8) : '-';
 }
 
+/** openKubernetesConsole 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openKubernetesConsole(command?: string, namespace?: string) {
   const query: Record<string, string> = {};
   if (command) query.command = command;
@@ -1354,6 +1474,7 @@ function openKubernetesConsole(command?: string, namespace?: string) {
   router.push({ name: 'cluster-console', params: { clusterId: clusterId.value }, query });
 }
 
+/** openSelectedResourceInConsole 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openSelectedResourceInConsole() {
   const resource = selectedResource.value;
   if (!resource) return;
@@ -1363,6 +1484,7 @@ function openSelectedResourceInConsole() {
   );
 }
 
+/** openSelectedPodTerminal 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openSelectedPodTerminal() {
   const resource = selectedResource.value;
   if (!resource || resource.resourceType.toLowerCase() !== 'pod') return;
@@ -1847,14 +1969,15 @@ function openSelectedPodTerminal() {
               <p>저장된 kubeconfig 또는 ServiceAccount 정보를 확인합니다. 민감값은 기본 마스킹됩니다.</p>
             </div>
             <div class="header-actions">
-              <button v-if="credential?.revealed" class="secondary-button" type="button" @click="maskCredential">
+              <button v-if="credential?.revealed" class="secondary-button" type="button" :disabled="credentialBusy" @click="maskCredential()">
                 <i class="pi pi-eye-slash"></i>
                 <span>마스킹</span>
               </button>
-              <button v-else class="secondary-button" type="button" @click="revealCredential">
+              <button v-else-if="canRevealCredential" class="secondary-button" type="button" :disabled="credentialBusy" @click="openCredentialReveal">
                 <i class="pi pi-eye"></i>
                 <span>원문 보기</span>
               </button>
+              <small v-else class="muted-line">원문 조회는 Cluster Admin 이상만 가능합니다.</small>
             </div>
           </div>
           <div class="credential-meta">
@@ -1864,6 +1987,35 @@ function openSelectedPodTerminal() {
           <pre class="credential-viewer">{{ credential?.payload || '저장된 인증 정보를 불러오지 못했습니다.' }}</pre>
         </section>
       </main>
+    </div>
+
+    <div v-if="credentialRevealOpen" class="modal-backdrop" @click.self="credentialRevealOpen = false">
+      <section class="modal-panel feedback-detail-modal" aria-modal="true" role="dialog" aria-labelledby="credential-reveal-title">
+        <header class="modal-header">
+          <div>
+            <h2 id="credential-reveal-title">등록 인증 정보 원문 보기</h2>
+            <p>{{ cluster?.name || 'Cluster' }}</p>
+          </div>
+          <button class="icon-button" title="닫기" type="button" :disabled="credentialBusy" @click="credentialRevealOpen = false">
+            <i class="pi pi-times"></i>
+          </button>
+        </header>
+        <div class="feedback-detail-body">
+          <p>ServiceAccount token, CA certificate 또는 kubeconfig 원문이 화면에 표시됩니다.</p>
+          <ul>
+            <li>조회에는 <code>cluster:manage</code> 권한이 필요합니다.</li>
+            <li>조회 행위와 대상 Cluster는 Audit에 기록됩니다.</li>
+            <li>원문은 60초 후 자동으로 다시 마스킹됩니다.</li>
+          </ul>
+        </div>
+        <footer class="modal-actions">
+          <button class="secondary-button" type="button" :disabled="credentialBusy" @click="credentialRevealOpen = false">취소</button>
+          <button class="primary-button" type="button" :disabled="credentialBusy" @click="revealCredential">
+            <i :class="credentialBusy ? 'pi pi-spin pi-spinner' : 'pi pi-eye'"></i>
+            <span>{{ credentialBusy ? '불러오는 중' : '원문 표시' }}</span>
+          </button>
+        </footer>
+      </section>
     </div>
 
     <div v-if="selectedResource" class="modal-backdrop" @click.self="closeResourceDetail">

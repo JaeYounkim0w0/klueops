@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class IncidentSignalCoordinatorTest {
 
+    /** IncidentSignalCoordinatorTest의 convertsHighSignalWarningEventToFactualIncidentSignal 처리 데이터를 필요한 표현으로 변환한다. */
     @Test
     void convertsHighSignalWarningEventToFactualIncidentSignal() {
         KubernetesEventSnapshot event = event("FailedMount", "Warning", 1);
@@ -29,12 +30,14 @@ class IncidentSignalCoordinatorTest {
         assertThat(signal.factual()).isTrue();
     }
 
+    /** IncidentSignalCoordinatorTest의 ignoresNormalAndLowFrequencyNonHighSignalEvents 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void ignoresNormalAndLowFrequencyNonHighSignalEvents() {
         assertThat(IncidentSignalCoordinator.eventSignal(event("Scheduled", "Normal", 20))).isNull();
         assertThat(IncidentSignalCoordinator.eventSignal(event("CustomWarning", "Warning", 2))).isNull();
     }
 
+    /** IncidentSignalCoordinatorTest의 convertsOnlyHighRiskAiFindingsAndExtractsResourceReference 처리 데이터를 필요한 표현으로 변환한다. */
     @Test
     void convertsOnlyHighRiskAiFindingsAndExtractsResourceReference() {
         Cluster cluster = Cluster.register("dev", "test", ClusterEnvironment.DEV,
@@ -59,6 +62,7 @@ class IncidentSignalCoordinatorTest {
         });
     }
 
+    /** IncidentSignalCoordinatorTest의 event 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesEventSnapshot event(String reason, String type, int count) {
         Instant now = Instant.parse("2026-09-07T00:00:00Z");
         return new KubernetesEventSnapshot(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "default",

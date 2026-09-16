@@ -23,6 +23,7 @@ public class CommandExecutionRecoveryService {
     private final Clock clock;
     private final Duration minimumAge;
 
+    /** CommandExecutionRecoveryService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public CommandExecutionRecoveryService(CommandExecutionRepositoryPort executions,
             CommandExecutionCoordinator coordinator, CommandEventStream events, AuditLogRepositoryPort audits,
             Clock clock, @Value("${aiops.command-console.recovery-minimum-age-seconds:90}") long minimumAgeSeconds) {
@@ -34,11 +35,13 @@ public class CommandExecutionRecoveryService {
         this.minimumAge = Duration.ofSeconds(Math.max(30, minimumAgeSeconds));
     }
 
+    /** CommandExecutionRecoveryService의 recoverAfterStartup 처리에 필요한 업무 로직을 수행한다. */
     @EventListener(ApplicationReadyEvent.class)
     public void recoverAfterStartup() {
         recoverOrphans();
     }
 
+    /** CommandExecutionRecoveryService의 recoverOrphans 처리에 필요한 업무 로직을 수행한다. */
     @Scheduled(fixedDelayString = "${aiops.command-console.recovery-interval-ms:30000}")
     public void recoverOrphans() {
         executions.findIncompleteBefore(clock.instant().minus(minimumAge), 200).stream()
@@ -46,6 +49,7 @@ public class CommandExecutionRecoveryService {
                 .forEach(this::failOrphan);
     }
 
+    /** CommandExecutionRecoveryService의 failOrphan 처리에 필요한 업무 로직을 수행한다. */
     private void failOrphan(CommandExecution execution) {
         String reason = "command execution worker lease expired; retry after checking the target state";
         CommandExecution failed = executions.save(execution.completed(CommandStatus.FAILED,
@@ -56,6 +60,7 @@ public class CommandExecutionRecoveryService {
         coordinator.release(execution.id());
     }
 
+    /** CommandExecutionRecoveryService의 elapsed 처리에 필요한 업무 로직을 수행한다. */
     private long elapsed(CommandExecution execution) {
         return Duration.between(execution.startedAt() == null ? execution.createdAt() : execution.startedAt(),
                 clock.instant()).toMillis();

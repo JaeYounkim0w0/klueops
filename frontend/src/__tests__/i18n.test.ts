@@ -30,16 +30,17 @@ describe('locale preference', () => {
   it('persists a locale and updates the document language', () => {
     const values = new Map<string, string>();
     const storage: Storage = {
+      /** length 처리에 필요한 화면 또는 업무 로직을 수행한다. */
       get length() {
         return values.size;
       },
-      clear: () => values.clear(),
-      getItem: (key: string) => values.get(key) ?? null,
-      key: (index: number) => [...values.keys()][index] ?? null,
-      removeItem: (key: string) => {
+      clear: /** clear 처리 대상과 관련 상태를 안전하게 정리한다. */ () => values.clear(),
+      getItem: /** getItem 처리 결과를 조회해 반환한다. */ (key: string) => values.get(key) ?? null,
+      key: /** key 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (index: number) => [...values.keys()][index] ?? null,
+      removeItem: /** removeItem 처리 대상과 관련 상태를 안전하게 정리한다. */ (key: string) => {
         values.delete(key);
       },
-      setItem: (key: string, value: string) => {
+      setItem: /** setItem 처리 대상의 상태를 갱신한다. */ (key: string, value: string) => {
         values.set(key, value);
       },
     };

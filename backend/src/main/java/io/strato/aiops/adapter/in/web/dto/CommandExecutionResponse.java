@@ -30,6 +30,7 @@ public record CommandExecutionResponse(
         Instant startedAt,
         Instant completedAt
 ) {
+    /** CommandExecutionResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static CommandExecutionResponse from(CommandExecution value) {
         return new CommandExecutionResponse(value.id(), value.clusterId(), value.sourceAnalysisId(), value.namespace(), value.command(),
                 value.safety().name(), value.status().name(), value.stdoutText(), value.stderrText(), value.exitCode(),

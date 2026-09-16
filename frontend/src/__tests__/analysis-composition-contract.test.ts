@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+/** source 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function source(path: string) {
   return readFileSync(resolve(process.cwd(), path), 'utf8');
 }

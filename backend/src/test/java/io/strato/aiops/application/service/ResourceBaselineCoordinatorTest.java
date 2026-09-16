@@ -20,6 +20,7 @@ class ResourceBaselineCoordinatorTest {
             new ResourceBaselineCoordinator(null, new ObjectMapper());
     private final Instant detectedAt = Instant.parse("2026-09-07T01:00:00Z");
 
+    /** ResourceBaselineCoordinatorTest의 createsInitialBaselineWithoutChangeNoise 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Test
     void createsInitialBaselineWithoutChangeNoise() {
         Cluster cluster = cluster();
@@ -32,6 +33,7 @@ class ResourceBaselineCoordinatorTest {
         assertThat(plan.deletedBaselineIds()).isEmpty();
     }
 
+    /** ResourceBaselineCoordinatorTest의 classifiesStatusOnlyDifferenceAsStatusChanged 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void classifiesStatusOnlyDifferenceAsStatusChanged() {
         Cluster cluster = cluster();
@@ -49,6 +51,7 @@ class ResourceBaselineCoordinatorTest {
         });
     }
 
+    /** ResourceBaselineCoordinatorTest의 recordsMissingResourceAsDeletedForBoundedInventory 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void recordsMissingResourceAsDeletedForBoundedInventory() {
         Cluster cluster = cluster();
@@ -64,10 +67,12 @@ class ResourceBaselineCoordinatorTest {
         assertThat(plan.changes()).extracting(change -> change.changeType()).contains("DELETED");
     }
 
+    /** ResourceBaselineCoordinatorTest의 cluster 처리에 필요한 업무 로직을 수행한다. */
     private Cluster cluster() {
         return Cluster.register("baseline", "test", ClusterEnvironment.DEV, ClusterProvider.KIND, "local", "test");
     }
 
+    /** ResourceBaselineCoordinatorTest의 snapshot 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesResourceSnapshot snapshot(Cluster cluster, String status, String summary) {
         return new KubernetesResourceSnapshot(UUID.randomUUID(), cluster.id(), UUID.randomUUID(), "default", "Pod",
                 "api", UUID.randomUUID().toString(), status, summary, null, false, detectedAt.minusSeconds(10));

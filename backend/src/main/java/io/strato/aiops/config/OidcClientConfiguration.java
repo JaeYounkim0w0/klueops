@@ -17,6 +17,7 @@ import java.util.Set;
 @Configuration
 public class OidcClientConfiguration {
 
+    /** OidcClientConfiguration의 explicitOidcClientRegistrationRepository 처리에 필요한 업무 로직을 수행한다. */
     @Bean
     @ConditionalOnProperty(
             prefix = "aiops.security.oidc-provider",
@@ -59,6 +60,7 @@ public class OidcClientConfiguration {
         return new InMemoryClientRegistrationRepository(registration);
     }
 
+    /** OidcClientConfiguration의 parseScopes 처리 데이터를 필요한 표현으로 변환한다. */
     private Set<String> parseScopes(String scopes) {
         Set<String> parsed = new LinkedHashSet<>();
         Arrays.stream(scopes.split(","))
@@ -71,6 +73,7 @@ public class OidcClientConfiguration {
         return Set.copyOf(parsed);
     }
 
+    /** OidcClientConfiguration의 requireNonBlank 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void requireNonBlank(String name, String value) {
         if (value == null || value.isBlank()) {
             throw new IllegalStateException("Explicit OIDC " + name + " is required");

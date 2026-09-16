@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ProductionEvidenceServiceTest {
 
+    /** ProductionEvidenceServiceTest의 importsChecksWithMaskedDetailsAndDerivesFailedRunState 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void importsChecksWithMaskedDetailsAndDerivesFailedRunState() {
         var repository = new MemoryRepository();
@@ -34,6 +35,7 @@ class ProductionEvidenceServiceTest {
                 .containsExactly("password=*** restored", "Bearer *** callback failed");
     }
 
+    /** ProductionEvidenceServiceTest의 returnsExistingRunForTheSameImportKey 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsExistingRunForTheSameImportKey() {
         var repository = new MemoryRepository();
@@ -53,18 +55,23 @@ class ProductionEvidenceServiceTest {
         private final List<ProductionEvidence.Run> values = new ArrayList<>();
         private final java.util.Map<String, UUID> importKeys = new java.util.HashMap<>();
 
+        /** MemoryRepository의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override public ProductionEvidence.Run save(ProductionEvidence.Run run) {
             values.removeIf(item -> item.id().equals(run.id()));
             values.add(run);
             return run;
         }
+        /** MemoryRepository의 findById 처리 결과를 조회해 반환한다. */
         @Override public Optional<ProductionEvidence.Run> findById(UUID id) {
             return values.stream().filter(item -> item.id().equals(id)).findFirst();
         }
+        /** MemoryRepository의 findRecent 처리 결과를 조회해 반환한다. */
         @Override public List<ProductionEvidence.Run> findRecent(int limit) { return List.copyOf(values); }
+        /** MemoryRepository의 findByImportKey 처리 결과를 조회해 반환한다. */
         @Override public Optional<ProductionEvidence.Run> findByImportKey(String importKey) {
             return Optional.ofNullable(importKeys.get(importKey)).flatMap(this::findById);
         }
+        /** MemoryRepository의 saveImportKey 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override public void saveImportKey(String importKey, UUID runId) { importKeys.put(importKey, runId); }
     }
 }

@@ -25,6 +25,7 @@ public record AnalysisResponse(
         String createdBy,
         Instant createdAt
 ) {
+    /** AnalysisResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static AnalysisResponse from(AnalysisSession analysisSession) {
         return new AnalysisResponse(analysisSession.id(), analysisSession.asyncJobId(), analysisSession.clusterId(),
                 analysisSession.applicationId(), analysisSession.namespace(), analysisSession.status(),

@@ -35,6 +35,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
     private final int connectTimeoutMs;
     private final int requestTimeoutMs;
 
+    /** Fabric8KubernetesStateSyncAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public Fabric8KubernetesStateSyncAdapter(
             ObjectMapper objectMapper,
             @Value("${aiops.kubernetes.connect-timeout-ms:5000}") int connectTimeoutMs,
@@ -45,6 +46,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         this.requestTimeoutMs = requestTimeoutMs;
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 collectClusterInventory 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public KubernetesStateInventory collectClusterInventory(KubernetesConnectionCredential credential) {
         try (KubernetesClient client = createClient(credential)) {
@@ -269,6 +271,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         }
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 resource 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesResourceSnapshot.CollectedResource resource(String resourceType, HasMetadata resource, String status,
                                                                   Instant collectedAt, Map<String, Object> summary) {
         Map<String, Object> enrichedSummary = new LinkedHashMap<>(summary);
@@ -286,6 +289,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         );
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 ownerReferences 처리에 필요한 업무 로직을 수행한다. */
     private List<Map<String, Object>> ownerReferences(HasMetadata resource) {
         if (resource.getMetadata() == null || resource.getMetadata().getOwnerReferences() == null) {
             return List.of();
@@ -299,6 +303,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
                 )).toList();
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 ingressBackends 처리에 필요한 업무 로직을 수행한다. */
     private List<Map<String, Object>> ingressBackends(io.fabric8.kubernetes.api.model.networking.v1.Ingress ingress) {
         List<Map<String, Object>> backends = new ArrayList<>();
         if (ingress.getSpec() == null) {
@@ -327,6 +332,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         return List.copyOf(backends);
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 summary 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, Object> summary(Object... values) {
         Map<String, Object> result = new LinkedHashMap<>();
         for (int index = 0; index + 1 < values.length; index += 2) {
@@ -335,6 +341,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         return result;
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 containerSummaries 처리에 필요한 업무 로직을 수행한다. */
     private List<Map<String, Object>> containerSummaries(PodSpec podSpec) {
         if (podSpec == null || podSpec.getContainers() == null) {
             return List.of();
@@ -342,6 +349,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         return podSpec.getContainers().stream().map(this::containerSummary).toList();
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 volumeSummaries 처리에 필요한 업무 로직을 수행한다. */
     private List<Map<String, Object>> volumeSummaries(PodSpec podSpec) {
         if (podSpec == null || podSpec.getVolumes() == null) {
             return List.of();
@@ -363,6 +371,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         }).toList();
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 containerSummary 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, Object> containerSummary(Container container) {
         return summary(
                 "name", valueOrBlank(container.getName()),
@@ -381,6 +390,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         );
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 quantityMap 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, String> quantityMap(Map<String, io.fabric8.kubernetes.api.model.Quantity> values) {
         if (values == null || values.isEmpty()) {
             return Map.of();
@@ -391,10 +401,12 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         return result;
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 nullSafeMap 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, String> nullSafeMap(Map<String, String> value) {
         return value == null ? Map.of() : value;
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 targetPortValue 처리에 필요한 업무 로직을 수행한다. */
     private String targetPortValue(IntOrString targetPort) {
         if (targetPort == null) {
             return "";
@@ -405,6 +417,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         return targetPort.getIntVal() == null ? "" : String.valueOf(targetPort.getIntVal());
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 sanitizeImage 처리에 필요한 업무 로직을 수행한다. */
     private String sanitizeImage(String image) {
         if (image == null) {
             return "";
@@ -412,6 +425,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         return image.replaceAll("(https?://)[^/@:]+:[^/@]+@", "$1***:***@");
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 writeJson 처리에 필요한 업무 로직을 수행한다. */
     private String writeJson(Map<String, Object> value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -420,6 +434,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         }
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 createClient 처리에 필요한 데이터를 생성하거나 저장한다. */
     private KubernetesClient createClient(KubernetesConnectionCredential credential) {
         if (credential.credentialType() == ClusterCredentialType.KUBECONFIG) {
             Config config = Config.fromKubeconfig(credential.payload());
@@ -438,11 +453,13 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         return new KubernetesClientBuilder().withConfig(config).build();
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 applyTimeouts 처리에 필요한 업무 로직을 수행한다. */
     private void applyTimeouts(Config config) {
         config.setConnectionTimeout(connectTimeoutMs);
         config.setRequestTimeout(requestTimeoutMs);
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 parseServiceAccountPayload 처리 데이터를 필요한 표현으로 변환한다. */
     private ServiceAccountPayload parseServiceAccountPayload(String payload) {
         try {
             return objectMapper.readValue(payload, ServiceAccountPayload.class);
@@ -451,6 +468,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         }
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 normalizeCertificateAuthority 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeCertificateAuthority(String caCertificate) {
         if (caCertificate == null || caCertificate.isBlank()) {
             return null;
@@ -461,6 +479,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         return caCertificate;
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 phase 처리에 필요한 업무 로직을 수행한다. */
     private String phase(Object status) {
         if (status == null) {
             return null;
@@ -473,26 +492,32 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         }
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 replicaStatus 처리에 필요한 업무 로직을 수행한다. */
     private String replicaStatus(Integer availableReplicas, Integer desiredReplicas) {
         return valueOrZero(availableReplicas) + "/" + valueOrZero(desiredReplicas);
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 jobStatus 처리에 필요한 업무 로직을 수행한다. */
     private String jobStatus(Integer succeeded, Integer completions) {
         return valueOrZero(succeeded) + "/" + valueOrZero(completions);
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 valueOrZero 처리에 필요한 업무 로직을 수행한다. */
     private int valueOrZero(Integer value) {
         return value == null ? 0 : value;
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 valueOrBlank 처리에 필요한 업무 로직을 수행한다. */
     private String valueOrBlank(String value) {
         return value == null ? "" : value;
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 keys 처리에 필요한 업무 로직을 수행한다. */
     private List<String> keys(Map<String, ?> value) {
         return value == null || value.isEmpty() ? List.of() : List.copyOf(value.keySet());
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 parseInstant 처리 데이터를 필요한 표현으로 변환한다. */
     private Instant parseInstant(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -504,6 +529,7 @@ public class Fabric8KubernetesStateSyncAdapter implements KubernetesStateSyncPor
         }
     }
 
+    /** Fabric8KubernetesStateSyncAdapter의 sanitizeEventMessage 처리에 필요한 업무 로직을 수행한다. */
     private String sanitizeEventMessage(String message) {
         if (message == null) {
             return null;

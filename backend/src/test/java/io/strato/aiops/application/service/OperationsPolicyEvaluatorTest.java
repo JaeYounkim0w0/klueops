@@ -20,6 +20,7 @@ class OperationsPolicyEvaluatorTest {
 
     private final OperationsPolicyEvaluator evaluator = new OperationsPolicyEvaluator(new ObjectMapper());
 
+    /** OperationsPolicyEvaluatorTest의 evaluatesWorkloadAvailabilityFromReplicaEvidence 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void evaluatesWorkloadAvailabilityFromReplicaEvidence() {
         Cluster cluster = cluster();
@@ -36,6 +37,7 @@ class OperationsPolicyEvaluatorTest {
         });
     }
 
+    /** OperationsPolicyEvaluatorTest의 detectsServiceTargetPortMismatchAgainstSelectedWorkload 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void detectsServiceTargetPortMismatchAgainstSelectedWorkload() {
         Cluster cluster = cluster();
@@ -56,6 +58,7 @@ class OperationsPolicyEvaluatorTest {
         });
     }
 
+    /** OperationsPolicyEvaluatorTest의 warnsWhenNamespaceGovernanceResourcesAreMissing 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void warnsWhenNamespaceGovernanceResourcesAreMissing() {
         Cluster cluster = cluster();
@@ -76,15 +79,18 @@ class OperationsPolicyEvaluatorTest {
         });
     }
 
+    /** OperationsPolicyEvaluatorTest의 cluster 처리에 필요한 업무 로직을 수행한다. */
     private Cluster cluster() {
         return Cluster.register("test-cluster", "policy test", ClusterEnvironment.DEV,
                 ClusterProvider.KIND, "local", "test");
     }
 
+    /** OperationsPolicyEvaluatorTest의 policy 처리에 필요한 업무 로직을 수행한다. */
     private PolicyDefinition policy(String id) {
         return new PolicyDefinition(id, id, "test policy", "TEST", "MEDIUM", true);
     }
 
+    /** OperationsPolicyEvaluatorTest의 snapshot 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesResourceSnapshot snapshot(Cluster cluster, String namespace, String kind, String name,
                                                 String summaryJson) {
         return new KubernetesResourceSnapshot(UUID.randomUUID(), cluster.id(), UUID.randomUUID(), namespace,

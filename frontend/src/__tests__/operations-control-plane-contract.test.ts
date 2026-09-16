@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+/** source 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function source(path: string) {
   return readFileSync(resolve(process.cwd(), path), 'utf8');
 }
@@ -72,6 +73,8 @@ describe('AIOps control plane UX contract', () => {
   it('provides persona-aware real-time triage and direct investigation paths', () => {
     expect(app).toContain('to="/triage"');
     expect(triage).toContain("mode = ref<'BEGINNER' | 'EXPERT'>");
+    expect(triage).toContain('<div class="triage-header-actions">');
+    expect(triage).toContain('<div class="triage-mode-switch" role="group"');
     expect(triage).toContain('getTriageQueue');
     expect(triage).toContain('updateTriageState');
     expect(triage).toContain("path: '/analysis'");

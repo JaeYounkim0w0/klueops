@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TenantWorkspaceTest {
 
+    /** TenantWorkspaceTest의 normalizesCodesAndKeepsWorkspaceInsideItsTenant 처리 데이터를 필요한 표현으로 변환한다. */
     @Test
     void normalizesCodesAndKeepsWorkspaceInsideItsTenant() {
         Tenant tenant = Tenant.create(" Acme-Corp ", "Acme", "Customer", "admin");
@@ -22,6 +23,7 @@ class TenantWorkspaceTest {
         assertThat(workspace.status()).isEqualTo(WorkspaceStatus.ACTIVE);
     }
 
+    /** TenantWorkspaceTest의 rejectsUnsafeOrBlankCodes 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsUnsafeOrBlankCodes() {
         assertThatThrownBy(() -> Tenant.create("invalid code!", "Acme", null, "admin"))
@@ -30,6 +32,7 @@ class TenantWorkspaceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    /** TenantWorkspaceTest의 exposesStableDefaultPlacementForExistingClusters 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesStableDefaultPlacementForExistingClusters() {
         assertThat(TenancyDefaults.TENANT_ID).isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));

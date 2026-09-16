@@ -18,6 +18,7 @@ public record ClusterResourceLogResponse(
         boolean truncated,
         Instant collectedAt
 ) {
+    /** ClusterResourceLogResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static ClusterResourceLogResponse from(ClusterResourceLogResult result) {
         return new ClusterResourceLogResponse(result.clusterId(), result.namespace(), result.resourceType(),
                 result.resourceName(), result.podName(), result.containerName(), result.tailLines(), result.previous(),

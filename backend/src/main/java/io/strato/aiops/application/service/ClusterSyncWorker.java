@@ -37,6 +37,7 @@ public class ClusterSyncWorker {
     private final KubernetesResourceSnapshotRepositoryPort resourceSnapshotRepositoryPort;
     private final KubernetesEventSnapshotRepositoryPort eventSnapshotRepositoryPort;
 
+    /** ClusterSyncWorker 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ClusterSyncWorker(
             AsyncJobRepositoryPort asyncJobRepositoryPort,
             SyncJobRepositoryPort syncJobRepositoryPort,
@@ -55,6 +56,7 @@ public class ClusterSyncWorker {
         this.eventSnapshotRepositoryPort = eventSnapshotRepositoryPort;
     }
 
+    /** ClusterSyncWorker의 runClusterSync 처리의 핵심 작업 흐름을 실행한다. */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void runClusterSync(UUID asyncJobId) {
         AsyncJob asyncJob = asyncJobRepositoryPort.findById(asyncJobId)
@@ -113,12 +115,14 @@ public class ClusterSyncWorker {
         }
     }
 
+    /** ClusterSyncWorker의 isJobCanceled 처리 조건의 충족 여부를 판단한다. */
     private boolean isJobCanceled(UUID asyncJobId) {
         return asyncJobRepositoryPort.findById(asyncJobId)
                 .map(job -> job.status() == AsyncJobStatus.CANCELED)
                 .orElse(false);
     }
 
+    /** ClusterSyncWorker의 markFailed 처리에 필요한 업무 로직을 수행한다. */
     private void markFailed(AsyncJob asyncJob, SyncJob syncJob, Exception exception) {
         Instant failedAt = Instant.now();
         String message = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();

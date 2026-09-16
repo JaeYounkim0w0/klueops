@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { api, type JobResponse } from '@/api/client';
+import { isRetryableJobPollError } from '@/utils/jobPolling';
 
 export type JobCenterTone = 'info' | 'success' | 'error';
 
@@ -65,6 +66,7 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
     };
   });
 
+  /** registerJob 처리에 필요한 데이터를 생성하거나 저장한다. */
   function registerJob(options: RegisterJobOptions) {
     const now = new Date().toISOString();
     const existing = jobs.value.find((job) => job.jobId === options.jobId);
@@ -94,6 +96,18 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
     return item;
   }
 
+  /** trackJob 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+  function trackJob(options: RegisterJobOptions) {
+    // 등록과 폴링을 한 진입점으로 묶어 Job Center가 PENDING에 멈추는 호출 누락을 방지한다.
+    registerJob(options);
+    return waitForJob(options.jobId, options).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : '작업 상태를 확인하지 못했습니다.';
+      markJobError(options.jobId, message);
+      throw error;
+    });
+  }
+
+  /** updateJob 처리 대상의 상태를 갱신한다. */
   function updateJob(job: JobResponse, fallback?: Partial<JobCenterItem>) {
     const now = new Date().toISOString();
     const existing = jobs.value.find((item) => item.jobId === job.id);
@@ -138,6 +152,7 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
     return item;
   }
 
+  /** markJobError 처리에 필요한 화면 또는 업무 로직을 수행한다. */
   function markJobError(jobId: string, message: string) {
     const existing = jobs.value.find((item) => item.jobId === jobId);
     if (!existing) {
@@ -150,6 +165,16 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
     existing.updatedAt = existing.completedAt;
   }
 
+  /** markJobPollDelayed 처리에 필요한 화면 또는 업무 로직을 수행한다. */
+  function markJobPollDelayed(jobId: string) {
+    const existing = jobs.value.find((item) => item.jobId === jobId);
+    if (!existing) return;
+    existing.tone = 'info';
+    existing.errorMessage = '서버 상태 조회가 지연되어 자동으로 다시 확인 중입니다.';
+    existing.updatedAt = new Date().toISOString();
+  }
+
+  /** waitForJob 처리에 필요한 화면 또는 업무 로직을 수행한다. */
   async function waitForJob(jobId: string, fallback?: Partial<JobCenterItem>) {
     const existing = jobs.value.find((job) => job.jobId === jobId);
     if (existing && TERMINAL_STATUSES.has(existing.status)) {
@@ -169,11 +194,13 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
     }
   }
 
+  /** cancelJob 처리 조건의 충족 여부를 판단한다. */
   async function cancelJob(jobId: string) {
     const job = await api.cancelJob(jobId);
     return updateJob(job);
   }
 
+  /** retryAnalysisJob 처리에 필요한 화면 또는 업무 로직을 수행한다. */
   async function retryAnalysisJob(jobId: string) {
     const source = jobs.value.find((job) => job.jobId === jobId);
     if (!source?.analysisId) {
@@ -195,9 +222,19 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
     });
   }
 
+  /** pollJob 처리에 필요한 화면 또는 업무 로직을 수행한다. */
   async function pollJob(jobId: string, fallback?: Partial<JobCenterItem>) {
     for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
-      const job = await api.getJob(jobId);
+      let job: JobResponse;
+      try {
+        job = await api.getJob(jobId);
+      } catch (error) {
+        if (!isRetryableJobPollError(error)) throw error;
+        // 상태 조회 timeout은 서버 Job 실패가 아니므로 진행 상태를 유지하고 다음 주기에 재조회한다.
+        markJobPollDelayed(jobId);
+        await delay(POLL_INTERVAL_MS);
+        continue;
+      }
       updateJob(job, fallback);
       if (TERMINAL_STATUSES.has(job.status)) {
         return job;
@@ -209,10 +246,12 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
     throw new Error(message);
   }
 
+  /** toggleCollapsed 처리 데이터를 화면 또는 API 표현으로 변환한다. */
   function toggleCollapsed() {
     collapsed.value = !collapsed.value;
   }
 
+  /** clearCompleted 처리 대상과 관련 상태를 안전하게 정리한다. */
   function clearCompleted() {
     jobs.value = jobs.value.filter((job) => !TERMINAL_STATUSES.has(job.status));
   }
@@ -225,6 +264,7 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
     diagnostics,
     collapsed,
     registerJob,
+    trackJob,
     updateJob,
     cancelJob,
     retryAnalysisJob,
@@ -234,10 +274,12 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
   };
 });
 
+/** delay 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+/** durationMs 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function durationMs(startedAt?: string, completedAt?: string) {
   if (!startedAt || !completedAt) {
     return 0;

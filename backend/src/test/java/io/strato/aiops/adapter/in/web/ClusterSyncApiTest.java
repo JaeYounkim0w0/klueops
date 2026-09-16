@@ -37,6 +37,7 @@ class ClusterSyncApiTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /** ClusterSyncApiTest의 clusterSyncCreatesAsyncJobAndReturnsRequestId 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void clusterSyncCreatesAsyncJobAndReturnsRequestId() throws Exception {
         String clusterId = registerCluster("sync-api-cluster");
@@ -63,6 +64,7 @@ class ClusterSyncApiTest {
                 .andExpect(jsonPath("$[0].id").value(jobId));
     }
 
+    /** ClusterSyncApiTest의 clusterSyncReusesActiveJobForSameCluster 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void clusterSyncReusesActiveJobForSameCluster() throws Exception {
         String clusterId = registerCluster("sync-reuse-cluster");
@@ -89,6 +91,7 @@ class ClusterSyncApiTest {
                 .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
+    /** ClusterSyncApiTest의 concurrentClusterSyncRequestsReuseExactlyOneJob 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void concurrentClusterSyncRequestsReuseExactlyOneJob() throws Exception {
         String clusterId = registerCluster("sync-concurrent-reuse-cluster");
@@ -113,6 +116,7 @@ class ClusterSyncApiTest {
         }
     }
 
+    /** ClusterSyncApiTest의 canceledClusterSyncDoesNotBlockNextSync 처리 조건의 충족 여부를 판단한다. */
     @Test
     void canceledClusterSyncDoesNotBlockNextSync() throws Exception {
         String clusterId = registerCluster("sync-cancel-retry-cluster");
@@ -143,6 +147,7 @@ class ClusterSyncApiTest {
                 .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
+    /** ClusterSyncApiTest의 updatesClusterSyncSettings 처리 대상의 상태를 갱신한다. */
     @Test
     void updatesClusterSyncSettings() throws Exception {
         String clusterId = registerCluster("sync-settings-cluster");
@@ -161,6 +166,7 @@ class ClusterSyncApiTest {
                 .andExpect(jsonPath("$.syncIntervalSeconds").value(600));
     }
 
+    /** ClusterSyncApiTest의 rejectsTooShortSyncInterval 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsTooShortSyncInterval() throws Exception {
         String clusterId = registerCluster("sync-settings-invalid-cluster");
@@ -176,6 +182,7 @@ class ClusterSyncApiTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** ClusterSyncApiTest의 registerCluster 처리에 필요한 데이터를 생성하거나 저장한다. */
     private String registerCluster(String name) throws Exception {
         String response = mockMvc.perform(post("/api/clusters")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -204,6 +211,7 @@ class ClusterSyncApiTest {
     @TestConfiguration
     static class NoopSyncExecutorConfig {
 
+        /** NoopSyncExecutorConfig의 clusterSyncExecutorPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         ClusterSyncExecutorPort clusterSyncExecutorPort() {

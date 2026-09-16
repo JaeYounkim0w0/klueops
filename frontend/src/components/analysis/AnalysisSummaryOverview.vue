@@ -12,8 +12,11 @@ const props = defineProps<{
 defineEmits<{ modeChange: [mode: 'beginner' | 'expert'] }>();
 const { t } = useI18n();
 
+/** text 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function text(value: unknown, fallback = '-') { return value == null || String(value).trim() === '' ? fallback : String(value); }
+/** number 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function number(value: unknown, fallback = '0') { const parsed = Number(value); return Number.isFinite(parsed) ? String(parsed) : fallback; }
+/** severityClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function severityClass(value: unknown) {
   const normalized = text(value, 'INFO').toLowerCase();
   return ['critical', 'high', 'medium', 'low', 'info'].includes(normalized) ? normalized : 'info';

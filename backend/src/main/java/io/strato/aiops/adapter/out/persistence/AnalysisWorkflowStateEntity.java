@@ -28,9 +28,11 @@ class AnalysisWorkflowStateEntity {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    /** AnalysisWorkflowStateEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected AnalysisWorkflowStateEntity() {
     }
 
+    /** AnalysisWorkflowStateEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private AnalysisWorkflowStateEntity(UUID id, UUID analysisId, String issueGroupId, String status, String note,
                                         String updatedBy, Instant updatedAt) {
         this.id = id;
@@ -42,12 +44,14 @@ class AnalysisWorkflowStateEntity {
         this.updatedAt = updatedAt;
     }
 
+    /** AnalysisWorkflowStateEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static AnalysisWorkflowStateEntity fromDomain(AnalysisWorkflowState workflowState) {
         return new AnalysisWorkflowStateEntity(workflowState.id(), workflowState.analysisId(),
                 workflowState.issueGroupId(), workflowState.status(), workflowState.note(), workflowState.updatedBy(),
                 workflowState.updatedAt());
     }
 
+    /** AnalysisWorkflowStateEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     AnalysisWorkflowState toDomain() {
         return new AnalysisWorkflowState(id, analysisId, issueGroupId, status, note, updatedBy, updatedAt);
     }

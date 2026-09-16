@@ -49,6 +49,8 @@ portal:
     runtimeExistingSecret: ""
   crypto:
     masterKeyExistingSecret: ""
+  security:
+    credentialRevealEnabled: false
   ai:
     baseUrl: http://ollama:11434
     model: qwen2.5-coder:7b

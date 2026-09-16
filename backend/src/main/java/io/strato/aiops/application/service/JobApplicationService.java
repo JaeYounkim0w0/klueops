@@ -40,6 +40,7 @@ public class JobApplicationService implements GetJobStatusUseCase, StartClusterS
     private final ClusterSyncExecutorPort clusterSyncExecutorPort;
     private final AuditLogRepositoryPort auditLogRepositoryPort;
 
+    /** JobApplicationService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public JobApplicationService(AsyncJobRepositoryPort asyncJobRepositoryPort, ClusterRepositoryPort clusterRepositoryPort,
                                  SyncJobRepositoryPort syncJobRepositoryPort, ClusterSyncExecutorPort clusterSyncExecutorPort,
                                  AuditLogRepositoryPort auditLogRepositoryPort) {
@@ -50,6 +51,7 @@ public class JobApplicationService implements GetJobStatusUseCase, StartClusterS
         this.auditLogRepositoryPort = auditLogRepositoryPort;
     }
 
+    /** JobApplicationService의 getJob 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public AsyncJob getJob(UUID jobId) {
@@ -57,12 +59,14 @@ public class JobApplicationService implements GetJobStatusUseCase, StartClusterS
                 .orElseThrow(() -> new NoSuchElementException("Job not found: " + jobId));
     }
 
+    /** JobApplicationService의 listRecentJobs 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public List<AsyncJob> listRecentJobs() {
         return asyncJobRepositoryPort.findRecent(RECENT_JOB_LIMIT);
     }
 
+    /** JobApplicationService의 cancelJob 처리 조건의 충족 여부를 판단한다. */
     @Override
     @Transactional
     public AsyncJob cancelJob(UUID jobId, String actor, String requestId) {
@@ -85,6 +89,7 @@ public class JobApplicationService implements GetJobStatusUseCase, StartClusterS
         return saved;
     }
 
+    /** JobApplicationService의 startClusterSync 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public UUID startClusterSync(UUID clusterId, String actor, String requestId) {
@@ -148,22 +153,26 @@ public class JobApplicationService implements GetJobStatusUseCase, StartClusterS
         return savedJob.id();
     }
 
+    /** JobApplicationService의 isReusableSyncJob 처리 조건의 충족 여부를 판단한다. */
     private boolean isReusableSyncJob(AsyncJob asyncJob) {
         return asyncJob.status() == AsyncJobStatus.PENDING || asyncJob.status() == AsyncJobStatus.RUNNING;
     }
 
+    /** JobApplicationService의 shouldResubmitPendingSync 처리 조건의 충족 여부를 판단한다. */
     private boolean shouldResubmitPendingSync(SyncJob syncJob, AsyncJob asyncJob) {
         return syncJob.status() == SyncJobStatus.PENDING
                 && asyncJob.status() == AsyncJobStatus.PENDING
                 && syncJob.createdAt().isBefore(Instant.now().minus(PENDING_SYNC_RESUBMIT_THRESHOLD));
     }
 
+    /** JobApplicationService의 submitClusterSyncAfterCommit 처리에 필요한 업무 로직을 수행한다. */
     private void submitClusterSyncAfterCommit(UUID jobId) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             clusterSyncExecutorPort.submitClusterSync(jobId);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /** 익명 구현체의 afterCommit 처리에 필요한 업무 로직을 수행한다. */
             @Override
             public void afterCommit() {
                 clusterSyncExecutorPort.submitClusterSync(jobId);

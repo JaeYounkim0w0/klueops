@@ -15,9 +15,9 @@ describe('tenant and workspace context', () => {
       ['aiops.workspaceId', 'removed-workspace'],
     ]);
     vi.stubGlobal('localStorage', {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => storage.set(key, value),
-      removeItem: (key: string) => storage.delete(key),
+      getItem: /** getItem 처리 결과를 조회해 반환한다. */ (key: string) => storage.get(key) ?? null,
+      setItem: /** setItem 처리 대상의 상태를 갱신한다. */ (key: string, value: string) => storage.set(key, value),
+      removeItem: /** removeItem 처리 대상과 관련 상태를 안전하게 정리한다. */ (key: string) => storage.delete(key),
     });
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -38,9 +38,9 @@ describe('tenant and workspace context', () => {
   it('changes tenant and cascades to its first workspace', async () => {
     const storage = new Map<string, string>();
     vi.stubGlobal('localStorage', {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => storage.set(key, value),
-      removeItem: (key: string) => storage.delete(key),
+      getItem: /** getItem 처리 결과를 조회해 반환한다. */ (key: string) => storage.get(key) ?? null,
+      setItem: /** setItem 처리 대상의 상태를 갱신한다. */ (key: string, value: string) => storage.set(key, value),
+      removeItem: /** removeItem 처리 대상과 관련 상태를 안전하게 정리한다. */ (key: string) => storage.delete(key),
     });
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -62,6 +62,7 @@ describe('tenant and workspace context', () => {
   });
 });
 
+/** json 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }

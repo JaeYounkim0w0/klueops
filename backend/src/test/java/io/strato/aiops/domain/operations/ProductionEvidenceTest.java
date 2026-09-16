@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ProductionEvidenceTest {
 
+    /** ProductionEvidenceTest의 runningEvidenceCanCompleteButTerminalEvidenceCannotRestart 처리의 핵심 작업 흐름을 실행한다. */
     @Test
     void runningEvidenceCanCompleteButTerminalEvidenceCannotRestart() {
         var run = ProductionEvidence.Run.start(UUID.randomUUID(), "release", "local", "operator", Instant.now());
@@ -22,6 +23,7 @@ class ProductionEvidenceTest {
                 .isInstanceOf(IllegalStateException.class);
     }
 
+    /** ProductionEvidenceTest의 checksumIsStableAndSecretsAreNotPartOfDisplayDetail 처리 입력과 현재 상태의 유효성을 검증한다. */
     @Test
     void checksumIsStableAndSecretsAreNotPartOfDisplayDetail() {
         String checksum = ProductionEvidence.sha256("password=plain token=abc");

@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class Fabric8KubernetesResourceLogAdapterTest {
 
+    /** Fabric8KubernetesResourceLogAdapterTest의 resolvesDeploymentPodsAndReadsOnlyAnOwnedContainer 처리에 필요한 결과를 조합해 반환한다. */
     @Test
     void resolvesDeploymentPodsAndReadsOnlyAnOwnedContainer() throws Exception {
         try (MockWebServer server = kubernetesServer(); SchedulerFixture scheduler = new SchedulerFixture()) {
@@ -33,6 +34,7 @@ class Fabric8KubernetesResourceLogAdapterTest {
         }
     }
 
+    /** Fabric8KubernetesResourceLogAdapterTest의 rejectsAPodThatDoesNotBelongToTheSelectedWorkload 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsAPodThatDoesNotBelongToTheSelectedWorkload() throws Exception {
         try (MockWebServer server = kubernetesServer(); SchedulerFixture scheduler = new SchedulerFixture()) {
@@ -45,9 +47,11 @@ class Fabric8KubernetesResourceLogAdapterTest {
         }
     }
 
+    /** Fabric8KubernetesResourceLogAdapterTest의 kubernetesServer 처리에 필요한 업무 로직을 수행한다. */
     private MockWebServer kubernetesServer() throws Exception {
         MockWebServer server = new MockWebServer();
         server.setDispatcher(new Dispatcher() {
+            /** 익명 구현체의 dispatch 처리에 필요한 업무 로직을 수행한다. */
             @Override
             public MockResponse dispatch(RecordedRequest request) {
                 String path = request.getPath() == null ? "" : request.getPath();
@@ -79,11 +83,13 @@ class Fabric8KubernetesResourceLogAdapterTest {
         return server;
     }
 
+    /** Fabric8KubernetesResourceLogAdapterTest의 adapter 처리에 필요한 업무 로직을 수행한다. */
     private Fabric8KubernetesResourceLogAdapter adapter(ThreadPoolTaskScheduler scheduler) {
         return new Fabric8KubernetesResourceLogAdapter(new ObjectMapper(), scheduler,
                 1_000, 1_000, 30_000, 50);
     }
 
+    /** Fabric8KubernetesResourceLogAdapterTest의 credential 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesConnectionCredential credential(MockWebServer server) {
         return new KubernetesConnectionCredential(ClusterCredentialType.KUBECONFIG, """
                 apiVersion: v1
@@ -105,6 +111,7 @@ class Fabric8KubernetesResourceLogAdapterTest {
                 """.formatted(server.url("/").toString()));
     }
 
+    /** Fabric8KubernetesResourceLogAdapterTest의 json 처리에 필요한 업무 로직을 수행한다. */
     private MockResponse json(String body) {
         return new MockResponse().setResponseCode(200).setHeader("Content-Type", "application/json").setBody(body);
     }
@@ -112,15 +119,18 @@ class Fabric8KubernetesResourceLogAdapterTest {
     private static final class SchedulerFixture implements AutoCloseable {
         private final ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
 
+        /** SchedulerFixture 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private SchedulerFixture() {
             scheduler.setPoolSize(2);
             scheduler.initialize();
         }
 
+        /** SchedulerFixture의 scheduler 처리에 필요한 업무 로직을 수행한다. */
         private ThreadPoolTaskScheduler scheduler() {
             return scheduler;
         }
 
+        /** SchedulerFixture의 close 처리 대상과 관련 상태를 안전하게 정리한다. */
         @Override
         public void close() {
             scheduler.shutdown();

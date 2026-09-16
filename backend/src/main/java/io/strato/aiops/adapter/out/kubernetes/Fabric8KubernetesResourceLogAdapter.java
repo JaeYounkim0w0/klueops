@@ -53,6 +53,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
     private final long maxStreamDurationMs;
     private final int maxTargetPods;
 
+    /** Fabric8KubernetesResourceLogAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public Fabric8KubernetesResourceLogAdapter(
             ObjectMapper objectMapper,
             @Qualifier("resourceLogScheduler") TaskScheduler scheduler,
@@ -69,6 +70,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         this.maxTargetPods = Math.max(1, maxTargetPods);
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 findTargets 처리 결과를 조회해 반환한다. */
     @Override
     public KubernetesResourceLogTargets findTargets(KubernetesConnectionCredential credential, String namespace,
                                                      String resourceType, String resourceName) {
@@ -95,6 +97,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         }
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 getRecentLogs 처리 결과를 조회해 반환한다. */
     @Override
     public KubernetesResourceLogSnapshot getRecentLogs(KubernetesConnectionCredential credential, String namespace,
                                                        String resourceType, String resourceName, String podName,
@@ -112,6 +115,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         }
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 streamLogs 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public KubernetesResourceLogStreamResult streamLogs(KubernetesConnectionCredential credential, String namespace,
                                                         String resourceType, String resourceName, String podName,
@@ -164,6 +168,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         }
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 requireTarget 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void requireTarget(KubernetesClient client, String namespace, String resourceType, String resourceName,
                                String podName, String containerName) {
         if (!SUPPORTED_TYPES.contains(resourceType)) {
@@ -181,6 +186,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         }
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 toTarget 처리 데이터를 필요한 표현으로 변환한다. */
     private KubernetesResourceLogTargets.PodTarget toTarget(Pod pod) {
         String podName = pod.getMetadata() == null ? "" : value(pod.getMetadata().getName());
         String phase = pod.getStatus() == null ? "Unknown" : value(pod.getStatus().getPhase());
@@ -198,6 +204,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         return new KubernetesResourceLogTargets.PodTarget(podName, phase, podStartedAt(pod), containers);
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 toContainerTarget 처리 데이터를 필요한 표현으로 변환한다. */
     private KubernetesResourceLogTargets.ContainerTarget toContainerTarget(Container container,
                                                                             ContainerStatus status,
                                                                             boolean initContainer) {
@@ -207,6 +214,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
                 containerState(status), initContainer);
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 allContainers 처리에 필요한 업무 로직을 수행한다. */
     private List<Container> allContainers(Pod pod) {
         if (pod.getSpec() == null) {
             return List.of();
@@ -221,6 +229,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         return containers;
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 statusFor 처리에 필요한 업무 로직을 수행한다. */
     private ContainerStatus statusFor(List<ContainerStatus> statuses, String name) {
         if (statuses == null) {
             return null;
@@ -228,6 +237,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         return statuses.stream().filter(status -> name.equals(status.getName())).findFirst().orElse(null);
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 containerState 처리에 필요한 업무 로직을 수행한다. */
     private String containerState(ContainerStatus status) {
         if (status == null || status.getState() == null) {
             return "UNKNOWN";
@@ -244,6 +254,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         return "UNKNOWN";
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 podsForResource 처리에 필요한 업무 로직을 수행한다. */
     private List<Pod> podsForResource(KubernetesClient client, String namespace, String resourceType,
                                       String resourceName) {
         return switch (resourceType) {
@@ -283,11 +294,13 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         };
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 podByName 처리에 필요한 업무 로직을 수행한다. */
     private List<Pod> podByName(KubernetesClient client, String namespace, String name) {
         Pod pod = client.pods().inNamespace(namespace).withName(name).get();
         return pod == null ? List.of() : List.of(pod);
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 podsForCronJob 처리에 필요한 업무 로직을 수행한다. */
     private List<Pod> podsForCronJob(KubernetesClient client, String namespace, String cronJobName) {
         return client.batch().v1().jobs().inNamespace(namespace).list().getItems().stream()
                 .filter(job -> ownedBy(job.getMetadata() == null ? null : job.getMetadata().getOwnerReferences(),
@@ -301,11 +314,13 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
                 .toList();
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 ownedBy 처리에 필요한 업무 로직을 수행한다. */
     private boolean ownedBy(List<OwnerReference> owners, String kind, String name) {
         return owners != null && owners.stream().anyMatch(owner -> kind.equalsIgnoreCase(value(owner.getKind()))
                 && name.equals(owner.getName()));
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 podsBySelector 처리에 필요한 업무 로직을 수행한다. */
     private List<Pod> podsBySelector(KubernetesClient client, String namespace, LabelSelector selector) {
         if (selector == null) {
             return List.of();
@@ -313,6 +328,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         return client.pods().inNamespace(namespace).withLabelSelector(selector).list().getItems();
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 podsByLabels 처리에 필요한 업무 로직을 수행한다. */
     private List<Pod> podsByLabels(KubernetesClient client, String namespace, Map<String, String> labels) {
         if (labels == null || labels.isEmpty()) {
             return List.of();
@@ -320,10 +336,12 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         return client.pods().inNamespace(namespace).withLabels(labels).list().getItems();
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 podStartedAt 처리에 필요한 업무 로직을 수행한다. */
     private Instant podStartedAt(Pod pod) {
         return pod.getStatus() == null ? null : parseInstant(pod.getStatus().getStartTime());
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 parseInstant 처리 데이터를 필요한 표현으로 변환한다. */
     private Instant parseInstant(String value) {
         try {
             return value == null || value.isBlank() ? null : Instant.parse(value);
@@ -332,6 +350,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         }
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 createClient 처리에 필요한 데이터를 생성하거나 저장한다. */
     private KubernetesClient createClient(KubernetesConnectionCredential credential, boolean streaming) {
         if (credential.credentialType() == ClusterCredentialType.KUBECONFIG) {
             Config config = Config.fromKubeconfig(credential.payload());
@@ -350,6 +369,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         return new KubernetesClientBuilder().withConfig(config).build();
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 parseServiceAccountPayload 처리 데이터를 필요한 표현으로 변환한다. */
     private ServiceAccountPayload parseServiceAccountPayload(String payload) {
         try {
             return objectMapper.readValue(payload, ServiceAccountPayload.class);
@@ -358,6 +378,7 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
         }
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 normalizeCertificateAuthority 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeCertificateAuthority(String caCertificate) {
         if (caCertificate == null || caCertificate.isBlank()) {
             return null;
@@ -367,18 +388,22 @@ public class Fabric8KubernetesResourceLogAdapter implements KubernetesResourceLo
                 : caCertificate;
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 normalizeType 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeType(String value) {
         return value == null ? "" : value.trim().toLowerCase();
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 value 처리에 필요한 업무 로직을 수행한다. */
     private String value(String value) {
         return value == null ? "" : value;
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 elapsedMs 처리에 필요한 업무 로직을 수행한다. */
     private long elapsedMs(long startedAt) {
         return Math.max(0, (System.nanoTime() - startedAt) / 1_000_000);
     }
 
+    /** Fabric8KubernetesResourceLogAdapter의 failureDetail 처리에 필요한 업무 로직을 수행한다. */
     private String failureDetail(RuntimeException exception) {
         Throwable current = exception;
         while (current.getCause() != null && current.getCause() != current) {

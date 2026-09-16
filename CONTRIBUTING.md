@@ -12,7 +12,7 @@ Use the bug report or feature request form. Search existing issues first, keep o
 
 Read `docs/development/definition-of-done.md`, `docs/development/tech-stack.md`, `docs/architecture/hexagonal-architecture.md`, and `docs/api/openapi-rules.md`.
 
-Keep changes inside the existing hexagonal boundary. Kubernetes, database, and AI integrations belong behind outbound ports. Frontend API calls must use the documented client boundary, and reusable styles belong under `frontend/src/styles/`.
+Keep changes inside the existing hexagonal boundary. Kubernetes, database, and AI integrations belong behind outbound ports. Frontend API calls must use the documented client boundary. Frontend UI must reuse the shared styles and semantic primitives under `frontend/src/styles/`; feature CSS is reserved for behavior and layout unique to that feature and must not duplicate shared control or surface rules.
 
 ## Validation
 

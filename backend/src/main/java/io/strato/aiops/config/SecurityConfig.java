@@ -26,6 +26,7 @@ import java.util.Map;
 @Configuration
 public class SecurityConfig {
 
+    /** SecurityConfig의 localSecurityFilterChain 처리에 필요한 업무 로직을 수행한다. */
     @Bean
     @Profile("local")
     SecurityFilterChain localSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -35,6 +36,7 @@ public class SecurityConfig {
                 .build();
     }
 
+    /** SecurityConfig의 oidcSecurityFilterChain 처리에 필요한 업무 로직을 수행한다. */
     @Bean
     @Profile("security-oidc | security-oidc-test")
     SecurityFilterChain oidcSecurityFilterChain(HttpSecurity http, ObjectMapper objectMapper,
@@ -75,6 +77,7 @@ public class SecurityConfig {
                 .build();
     }
 
+    /** SecurityConfig의 resourceServerSecurityFilterChain 처리에 필요한 업무 로직을 수행한다. */
     @Bean
     @Profile("!local & !security-oidc & !security-oidc-test")
     SecurityFilterChain resourceServerSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -88,18 +91,21 @@ public class SecurityConfig {
                 .build();
     }
 
+    /** SecurityConfig의 problemEntryPoint 처리에 필요한 업무 로직을 수행한다. */
     private AuthenticationEntryPoint problemEntryPoint(ObjectMapper objectMapper) {
         return (request, response, exception) -> writeProblem(
                 objectMapper, response, HttpServletResponse.SC_UNAUTHORIZED,
                 "Authentication required", "AUTHENTICATION_REQUIRED", request.getRequestURI());
     }
 
+    /** SecurityConfig의 problemAccessDeniedHandler 처리에 필요한 업무 로직을 수행한다. */
     private AccessDeniedHandler problemAccessDeniedHandler(ObjectMapper objectMapper) {
         return (request, response, exception) -> writeProblem(
                 objectMapper, response, HttpServletResponse.SC_FORBIDDEN,
                 "Access denied", "ACCESS_DENIED", request.getRequestURI());
     }
 
+    /** SecurityConfig의 writeProblem 처리에 필요한 업무 로직을 수행한다. */
     private void writeProblem(ObjectMapper objectMapper, HttpServletResponse response, int status,
                               String title, String code, String instance) throws java.io.IOException {
         response.setStatus(status);

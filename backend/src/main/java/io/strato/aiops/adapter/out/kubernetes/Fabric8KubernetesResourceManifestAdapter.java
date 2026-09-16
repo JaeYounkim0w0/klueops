@@ -39,6 +39,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
     private final int requestTimeoutMs;
     private final int manifestLookupTimeoutMs;
 
+    /** Fabric8KubernetesResourceManifestAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public Fabric8KubernetesResourceManifestAdapter(
             ObjectMapper objectMapper,
             AiManifestSanitizer aiManifestSanitizer,
@@ -53,6 +54,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         this.manifestLookupTimeoutMs = manifestLookupTimeoutMs;
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 getResourceManifest 처리 결과를 조회해 반환한다. */
     @Override
     public KubernetesResourceManifest getResourceManifest(
             KubernetesConnectionCredential credential,
@@ -63,12 +65,14 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         return getResourceManifest(credential, namespace, resourceType, resourceName, false);
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 getAiSafeResourceManifest 처리 결과를 조회해 반환한다. */
     @Override
     public KubernetesResourceManifest getAiSafeResourceManifest(
             KubernetesConnectionCredential credential, String namespace, String resourceType, String resourceName) {
         return getResourceManifest(credential, namespace, resourceType, resourceName, true);
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 getResourceManifest 처리 결과를 조회해 반환한다. */
     private KubernetesResourceManifest getResourceManifest(
             KubernetesConnectionCredential credential, String namespace, String resourceType, String resourceName,
             boolean aiSafe) {
@@ -98,6 +102,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         }
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 fetchWithTimeout 처리 결과를 조회해 반환한다. */
     private HasMetadata fetchWithTimeout(KubernetesClient client, ResourceMapping mapping, String namespace, String resourceName) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
@@ -120,6 +125,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         }
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 fetch 처리 결과를 조회해 반환한다. */
     private HasMetadata fetch(KubernetesClient client, ResourceMapping mapping, String namespace, String resourceName) {
         if (mapping.namespaced() && (namespace == null || namespace.isBlank())) {
             throw new IllegalArgumentException(mapping.kind() + " namespace is required");
@@ -147,6 +153,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         };
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 sanitize 처리에 필요한 업무 로직을 수행한다. */
     private void sanitize(HasMetadata resource, ResourceMapping mapping, boolean removeStatus) {
         ObjectMeta metadata = resource.getMetadata();
         if (metadata != null) {
@@ -163,6 +170,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         }
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 stripStatus 처리에 필요한 업무 로직을 수행한다. */
     private void stripStatus(HasMetadata resource) {
         try {
             resource.getClass().getMethod("setStatus", resource.getClass().getMethod("getStatus").getReturnType())
@@ -172,6 +180,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         }
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 redactSecret 처리에 필요한 업무 로직을 수행한다. */
     private void redactSecret(Secret secret) {
         if (secret.getData() != null) {
             Map<String, String> redacted = new LinkedHashMap<>();
@@ -181,6 +190,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         secret.setStringData(null);
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 createClient 처리에 필요한 데이터를 생성하거나 저장한다. */
     private KubernetesClient createClient(KubernetesConnectionCredential credential) {
         if (credential.credentialType() == ClusterCredentialType.KUBECONFIG) {
             Config config = Config.fromKubeconfig(credential.payload());
@@ -199,11 +209,13 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         return new KubernetesClientBuilder().withConfig(config).build();
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 applyTimeouts 처리에 필요한 업무 로직을 수행한다. */
     private void applyTimeouts(Config config) {
         config.setConnectionTimeout(connectTimeoutMs);
         config.setRequestTimeout(requestTimeoutMs);
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 parseServiceAccountPayload 처리 데이터를 필요한 표현으로 변환한다. */
     private ServiceAccountPayload parseServiceAccountPayload(String payload) {
         try {
             return objectMapper.readValue(payload, ServiceAccountPayload.class);
@@ -212,6 +224,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         }
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 normalizeCertificateAuthority 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeCertificateAuthority(String caCertificate) {
         if (caCertificate == null || caCertificate.isBlank()) {
             return null;
@@ -222,6 +235,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         return caCertificate;
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 connectionFailureMessage 처리에 필요한 업무 로직을 수행한다. */
     private String connectionFailureMessage(RuntimeException exception) {
         Throwable rootCause = rootCause(exception);
         String detail = rootCause.getMessage();
@@ -235,6 +249,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
         return "Kubernetes API manifest lookup failed: " + detail;
     }
 
+    /** Fabric8KubernetesResourceManifestAdapter의 rootCause 처리에 필요한 업무 로직을 수행한다. */
     private Throwable rootCause(Throwable throwable) {
         Throwable current = throwable;
         while (current.getCause() != null && current.getCause() != current) {
@@ -252,6 +267,7 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
 
     private record ResourceMapping(String normalizedType, String kind, boolean namespaced, boolean secret) {
 
+        /** ResourceMapping의 from 처리 데이터를 필요한 표현으로 변환한다. */
         private static ResourceMapping from(String resourceType) {
             String normalized = resourceType == null ? "" : resourceType.replace("-", "").replace("_", "").toLowerCase(Locale.ROOT);
             return switch (normalized) {
@@ -277,10 +293,12 @@ public class Fabric8KubernetesResourceManifestAdapter implements KubernetesResou
             };
         }
 
+        /** ResourceMapping의 namespaced 처리에 필요한 업무 로직을 수행한다. */
         private static ResourceMapping namespaced(String normalizedType, String kind) {
             return new ResourceMapping(normalizedType, kind, true, false);
         }
 
+        /** ResourceMapping의 cluster 처리에 필요한 업무 로직을 수행한다. */
         private static ResourceMapping cluster(String normalizedType, String kind) {
             return new ResourceMapping(normalizedType, kind, false, false);
         }

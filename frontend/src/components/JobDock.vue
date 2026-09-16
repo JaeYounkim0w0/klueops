@@ -23,6 +23,7 @@ const diagnosticsLabel = computed(() => {
   return parts.join(' · ');
 });
 
+/** statusIcon 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function statusIcon(job: JobCenterItem) {
   if (job.status === 'SUCCEEDED') {
     return 'pi pi-check-circle';
@@ -33,6 +34,7 @@ function statusIcon(job: JobCenterItem) {
   return 'pi pi-spin pi-spinner';
 }
 
+/** statusLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function statusLabel(job: JobCenterItem) {
   if (job.status === 'PENDING') {
     return t('jobs.statusPending');
@@ -52,10 +54,12 @@ function statusLabel(job: JobCenterItem) {
   return t('jobs.statusFailed');
 }
 
+/** shortId 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function shortId(value?: string) {
   return value ? value.slice(0, 8) : '-';
 }
 
+/** timeLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function timeLabel(value?: string) {
   if (!value) {
     return '-';
@@ -63,6 +67,7 @@ function timeLabel(value?: string) {
   return new Date(value).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' });
 }
 
+/** durationLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function durationLabel(job: JobCenterItem) {
   const elapsed = formatElapsedDuration(job.startedAt, job.completedAt);
   if (elapsed === '-') {
@@ -71,14 +76,17 @@ function durationLabel(job: JobCenterItem) {
   return job.completedAt ? t('jobs.elapsed', { duration: elapsed }) : `${t('jobs.statusRunning')} ${elapsed}`;
 }
 
+/** canCancel 처리 조건의 충족 여부를 판단한다. */
 function canCancel(job: JobCenterItem) {
   return !['SUCCEEDED', 'FAILED', 'CANCELED', 'TIMEOUT'].includes(job.status);
 }
 
+/** canRetry 처리 조건의 충족 여부를 판단한다. */
 function canRetry(job: JobCenterItem) {
   return Boolean(job.analysisId && ['FAILED', 'CANCELED', 'TIMEOUT'].includes(job.status));
 }
 
+/** retryHint 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function retryHint(job: JobCenterItem) {
   if (job.status === 'TIMEOUT') {
     return t('jobs.timeoutHint');
@@ -92,10 +100,12 @@ function retryHint(job: JobCenterItem) {
   return '';
 }
 
+/** retryJob 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function retryJob(job: JobCenterItem) {
   await jobCenter.retryAnalysisJob(job.jobId);
 }
 
+/** durationMsLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function durationMsLabel(value: number) {
   if (!value) {
     return '-';

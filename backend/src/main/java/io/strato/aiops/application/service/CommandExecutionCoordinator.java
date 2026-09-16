@@ -16,6 +16,7 @@ public class CommandExecutionCoordinator {
     private final Clock clock;
     private final Limits limits;
 
+    /** CommandExecutionCoordinator 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public CommandExecutionCoordinator(
             CommandExecutionAdmissionPort admission,
             Clock clock,
@@ -32,6 +33,7 @@ public class CommandExecutionCoordinator {
                 positive(clusterTerminals), positive(userStartsPerMinute), positive(clusterStartsPerMinute));
     }
 
+    /** CommandExecutionCoordinator의 acquire 처리에 필요한 업무 로직을 수행한다. */
     public void acquire(UUID executionId, UUID clusterId, String actor, CommandExecutionMode mode, Duration ttl) {
         Instant now = clock.instant();
         admission.acquire(new CommandExecutionAdmissionPort.AdmissionRequest(executionId, clusterId, actor, mode,
@@ -39,30 +41,37 @@ public class CommandExecutionCoordinator {
                 limits.userStartsPerMinute(), limits.clusterStartsPerMinute()));
     }
 
+    /** CommandExecutionCoordinator의 renew 처리에 필요한 업무 로직을 수행한다. */
     public void renew(UUID executionId, Duration ttl) {
         admission.renew(executionId, clock.instant().plus(ttl));
     }
 
+    /** CommandExecutionCoordinator의 release 처리에 필요한 업무 로직을 수행한다. */
     public void release(UUID executionId) {
         admission.release(executionId);
     }
 
+    /** CommandExecutionCoordinator의 isActive 처리 조건의 충족 여부를 판단한다. */
     public boolean isActive(UUID executionId) {
         return admission.isActive(executionId, clock.instant());
     }
 
+    /** CommandExecutionCoordinator의 limits 처리에 필요한 업무 로직을 수행한다. */
     public Limits limits() {
         return limits;
     }
 
+    /** CommandExecutionCoordinator의 userConcurrency 처리에 필요한 업무 로직을 수행한다. */
     private int userConcurrency(CommandExecutionMode mode) {
         return mode == CommandExecutionMode.TERMINAL ? limits.userTerminals() : limits.userCommands();
     }
 
+    /** CommandExecutionCoordinator의 clusterConcurrency 처리에 필요한 업무 로직을 수행한다. */
     private int clusterConcurrency(CommandExecutionMode mode) {
         return mode == CommandExecutionMode.TERMINAL ? limits.clusterTerminals() : limits.clusterCommands();
     }
 
+    /** CommandExecutionCoordinator의 positive 처리에 필요한 업무 로직을 수행한다. */
     private static int positive(int value) {
         return Math.max(1, value);
     }

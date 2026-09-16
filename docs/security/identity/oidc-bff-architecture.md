@@ -35,7 +35,7 @@ refresh token을 요구하는 `offline_access` scope는 기본값에서 제외�
 
 - Spring Session idle timeout은 인증된 요청마다 sliding 방식으로 갱신한다.
 - 화면이 보이고 최근 5분 안에 사용자 입력이 있었을 때만 idle 만료 10분 전부터 자동 연장할 수 있다.
-- 유휴 상태에서는 자동 연장하지 않고 만료 5분 전에 남은 시간, `세션 연장`, `로그아웃`을 제공한다.
+- 유휴 상태에서는 자동 연장하지 않고 만료 5분 전에 남은 시간을 초 단위로 갱신하며 `세션 연장`, `로그아웃`을 제공한다. 연장 실패 사유는 팝업 안에 표시하고 absolute session timeout 이후의 시각은 반환하지 않는다.
 - absolute timeout 이후에는 연장하지 않고 Keycloak 재인증을 요구한다.
 - `POST /api/auth/session/extend`는 CSRF와 인증을 요구하며 갱신된 만료 정보를 반환한다.
 - `POST /logout`은 application session과 CSRF cookie를 삭제한 뒤 OIDC RP-initiated logout으로 Keycloak SSO session까지 종료한다.

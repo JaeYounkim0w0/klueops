@@ -67,6 +67,8 @@ LLM context 설계 원칙은 "작고 목적이 분명한 context를 여러 번 �
 
 Namespace/Application AI Analysis는 sectioned orchestrator를 사용한다. Backend pre analyzer가 Kubernetes API diagnostics를 한 번 수집한 뒤, `root-cause`, `log-analysis`, `runbook-operations` 단위로 작은 context slice를 구성한다. 각 section은 독립 AI 호출로 분석하고, 결과를 `analysis-result.v1` 최종 JSON으로 병합한다. 특정 section이 timeout 또는 format 오류로 실패하면 전체 분석을 실패시키지 않고 해당 section만 Kubernetes API 기반 fallback으로 유지한다.
 
+Section context를 만들기 전에 current-state reconciliation을 수행한다. 현재 `Running`·전체 container `Ready`·restart 0인 Pod와 `Bound` PVC가 확인되면 배포 초기에만 발생한 `FailedScheduling`, `FailedMount`, `FailedAttachVolume`, `FailedBinding`은 `ResolvedTransient`로 분류해 활성 장애 근거에서 제외한다. 정상 Pod의 시작 과정에서 발생했지만 이후 상태에 영향을 주지 않은 `chmod ... Operation not permitted` 같은 startup noise도 활성 권한 장애 근거로 LLM에 전달하지 않는다. 병합 뒤에도 활성 문제 리소스, Warning Event, high-severity log가 없으면 Kubernetes 현재 상태가 LLM 문장보다 우선하며 `currentStateReconciliation=CURRENTLY_HEALTHY`로 severity와 summary를 보정한다.
+
 `risk-timeline`은 LLM 호출 대상에서 제외하고 deterministic section으로 처리한다. Risk forecast와 change timeline은 backend pre analyzer가 problem resource, warning event, high-signal log, event time을 기준으로 산출할 수 있는 사실 기반 영역이므로 Ollama timeout과 queue 지연을 줄이기 위해 AI synthesis 대신 Kubernetes API evidence를 그대로 구조화한다.
 
 `performance-scaling`도 Prometheus 연동 전까지는 deterministic section으로 처리한다. CPU/Memory/Latency 같은 metric은 생성하지 않고, Pending Pod, FailedScheduling/FailedMount, Endpoint readiness, PVC 상태, HPA/ResourceQuota/LimitRange 존재 여부, workload replica 상태처럼 Kubernetes API로 확인 가능한 신호만 구조화한다. 이 섹션은 운영자가 빈 화면을 보지 않도록 summary, bottlenecks, improvements, scaleUpCandidates, hpaRecommendations, capacityNotes를 항상 채운다.

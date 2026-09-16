@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 class AiQualityQueryServiceTest {
 
+    /** AiQualityQueryServiceTest의 calculatesCalibrationWithOneBatchSessionLookup 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void calculatesCalibrationWithOneBatchSessionLookup() {
         UUID firstId = UUID.randomUUID();
@@ -56,17 +57,20 @@ class AiQualityQueryServiceTest {
         assertThat(batchLookups).hasValue(1);
     }
 
+    /** AiQualityQueryServiceTest의 feedback 처리에 필요한 업무 로직을 수행한다. */
     private AnalysisFeedback feedback(UUID id, String accuracy, String outcome, boolean dangerous) {
         return new AnalysisFeedback(id, accuracy, outcome, dangerous, null, "root cause", "resolution",
                 "Pod", "api", "HIGH", "operator", Instant.parse("2026-09-07T00:00:00Z"));
     }
 
+    /** AiQualityQueryServiceTest의 analysis 처리에 필요한 업무 로직을 수행한다. */
     private AnalysisSession analysis(UUID id, String model, String promptVersion) {
         return new AnalysisSession(id, UUID.randomUUID(), UUID.randomUUID(), null, "default",
                 AnalysisStatus.SUCCEEDED, "ollama", model, promptVersion, "analysis-result.v1",
                 "summary", "{}", "operator", Instant.parse("2026-09-07T00:00:00Z"));
     }
 
+    /** AiQualityQueryServiceTest의 proxy 처리에 필요한 업무 로직을 수행한다. */
     @SuppressWarnings("unchecked")
     private <T> T proxy(Class<T> type, PortCall call) {
         return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
@@ -74,6 +78,7 @@ class AiQualityQueryServiceTest {
     }
 
     private interface PortCall {
+        /** PortCall의 invoke 처리 계약을 정의한다. */
         Object invoke(String method, Object[] args);
     }
 }

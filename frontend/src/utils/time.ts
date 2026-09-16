@@ -1,3 +1,4 @@
+/** formatElapsedDuration 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 export function formatElapsedDuration(startedAt?: string, completedAt?: string, now = new Date()) {
   if (!startedAt) {
     return '-';
@@ -29,6 +30,7 @@ export function formatElapsedDuration(startedAt?: string, completedAt?: string, 
   return `${seconds}초`;
 }
 
+/** formatDurationMs 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 export function formatDurationMs(durationMs?: number) {
   if (durationMs == null || !Number.isFinite(durationMs) || durationMs < 0) {
     return '-';
@@ -42,6 +44,7 @@ export function formatDurationMs(durationMs?: number) {
   return `${seconds}초`;
 }
 
+/** formatTimestamp 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 export function formatTimestamp(value?: string) {
   if (!value) return '-';
   const date = new Date(value);

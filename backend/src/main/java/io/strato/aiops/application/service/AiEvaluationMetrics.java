@@ -7,9 +7,11 @@ import java.util.Set;
 
 public final class AiEvaluationMetrics {
 
+    /** AiEvaluationMetrics 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private AiEvaluationMetrics() {
     }
 
+    /** AiEvaluationMetrics의 calculate 처리에 필요한 업무 로직을 수행한다. */
     public static Summary calculate(List<Observation> observations) {
         if (observations == null || observations.isEmpty()) {
             return new Summary("INSUFFICIENT_EVIDENCE", 0, 0, 0, List.of());
@@ -47,10 +49,12 @@ public final class AiEvaluationMetrics {
         return new Summary("MEASURED", observations.size(), macroF1, abstentionAccuracy, List.copyOf(categories));
     }
 
+    /** AiEvaluationMetrics의 percentage 처리에 필요한 업무 로직을 수행한다. */
     private static double percentage(int numerator, int denominator) {
         return denominator == 0 ? 0 : round(numerator * 100.0 / denominator);
     }
 
+    /** AiEvaluationMetrics의 round 처리에 필요한 업무 로직을 수행한다. */
     private static double round(double value) {
         return Math.round(value * 10.0) / 10.0;
     }

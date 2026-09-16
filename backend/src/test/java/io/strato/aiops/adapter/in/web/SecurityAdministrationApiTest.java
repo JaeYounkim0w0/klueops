@@ -42,6 +42,7 @@ class SecurityAdministrationApiTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** SecurityAdministrationApiTest의 deniesIdentityAdministrationWithoutCapability 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void deniesIdentityAdministrationWithoutCapability() throws Exception {
         mockMvc.perform(get("/api/security/users").with(login("ordinary-user")))
@@ -49,6 +50,7 @@ class SecurityAdministrationApiTest {
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
+    /** SecurityAdministrationApiTest의 allowsPlatformAdministratorToListUsersAndBindings 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void allowsPlatformAdministratorToListUsersAndBindings() throws Exception {
         RequestPostProcessor login = login("platform-admin");
@@ -70,6 +72,7 @@ class SecurityAdministrationApiTest {
                 .andExpect(jsonPath("$[0].role").value("PLATFORM_ADMIN"));
     }
 
+    /** SecurityAdministrationApiTest의 preventsSelfDisableAndUnknownUserBinding 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void preventsSelfDisableAndUnknownUserBinding() throws Exception {
         RequestPostProcessor login = login("safety-admin");
@@ -96,6 +99,7 @@ class SecurityAdministrationApiTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** SecurityAdministrationApiTest의 login 처리에 필요한 업무 로직을 수행한다. */
     private RequestPostProcessor login(String subject) {
         return oidcLogin().idToken(token -> token
                 .issuer("https://idp.example")

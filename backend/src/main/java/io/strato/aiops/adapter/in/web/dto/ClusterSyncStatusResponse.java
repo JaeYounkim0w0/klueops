@@ -22,6 +22,7 @@ public record ClusterSyncStatusResponse(
         String errorMessage,
         Instant createdAt
 ) {
+    /** ClusterSyncStatusResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static ClusterSyncStatusResponse from(ClusterSyncStatusResult result) {
         return new ClusterSyncStatusResponse(
                 result.syncJobId(),

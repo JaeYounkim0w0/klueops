@@ -14,6 +14,9 @@ portal:
     runtimeExistingSecret: aiops-portal-db
   crypto:
     masterKeyExistingSecret: aiops-portal-master-key
+  security:
+    # 로컬 단일 운영자 검증에서만 감사 로그와 관리 권한을 전제로 원문 조회를 허용한다.
+    credentialRevealEnabled: true
   ai:
     baseUrl: http://host.docker.internal:11434
   session:

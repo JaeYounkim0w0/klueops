@@ -26,6 +26,7 @@ class AnalysisCommandEvidenceMergerTest {
     private final AnalysisCommandEvidenceMerger merger = new AnalysisCommandEvidenceMerger(objectMapper);
     private final AnalysisCommandParser parser = new AnalysisCommandParser();
 
+    /** AnalysisCommandEvidenceMergerTest의 connectsSuccessfulCommandEvidenceToMatchingIssueAndConclusion 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void connectsSuccessfulCommandEvidenceToMatchingIssueAndConclusion() throws Exception {
         String resultJson = """
@@ -68,6 +69,7 @@ class AnalysisCommandEvidenceMergerTest {
         assertThat(conclusion.path("needsFollowUpCommandCount").asInt()).isEqualTo(1);
     }
 
+    /** AnalysisCommandEvidenceMergerTest의 matchesEventFieldSelectorToTheAffectedResourceName 처리 조건의 충족 여부를 판단한다. */
     @Test
     void matchesEventFieldSelectorToTheAffectedResourceName() throws Exception {
         String resultJson = """
@@ -86,6 +88,7 @@ class AnalysisCommandEvidenceMergerTest {
                 .isEqualTo(1);
     }
 
+    /** AnalysisCommandEvidenceMergerTest의 deduplicatesLatestExecutionAndKeepsBoundedHistories 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void deduplicatesLatestExecutionAndKeepsBoundedHistories() throws Exception {
         ObjectNode root = objectMapper.createObjectNode();
@@ -114,6 +117,7 @@ class AnalysisCommandEvidenceMergerTest {
                 .isEqualTo(1);
     }
 
+    /** AnalysisCommandEvidenceMergerTest의 ignoresBlankMalformedAndNonObjectAnalysisResults 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void ignoresBlankMalformedAndNonObjectAnalysisResults() {
         AnalysisCommandExecution execution = execution(EXECUTION_ID, "kubectl get pods",
@@ -125,6 +129,7 @@ class AnalysisCommandEvidenceMergerTest {
         assertThat(merger.merge("[]", execution, parsed)).isEmpty();
     }
 
+    /** AnalysisCommandEvidenceMergerTest의 execution 처리에 필요한 업무 로직을 수행한다. */
     private AnalysisCommandExecution execution(UUID id, String command, AnalysisCommandStatus status, String output) {
         return new AnalysisCommandExecution(id, ANALYSIS_ID, CLUSTER_ID, "demo", command,
                 AnalysisCommandSafety.READ_ONLY, status, "test reason",
@@ -133,6 +138,7 @@ class AnalysisCommandEvidenceMergerTest {
                 status == AnalysisCommandStatus.SUCCEEDED ? 0 : 1, 25L, "tester", EXECUTED_AT);
     }
 
+    /** AnalysisCommandEvidenceMergerTest의 countId 처리에 필요한 업무 로직을 수행한다. */
     private long countId(JsonNode items, String id) {
         long count = 0;
         for (JsonNode item : items) {

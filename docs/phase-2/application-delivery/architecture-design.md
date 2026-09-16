@@ -2,7 +2,18 @@
 
 기준일: 2026-09-15
 
-상태: 설계 완료, 구현 미착수
+상태: 승인된 Phase 2 bounded context와 UI 구현 완료, OCI/S3 저장 adapter·자동 DNS/TLS만 후속
+
+구현 기준선은 PostgreSQL metadata/artifact 저장, Backend 내부 Application Delivery port/service/adapter, 임시 kubeconfig를 사용하는 제한된 Helm CLI 실행, Chart-managed route 검증, Service 기반 HTTPRoute·Ingress·TCPRoute companion, ReferenceGrant/allowedRoutes preflight, Async Job과 ReleaseOperation 복구다. OCI/Object Storage와 DNS/TLS Provider는 실제 확장 조건이 생길 때 적용한다.
+
+### 2026-09-16 승인 확장 설계
+
+- Values 계약 API가 immutable Chart archive의 기본 `values.yaml`과 `values.schema.json`을 제공하고, Frontend는 지원 scalar만 Form으로 노출한다. Secret 추정 경로와 배열·복합 구조는 YAML 편집으로 유지한다.
+- `aiops.application-delivery.provenance-keyring`이 설정되면 `helm pull --verify --keyring`을 강제한다. 서명 위조는 import 실패, `.prov` 미제공은 `CHECKSUMMED`, 성공은 `VERIFIED`다.
+- HTTPRoute/TCPRoute cross-namespace backend는 Service 실재와 ReferenceGrant의 from/to/group/kind/name을 모두 검사한다. Listener는 route kind, protocol, allowedRoutes kind와 Namespace selector를 모두 통과해야 한다.
+- Uninstall 보존 정책은 worker 제출 시 immutable 인자로 전달한다. PVC/TLS 보존은 Helm keep annotation, 비보존은 release label 범위 삭제, DNS 경로 비보존은 companion 삭제로 실행한다. 실패 Application은 새 Job의 cleanup retry만 허용한다.
+- Local model은 모든 Tenant routing 참조를 조회해 사용 중 삭제를 차단한다. 6개 고정 corpus를 실제 Ollama `/api/generate`에 실행해 80점·6 sample·9B 이하 gate를 통과한 경우에만 Profile 기본 모델로 승격한다.
+- Playwright가 22개 정적 product route를 desktop/mobile snapshot으로 관리하며, 전역 modal observer가 role/aria-modal 보완, 최초 focus, Tab 순환과 trigger focus 복원을 담당한다.
 
 ## 1. 결정
 
@@ -24,9 +35,11 @@ P2-0은 Backend API나 기존 업무 기능을 재작성하지 않는다. `front
 
 - global shell, page header, action bar, card/table/form, status/risk, loading/empty/error와 modal/drawer를 공통 primitive로 정리한다.
 - route component는 page composition에 집중하고 long-running state는 기존 global Job Center store를 사용한다.
-- 한 번에 전체 화면을 교체하지 않고 shell → 공통 primitive → 핵심 운영 화면 → 설정 화면 순으로 migration한다.
+- 인증 route 전체가 `App.vue`의 공통 shell과 `product-shell.css`를 사용한다. 화면별 업무 CSS는 이 기반 위에 composition만 확장한다.
 - 각 migration slice는 기존 API/permission/E2E 회귀, 1280/1440/1680 screenshot과 responsive/accessibility 검사를 통과해야 한다.
 - 기존 1차 기능의 의미를 바꾸는 개선은 P2-0 visual refresh에 섞지 않고 별도 요구사항과 승인 대상으로 분리한다.
+
+실제 공통 shell은 dark navigation, sticky Tenant/Workspace context bar, global search/notification action과 mobile overlay navigation으로 구성한다. Applications의 목록·inspector는 해당 shell의 semantic token을 사용하며, 과도한 wide card 확장을 방지하기 위해 최대 content width와 명시적 responsive breakpoint를 둔다.
 
 ## 2. 논리 구조
 
@@ -90,7 +103,7 @@ ArchUnit gate:
 - AI Values suggestion orchestration
 - preview 요청과 정책 결과 조립
 - Cluster/Namespace target, Release name과 Namespace 생성 계획
-- Chart-managed/KlueOps-managed Exposure 계획과 Gateway/DNS/TLS capability 조립
+- Chart-managed/KlueOps HTTPRoute Exposure 계획과 Gateway/DNS/TLS capability 조립
 - exact confirmation과 async job lifecycle
 - Application, Release metadata, workload/endpoint health, history, audit와 사후 검증
 
@@ -98,7 +111,7 @@ ArchUnit gate:
 
 - Chart archive 안전 검사와 bounded unpack
 - `helm lint`, `helm template`, install/upgrade/status/history/rollback/uninstall
-- Backend가 승인한 companion HTTPRoute/Ingress의 server-side apply/delete와 condition 조회
+- Backend가 승인한 companion HTTPRoute의 server-side apply/delete와 condition 조회
 - argv allowlist, namespace/release 고정과 timeout/cancel
 - 임시 kubeconfig, registry config, Chart와 Values의 job 종료 cleanup
 - NDJSON progress와 bounded stdout/stderr
@@ -212,7 +225,7 @@ NamespacePlan
 - quotaJson, limitRangeJson, networkPolicyProfile, policyResult
 
 ExposurePlan
-- id, deploymentPlanId, mode: INTERNAL_ONLY | CHART_MANAGED | KLUEOPS_MANAGED
+- id, deploymentPlanId, mode: NONE | CHART_MANAGED | HTTP_ROUTE
 - routeKind: NONE | HTTP_ROUTE | INGRESS
 - gatewayRef, listenerName, hostname, path
 - backendService, backendPort, tlsMode, tlsSecretRef, dnsMode
@@ -235,11 +248,17 @@ ReleaseOperation
 - outputHash, errorCode, maskedError
 ```
 
-Install 실행이 `202 Accepted`되면 같은 transaction에서 `Application(DEPLOYING)`, `ReleaseOperation`과 Async Job 연결을 만든다. 따라서 Helm 완료 전에도 Deployed Applications에서 대상과 상태를 찾을 수 있다. 성공 시 `ACTIVE`와 current Release를 확정하고 실패 시 `FAILED`와 안전한 retry/cleanup action을 제공한다. Uninstall 완료 후에는 기본 목록에서 제외하되 History/Audit 보존 정책에 따라 tombstone을 유지한다.
+Install 실행이 `202 Accepted`되면 같은 transaction에서 `Application(DEPLOYING)`, `ReleaseOperation`과 Async Job 연결을 만든다. 따라서 Helm 완료 전에도 Deployed Applications에서 대상과 상태를 찾을 수 있다. 성공 시 `ACTIVE`와 current Release를 확정하고 실패 시 `FAILED`와 안전한 retry/cleanup action을 제공한다. Uninstall 성공 시 Endpoint → Release → ReleaseOperation → 소비된 Plan → ManagedApplication 순서로 하나의 짧은 DB transaction에서 삭제하며 tombstone은 유지하지 않는다. Helm Release 생성 전에 설치가 실패한 Application도 `helm uninstall --ignore-not-found`로 cleanup을 완료할 수 있다. Phase 2 전환 시 이전 버전에서 남은 `UNINSTALLED` 수명주기 데이터도 같은 순서로 한 번 정리한다. Async Job 결과는 Application FK와 독립된 최소 실행 증거로 보존한다.
+
+Application Delivery worker는 위 transaction이 commit된 뒤에만 bounded executor에 제출한다. `saveAndFlush` 직후 다른 thread를 시작하는 방식은 미커밋 행 조회 경쟁을 만들기 때문에 허용하지 않는다. rollback이면 worker를 제출하지 않고, executor 포화나 worker 시작부 예외는 `REQUIRES_NEW` 실패 기록으로 Job, Application과 ReleaseOperation을 함께 종결한다. 서로 다른 Release는 Backend instance당 기본 core 2·max 4·queue 30 범위에서 병렬 실행하며, 같은 Application의 upgrade/rollback/uninstall은 PostgreSQL row lock과 active 상태 검증으로 중복 실행을 거부한다. 신규 install의 동일 `Cluster + Namespace + Release` 경합은 unique constraint를 최종 방어선으로 사용하고 `409 APPLICATION_OPERATION_CONFLICT`로 응답한다.
 
 Job Center는 Async Job의 queue, progress, cancel과 일시적 실행 출력을 보여주는 전역 read model이다. Application Detail의 History는 `ReleaseOperation`을 기준으로 해당 대상의 install/upgrade/rollback/uninstall 결과와 Audit을 보여준다. 두 화면은 같은 `asyncJobId`로 연결하며 별도 Application Operations aggregate나 중복 API를 만들지 않는다.
 
-Secret-like Values는 평문 검색, diff와 AI 전송에서 제외한다. DB 저장이 필요한 경우 기존 AES-256-GCM master key 계약으로 전체 Values payload를 암호화하고 key name과 mask만 UI에 노출한다.
+Secret-like Values는 평문 검색, diff와 AI 전송에서 제외한다. DB 저장이 필요한 경우 기존 AES-256-GCM master key 계약으로 전체 Values payload를 암호화하고 key name과 mask만 UI에 노출한다. AI 전송 전 민감 key 값을 `***REDACTED***`로 치환하고, 제안 검증 후에는 사용자가 입력한 원래 값을 서버에서 복원하므로 marker가 실제 Revision 값으로 저장되지 않는다.
+
+Values 제안은 `helm-values.v10` 계약을 사용한다. Backend가 immutable Chart artifact에서 사용자 지시와 현재 override에 관련된 root `values.yaml` section, 사용 가능한 최상위 key와 선택형 `values.schema.json` property를 추출하고 Chart/package, 제공사/source, Chart/App version, 요청 관련 root key와 함께 `HELM_VALUES` Provider에 전달한다. Prompt는 특정 application이나 제공사 이름을 분기 조건으로 사용하지 않는다. exact default 또는 현재 override가 이미 요청을 만족하면 해당 root의 중복 출력을 허용하지 않고 생략할 수 있다. 결과는 Kubernetes manifest 형태와 exact Chart에 없는 재귀 Values path 및 redaction marker를 먼저 거부하고 같은 artifact의 `helm template`로 검증한다. 실패할 때마다 masked·bounded 검증 오류를 재피드백하며 최대 3회 모두 실패하면 제안을 반환하지 않는다. 수동 Revision 저장도 같은 렌더 검증을 통과해야 하며 Helm 프로세스 실행 중 DB transaction을 유지하지 않는다. 실제 credential 값은 masking·복원하고 `existingSecret` 같은 resource reference 이름은 Chart 계약 생성에 사용할 수 있도록 유지한다.
+
+Chart Library 제거는 `tenant_charts.archived_at`을 갱신하는 soft archive다. `chart_versions`, 암호화 Values profile/revision, 배포 plan과 Application release FK는 그대로 유지해 실행 중 Application과 rollback 이력을 손상하지 않는다. 동일 Tenant/source/package를 다시 가져오면 기존 Chart를 복원하고 digest가 같은 immutable version을 재사용한다.
 
 ## 6. Port 설계
 
@@ -259,7 +278,7 @@ interface ChartArtifactStorePort {
 }
 
 interface HelmValuesSuggestionPort {
-    ValuesSuggestion suggest(SanitizedValuesContext context);
+    String suggest(TenantId tenantId, ExactChartValuesContext context);
 }
 
 interface HelmRunnerPort {
@@ -365,7 +384,8 @@ flowchart TD
     Archive --> Metadata[Chart metadata/schema]
     Metadata --> Lint[helm lint]
     Lint --> Render[helm template]
-    Render --> Policy[Manifest policy]
+    Render --> Service[Service type and port validation]
+    Service --> Policy[Manifest policy]
     Policy --> RBAC[SSAR/RBAC preflight]
     RBAC --> Gateway[Gateway/Route/DNS/TLS preflight]
     Gateway --> Live[Live release + companion diff]
@@ -377,15 +397,20 @@ flowchart TD
 
 위험 신호는 `BLOCKED`, `REQUIRES_APPROVAL`, `WARNING`, `PASSED`로 표시한다. CRD, cluster-wide RBAC, webhook, privileged/host access, hook Job와 PVC 삭제 가능성은 별도 승인 없이는 실행하지 않는다.
 
+Helm 3 release metadata는 대상 Namespace의 Secret에 저장된다. Backend는 Preview와 비동기 install/upgrade 직전에 등록 Cluster credential로 SelfSubjectAccessReview를 수행해 Secret `get/list/create` 최소 권한을 확인한다. Namespace 목록 조회 권한만 있는 대상을 배포 가능 대상으로 오인하지 않으며, 거부된 verb와 Namespace를 사용자에게 표시한다. 이 원격 검증 중에는 DB transaction을 유지하지 않는다.
+
 ### 8.1 Exposure 실행 순서
 
-1. `helm template` 결과에서 Service와 chart-managed Ingress/HTTPRoute를 식별한다.
-2. Chart-managed route가 있으면 중복 companion 생성을 차단한다.
-3. KlueOps-managed mode는 Gateway API CRD, Gateway/Listener allowedRoutes, backend Service/Port와 RBAC를 검사한다.
-4. Helm install/upgrade 성공 후 승인된 companion resource를 적용한다.
-5. HTTPRoute `Accepted`와 `ResolvedRefs`, Gateway address, DNS와 TLS를 각각 독립 상태로 수집한다.
-6. Route 적용 실패 시 `REQUIRED` 정책은 Helm rollback, `BEST_EFFORT` 정책은 Application을 `RUNNING_ENDPOINT_DEGRADED`로 표시하고 cleanup/재시도를 제공한다.
-7. Rollback/Uninstall은 operation journal의 companion resource를 같은 plan에서 변경·정리한다.
+1. Target option 조회 API가 고정된 Chart/Values를 `helm template`로 렌더링해 Service namespace/name/type과 `spec.ports[].port`, `targetPort`, `nodePort`를 추출한다. 렌더링된 모든 Service에서 `nodePort`가 `NodePort` 또는 `LoadBalancer`에만 존재하고 Kubernetes 기본 범위 `30000-32767` 안인지 먼저 검사하며, 위반하면 Revision 저장·Target 조회·Preview를 같은 오류로 차단한다. 통과한 뒤에만 별도 Kubernetes 조회로 Gateway와 HTTP/HTTPS listener, `Accepted/Programmed` 상태를 반환한다. 원격 조회 중 DB transaction은 유지하지 않는다.
+2. `CHART_MANAGED`는 렌더 결과에 top-level Ingress 또는 HTTPRoute가 없으면 preview를 거부한다.
+3. `HTTP_ROUTE`는 Preview와 비동기 Helm 실행 직전에 Gateway API CRD와 parent Gateway, HTTP/HTTPS listener, listener `allowedRoutes`의 Namespace admission, Gateway 준비 상태, backend Service와 `spec.ports[].port`를 재검사한다. Service `appProtocol`, port name과 알려진 포트로 명백한 비-HTTP TCP endpoint를 제외한다. 조회와 실행 사이에 Gateway가 삭제되거나 준비 해제된 경우 Helm 변경 전에 실패시킨다.
+4. Helm install/upgrade 성공 후 승인된 companion HTTPRoute를 server-side apply한다.
+5. Helm 소유 label 또는 release annotation으로 chart-managed Ingress를 찾고 TLS 유무에 맞춰 URL을 만든다.
+6. HTTPRoute `Accepted`와 `ResolvedRefs`를 수집하고 두 조건이 모두 참이면 `READY`, 거부 조건이면 `DEGRADED`, 아직 판정 전이면 `APPLIED`로 표시한다.
+7. companion 적용 실패는 생성 시도한 Route를 best-effort 정리하고 추정 URL을 저장하지 않는다.
+8. Gateway API와 Controller 설치는 Tenant Cluster Admin 책임이며 KlueOps가 자동 설치하지 않는다. 자동 DNS/TLS, cross-namespace backend `ReferenceGrant`, Gateway address 기반 도달성 판단과 companion Ingress/TCPRoute는 후속 adapter 범위다.
+
+PostgreSQL·Redis처럼 raw TCP를 사용하는 workload는 HTTPRoute의 대상이 아니다. 로컬 개발에서는 port-forward, 일반 운영에서는 Cluster 정책에 맞는 NodePort/LoadBalancer 또는 TCP listener와 TCPRoute를 사용한다. KlueOps가 TCPRoute 배포를 지원하기 전까지 해당 Service는 HTTPRoute 선택 목록에서 비활성화하고 Preview에서도 이중 차단한다.
 
 Wildcard DNS가 Gateway를 가리키는 경우 hostname만 등록한다. 그렇지 않으면 선택형 DNS Provider/ExternalDNS adapter가 있을 때만 자동화를 제공하고, 없는 경우 필요한 record와 `MANUAL_ACTION_REQUIRED`를 표시한다.
 
@@ -463,8 +488,9 @@ portal:
 - fake AI provider의 schema/timeout/masking test
 - ephemeral namespace에서 install → upgrade → rollback → uninstall E2E
 - 기존/신규 Namespace 권한, quota와 uninstall 시 Namespace 보존 test
-- Internal/Chart-managed/KlueOps-managed Exposure와 중복 Route 차단 test
-- HTTPRoute Accepted/ResolvedRefs, Gateway allowedRoutes, DNS/TLS partial 상태 test
+- Cluster 내부/Chart-managed/KlueOps HTTPRoute Exposure와 중복 Route 차단 test
+- HTTPRoute Accepted/ResolvedRefs와 Chart-managed Ingress 수집 test
+- Gateway allowedRoutes, cross-namespace ReferenceGrant, DNS/TLS partial 상태 test
 - Application Workload/Pod/Endpoint 조회와 Tenant scope test
 - companion apply 실패, Helm rollback, uninstall cleanup과 retained resource test
 - Embedded DB/Object Storage/External OCI artifact store contract test

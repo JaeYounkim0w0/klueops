@@ -21,6 +21,7 @@ public record ApplicationRollbackPreviewResponse(
         List<ApplicationRollbackRevisionResponse> revisions,
         Instant plannedAt
 ) {
+    /** ApplicationRollbackPreviewResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static ApplicationRollbackPreviewResponse from(ApplicationRollbackPreviewResult result) {
         return new ApplicationRollbackPreviewResponse(result.applicationId(), result.clusterId(), result.namespace(),
                 result.deploymentName(), result.currentRevision(), result.targetRevision(), result.executable(),

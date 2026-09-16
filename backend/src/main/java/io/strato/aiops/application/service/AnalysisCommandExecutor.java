@@ -23,6 +23,7 @@ final class AnalysisCommandExecutor {
     private final CredentialResolver credentialResolver;
     private final DiagnosticsResolver diagnosticsResolver;
 
+    /** AnalysisCommandExecutor 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     AnalysisCommandExecutor(KubernetesMutationPort mutationPort,
                             KubernetesNamespaceDiagnosticsPort diagnosticsPort,
                             CredentialResolver credentialResolver,
@@ -33,6 +34,7 @@ final class AnalysisCommandExecutor {
         this.diagnosticsResolver = diagnosticsResolver;
     }
 
+    /** AnalysisCommandExecutor의 guard 처리에 필요한 업무 로직을 수행한다. */
     GuardResult guard(UUID clusterId, AnalysisCommandParser.ParsedCommand command) {
         if (!command.executable()) return GuardResult.blocked(command.reason());
         if (command.safety() != AnalysisCommandSafety.CHANGE) {
@@ -63,6 +65,7 @@ final class AnalysisCommandExecutor {
         }
     }
 
+    /** AnalysisCommandExecutor의 execute 처리의 핵심 작업 흐름을 실행한다. */
     String execute(UUID clusterId, AnalysisCommandParser.ParsedCommand command) {
         return switch (command.operation()) {
             case "logs" -> executeLogs(clusterId, command);
@@ -75,6 +78,7 @@ final class AnalysisCommandExecutor {
         };
     }
 
+    /** AnalysisCommandExecutor의 executeRollout 처리의 핵심 작업 흐름을 실행한다. */
     private String executeRollout(UUID clusterId, AnalysisCommandParser.ParsedCommand command) {
         KubernetesConnectionCredential credential = credentialResolver.resolve(clusterId);
         KubernetesMutationResult result = isRolloutUndo(command)
@@ -85,11 +89,13 @@ final class AnalysisCommandExecutor {
         return mutationSummary(result);
     }
 
+    /** AnalysisCommandExecutor의 executeScale 처리의 핵심 작업 흐름을 실행한다. */
     private String executeScale(UUID clusterId, AnalysisCommandParser.ParsedCommand command) {
         return mutationSummary(mutationPort.scaleDeployment(credentialResolver.resolve(clusterId), command.namespace(),
                 requireText(command.resourceName(), "deploymentName"), command.replicas()));
     }
 
+    /** AnalysisCommandExecutor의 executeLogs 처리의 핵심 작업 흐름을 실행한다. */
     private String executeLogs(UUID clusterId, AnalysisCommandParser.ParsedCommand command) {
         KubernetesPodLogs logs = diagnosticsPort.collectPodLogs(credentialResolver.resolve(clusterId), command.namespace(),
                 requireText(command.resourceName(), "podName"), command.containerName(),
@@ -103,6 +109,7 @@ final class AnalysisCommandExecutor {
         return output.toString();
     }
 
+    /** AnalysisCommandExecutor의 executeDiagnostics 처리의 핵심 작업 흐름을 실행한다. */
     private String executeDiagnostics(UUID clusterId, AnalysisCommandParser.ParsedCommand command) {
         KubernetesNamespaceDiagnostics diagnostics = diagnosticsResolver.resolve(clusterId, command.namespace());
         String resourceType = normalizeResourceType(command.resourceType());
@@ -111,6 +118,7 @@ final class AnalysisCommandExecutor {
         return formatResourceDetails(command, diagnostics, resourceType);
     }
 
+    /** AnalysisCommandExecutor의 formatEvents 처리에 필요한 업무 로직을 수행한다. */
     private String formatEvents(AnalysisCommandParser.ParsedCommand command, KubernetesNamespaceDiagnostics diagnostics) {
         List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events = diagnostics.events().stream()
                 .filter(event -> command.fieldSelectorInvolvedName().isBlank()
@@ -127,6 +135,7 @@ final class AnalysisCommandExecutor {
         return output.toString();
     }
 
+    /** AnalysisCommandExecutor의 formatResourceList 처리에 필요한 업무 로직을 수행한다. */
     private String formatResourceList(String resourceType, KubernetesNamespaceDiagnostics diagnostics) {
         List<KubernetesNamespaceDiagnostics.DiagnosticResource> resources = diagnostics.resources().stream()
                 .filter(resource -> resourceType.isBlank()
@@ -139,6 +148,7 @@ final class AnalysisCommandExecutor {
         return output.toString();
     }
 
+    /** AnalysisCommandExecutor의 formatResourceDetails 처리에 필요한 업무 로직을 수행한다. */
     private String formatResourceDetails(AnalysisCommandParser.ParsedCommand command,
                                          KubernetesNamespaceDiagnostics diagnostics, String resourceType) {
         KubernetesNamespaceDiagnostics.DiagnosticResource matched = diagnostics.resources().stream()
@@ -157,11 +167,13 @@ final class AnalysisCommandExecutor {
         return output.toString();
     }
 
+    /** AnalysisCommandExecutor의 isRolloutUndo 처리 조건의 충족 여부를 판단한다. */
     private boolean isRolloutUndo(AnalysisCommandParser.ParsedCommand command) {
         return "rollout".equals(command.operation())
                 && command.command().toLowerCase(Locale.ROOT).contains(" rollout undo ");
     }
 
+    /** AnalysisCommandExecutor의 mutationSummary 처리에 필요한 업무 로직을 수행한다. */
     private String mutationSummary(KubernetesMutationResult result) {
         return "Kubernetes mutation result\naction=" + result.action() + '\n'
                 + "target=" + result.resourceType() + "/" + result.resourceName() + '\n'
@@ -171,6 +183,7 @@ final class AnalysisCommandExecutor {
                 + "changedAt=" + result.changedAt();
     }
 
+    /** AnalysisCommandExecutor의 rollbackSummary 처리에 필요한 업무 로직을 수행한다. */
     private String rollbackSummary(KubernetesRollbackPlan plan) {
         return "Kubernetes rollback guard\ntarget=Deployment/" + plan.deploymentName() + '\n'
                 + "namespace=" + plan.namespace() + '\n' + "currentRevision=" + value(plan.currentRevision()) + '\n'
@@ -179,6 +192,7 @@ final class AnalysisCommandExecutor {
                 + "target=" + value(plan.targetState()) + '\n' + "confirmationText=" + value(plan.confirmationText());
     }
 
+    /** AnalysisCommandExecutor의 normalizeResourceType 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeResourceType(String resourceType) {
         return switch (value(resourceType).toLowerCase(Locale.ROOT)) {
             case "", "all" -> "";
@@ -200,35 +214,41 @@ final class AnalysisCommandExecutor {
         };
     }
 
+    /** AnalysisCommandExecutor의 requireText 처리 입력과 현재 상태의 유효성을 검증한다. */
     private String requireText(String input, String name) {
         String normalized = value(input).trim();
         if (normalized.isBlank()) throw new IllegalArgumentException(name + " must not be blank");
         return normalized;
     }
 
+    /** AnalysisCommandExecutor의 value 처리에 필요한 업무 로직을 수행한다. */
     private static String value(Object input) {
         return input == null ? "" : input.toString();
     }
 
     @FunctionalInterface
     interface CredentialResolver {
+        /** CredentialResolver의 resolve 처리에 필요한 결과를 조합해 반환한다. */
         KubernetesConnectionCredential resolve(UUID clusterId);
     }
 
     @FunctionalInterface
     interface DiagnosticsResolver {
+        /** DiagnosticsResolver의 resolve 처리에 필요한 결과를 조합해 반환한다. */
         KubernetesNamespaceDiagnostics resolve(UUID clusterId, String namespace);
     }
 
     record GuardResult(boolean executable, String reason, boolean requiresConfirmation, String confirmationText,
                        boolean rbacAllowed, boolean dryRunPassed, boolean rollbackGuardPassed,
                        String guardMessage, String dryRunSummary) {
+        /** GuardResult의 allowed 처리에 필요한 업무 로직을 수행한다. */
         static GuardResult allowed(String reason, boolean requiresConfirmation, String confirmationText,
                                    String guardMessage, String dryRunSummary) {
             return allowed(reason, requiresConfirmation, confirmationText, guardMessage, dryRunSummary,
                     true, true, false);
         }
 
+        /** GuardResult의 allowed 처리에 필요한 업무 로직을 수행한다. */
         static GuardResult allowed(String reason, boolean requiresConfirmation, String confirmationText,
                                    String guardMessage, String dryRunSummary, boolean rbacAllowed,
                                    boolean dryRunPassed, boolean rollbackGuardPassed) {
@@ -236,10 +256,12 @@ final class AnalysisCommandExecutor {
                     dryRunPassed, rollbackGuardPassed, guardMessage, dryRunSummary);
         }
 
+        /** GuardResult의 blocked 처리에 필요한 업무 로직을 수행한다. */
         static GuardResult blocked(String reason) {
             return blocked(reason, false, false, false, reason, "");
         }
 
+        /** GuardResult의 blocked 처리에 필요한 업무 로직을 수행한다. */
         static GuardResult blocked(String reason, boolean rbacAllowed, boolean dryRunPassed,
                                    boolean rollbackGuardPassed, String guardMessage, String dryRunSummary) {
             return new GuardResult(false, reason, false, "", rbacAllowed, dryRunPassed,

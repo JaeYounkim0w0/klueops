@@ -18,22 +18,26 @@ public class ProductionEvidenceService {
     private final ProductionEvidenceRepositoryPort repository;
     private final Clock clock;
 
+    /** ProductionEvidenceService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     @Autowired
     public ProductionEvidenceService(ProductionEvidenceRepositoryPort repository) {
         this(repository, Clock.systemUTC());
     }
 
+    /** ProductionEvidenceService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     ProductionEvidenceService(ProductionEvidenceRepositoryPort repository, Clock clock) {
         this.repository = repository;
         this.clock = clock;
     }
 
+    /** ProductionEvidenceService의 importEvidence 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public ProductionEvidence.Run importEvidence(String releaseName, String environment, String actor,
                                                   List<CheckInput> inputs) {
         return importEvidence(UUID.randomUUID().toString(), releaseName, environment, actor, inputs);
     }
 
+    /** ProductionEvidenceService의 importEvidence 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public ProductionEvidence.Run importEvidence(String importKey, String releaseName, String environment, String actor,
                                                   List<CheckInput> inputs) {
@@ -55,16 +59,19 @@ public class ProductionEvidenceService {
         return saved;
     }
 
+    /** ProductionEvidenceService의 recent 처리에 필요한 업무 로직을 수행한다. */
     @Transactional(readOnly = true)
     public List<ProductionEvidence.Run> recent(int limit) {
         return repository.findRecent(Math.max(1, Math.min(limit, 100)));
     }
 
+    /** ProductionEvidenceService의 get 처리 결과를 조회해 반환한다. */
     @Transactional(readOnly = true)
     public ProductionEvidence.Run get(UUID id) {
         return repository.findById(id).orElseThrow(() -> new NoSuchElementException("Evidence run not found: " + id));
     }
 
+    /** ProductionEvidenceService의 check 처리 입력과 현재 상태의 유효성을 검증한다. */
     private ProductionEvidence.Check check(UUID runId, CheckInput input, Instant now) {
         UUID checkId = UUID.randomUUID();
         List<ProductionEvidence.Artifact> artifacts = input.artifacts() == null ? List.of()
@@ -81,6 +88,7 @@ public class ProductionEvidenceService {
                 now, artifacts);
     }
 
+    /** ProductionEvidenceService의 required 처리 입력과 현재 상태의 유효성을 검증한다. */
     private String required(String value) {
         if (value == null || value.isBlank()) throw new IllegalArgumentException("Evidence value is required");
         return value.trim();

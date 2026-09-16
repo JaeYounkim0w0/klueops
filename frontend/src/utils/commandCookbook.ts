@@ -70,10 +70,12 @@ export const commandCookbookProcedures: CommandCookbookProcedure[] = [
   { id: 'nodePressure', commandIds: ['nodeConditions', 'nodeUsage', 'nodePods', 'warningEvents'] }
 ];
 
+/** commandPlaceholders 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function commandPlaceholders(command: string): string[] {
   return [...new Set(command.match(/\b[A-Z][A-Z0-9]*_(?:NAME|LABEL)\b/g) ?? [])];
 }
 
+/** resolveCookbookCommand 처리에 필요한 결과를 조합해 반환한다. */
 export function resolveCookbookCommand(command: string, values: Record<string, string>): string {
   return commandPlaceholders(command).reduce((resolved, placeholder) => {
     const value = values[placeholder]?.trim();
@@ -81,6 +83,7 @@ export function resolveCookbookCommand(command: string, values: Record<string, s
   }, command);
 }
 
+/** filterCommandCookbook 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function filterCommandCookbook(items: CommandCookbookItem[], category: string, query: string,
                                       searchableText: (item: CommandCookbookItem) => string): CommandCookbookItem[] {
   const normalized = query.trim().toLocaleLowerCase();

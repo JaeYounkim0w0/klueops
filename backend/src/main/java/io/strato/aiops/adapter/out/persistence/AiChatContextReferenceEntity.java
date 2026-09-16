@@ -29,9 +29,11 @@ class AiChatContextReferenceEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    /** AiChatContextReferenceEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected AiChatContextReferenceEntity() {
     }
 
+    /** AiChatContextReferenceEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private AiChatContextReferenceEntity(UUID id, UUID messageId, AiChatReferenceType referenceType,
                                          UUID referenceId, String label, Instant createdAt) {
         this.id = id;
@@ -42,11 +44,13 @@ class AiChatContextReferenceEntity {
         this.createdAt = createdAt;
     }
 
+    /** AiChatContextReferenceEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static AiChatContextReferenceEntity fromDomain(AiChatContextReference reference) {
         return new AiChatContextReferenceEntity(reference.id(), reference.messageId(), reference.referenceType(),
                 reference.referenceId(), reference.label(), reference.createdAt());
     }
 
+    /** AiChatContextReferenceEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     AiChatContextReference toDomain() {
         return new AiChatContextReference(id, messageId, referenceType, referenceId, label, createdAt);
     }

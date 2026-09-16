@@ -70,4 +70,12 @@ describe('cluster detail operations UX contract', () => {
     expect(viewSource).toContain('readiness.credential.secretValueExposed');
     expect(viewSource).toContain('readiness.upgrade.findings');
   });
+
+  it('guards plaintext credential reveal with permission, confirmation, audit guidance, and automatic masking', () => {
+    expect(viewSource).toContain("auth.hasCapability('cluster:manage')");
+    expect(viewSource).toContain('credentialRevealOpen');
+    expect(viewSource).toContain('조회 행위와 대상 Cluster는 Audit에 기록됩니다.');
+    expect(viewSource).toContain('setTimeout(() => void maskCredential(true), 60_000)');
+    expect(viewSource).toContain('CREDENTIAL_REVEAL_DISABLED');
+  });
 });

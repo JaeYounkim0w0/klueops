@@ -56,6 +56,7 @@ public class CommandConsoleApplicationService implements CommandConsoleUseCase {
     private final CommandOperationVerifier operationVerifier;
     private final KubernetesClusterPort kubernetesClusterPort;
 
+    /** CommandConsoleApplicationService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public CommandConsoleApplicationService(
             ClusterRepositoryPort clusterRepository,
             ClusterCredentialRepositoryPort credentialRepository,
@@ -98,12 +99,14 @@ public class CommandConsoleApplicationService implements CommandConsoleUseCase {
         this.kubernetesClusterPort = kubernetesClusterPort;
     }
 
+    /** CommandConsoleApplicationService의 validate 처리 입력과 현재 상태의 유효성을 검증한다. */
     @Override
     public CommandValidationResult validate(UUID clusterId, String namespace, String command) {
         requireCluster(clusterId);
         return tokenizer.validate(command, normalizeNamespace(namespace));
     }
 
+    /** CommandConsoleApplicationService의 execute 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public CommandExecution execute(StartCommandExecutionCommand command) {
         requireCluster(command.clusterId());
@@ -142,6 +145,7 @@ public class CommandConsoleApplicationService implements CommandConsoleUseCase {
         return execution;
     }
 
+    /** CommandConsoleApplicationService의 getExecution 처리 결과를 조회해 반환한다. */
     @Override
     public CommandExecution getExecution(UUID clusterId, UUID executionId) {
         CommandExecution execution = executionRepository.findById(executionId)
@@ -150,12 +154,14 @@ public class CommandConsoleApplicationService implements CommandConsoleUseCase {
         return execution;
     }
 
+    /** CommandConsoleApplicationService의 listExecutions 처리 결과를 조회해 반환한다. */
     @Override
     public List<CommandExecution> listExecutions(UUID clusterId, String namespace, int limit) {
         requireCluster(clusterId);
         return executionRepository.findRecent(clusterId, normalizeNamespace(namespace), limit);
     }
 
+    /** CommandConsoleApplicationService의 cancel 처리 조건의 충족 여부를 판단한다. */
     @Override
     public CommandExecution cancel(UUID clusterId, UUID executionId, String actor, String requestId) {
         CommandExecution execution = getExecution(clusterId, executionId);
@@ -171,37 +177,44 @@ public class CommandConsoleApplicationService implements CommandConsoleUseCase {
         return completed;
     }
 
+    /** CommandConsoleApplicationService의 stream 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public SseEmitter stream(UUID clusterId, UUID executionId) {
         return eventStream.subscribe(getExecution(clusterId, executionId));
     }
 
+    /** CommandConsoleApplicationService의 runnerAvailable 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public boolean runnerAvailable() {
         return runner.available();
     }
 
+    /** CommandConsoleApplicationService의 kubectlVersion 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public String kubectlVersion() {
         return runner.clientVersion();
     }
 
+    /** CommandConsoleApplicationService의 limits 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public CommandExecutionCoordinator.Limits limits() {
         return coordinator.limits();
     }
 
+    /** CommandConsoleApplicationService의 executionBoundary 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public String executionBoundary() {
         return runner.executionBoundary();
     }
 
+    /** CommandConsoleApplicationService의 metricsApiAvailable 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public boolean metricsApiAvailable(UUID clusterId) {
         requireCluster(clusterId);
         return kubernetesClusterPort.metricsApiAvailable(credential(clusterId));
     }
 
+    /** CommandConsoleApplicationService의 run 처리의 핵심 작업 흐름을 실행한다. */
     private void run(CommandExecution queued, CommandValidationResult validation, String manifest,
                      KubernetesConnectionCredential credential) {
         CommandExecution latest = executionRepository.findById(queued.id()).orElse(queued);
@@ -259,12 +272,14 @@ public class CommandConsoleApplicationService implements CommandConsoleUseCase {
         }
     }
 
+    /** CommandConsoleApplicationService의 isLongRunning 처리 조건의 충족 여부를 판단한다. */
     private boolean isLongRunning(List<String> arguments) {
         return arguments.contains("--watch") || arguments.contains("-w") || arguments.contains("--follow")
                 || arguments.contains("-f") && arguments.contains("logs") || arguments.contains("wait")
                 || arguments.contains("port-forward");
     }
 
+    /** CommandConsoleApplicationService의 credential 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesConnectionCredential credential(UUID clusterId) {
         EncryptedClusterCredential stored = credentialRepository.findByClusterId(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster credential not found: " + clusterId));
@@ -273,15 +288,18 @@ public class CommandConsoleApplicationService implements CommandConsoleUseCase {
         return new KubernetesConnectionCredential(stored.credentialType(), payload);
     }
 
+    /** CommandConsoleApplicationService의 requireCluster 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void requireCluster(UUID clusterId) {
         clusterRepository.findById(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster not found: " + clusterId));
     }
 
+    /** CommandConsoleApplicationService의 normalizeNamespace 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeNamespace(String namespace) {
         return namespace == null || namespace.isBlank() || "__ALL__".equals(namespace) ? null : namespace;
     }
 
+    /** CommandConsoleApplicationService의 json 처리에 필요한 업무 로직을 수행한다. */
     private String json(List<String> values) {
         try {
             return objectMapper.writeValueAsString(values);
@@ -290,11 +308,13 @@ public class CommandConsoleApplicationService implements CommandConsoleUseCase {
         }
     }
 
+    /** CommandConsoleApplicationService의 elapsed 처리에 필요한 업무 로직을 수행한다. */
     private long elapsed(CommandExecution execution) {
         Instant started = execution.startedAt() == null ? execution.createdAt() : execution.startedAt();
         return Duration.between(started, clock.instant()).toMillis();
     }
 
+    /** CommandConsoleApplicationService의 audit 처리에 필요한 업무 로직을 수행한다. */
     private void audit(String action, CommandExecution execution, String actor, String requestId) {
         auditRepository.save(AuditLog.create(action, "COMMAND_EXECUTION", execution.id().toString(), actor, requestId));
     }

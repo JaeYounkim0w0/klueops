@@ -31,6 +31,8 @@ const loading = ref(false);
 const listLoading = ref(false);
 const streaming = ref(false);
 const streamingConversationId = ref('');
+const streamingElapsedSeconds = ref(0);
+const streamHeartbeatReceived = ref(false);
 const errorMessage = ref('');
 const chatLog = ref<HTMLElement | null>(null);
 const abortController = ref<AbortController | null>(null);
@@ -38,6 +40,7 @@ const dialog = ref<ConversationDialog | null>(null);
 const dialogConversation = ref<AiChatConversationResponse | null>(null);
 const renameTitle = ref('');
 const dialogBusy = ref(false);
+let streamingClock: ReturnType<typeof setInterval> | null = null;
 
 const activeConversation = computed(() => conversations.value.find((item) => item.id === activeConversationId.value));
 const canSend = computed(() => draft.value.trim().length > 0 && !streaming.value
@@ -50,7 +53,7 @@ onMounted(async () => {
   else await selectConversation(conversations.value[0].id);
 });
 
-onUnmounted(() => abortController.value?.abort());
+onUnmounted(() => { abortController.value?.abort(); stopStreamingClock(); });
 
 watch(selectedClusterId, async (clusterId) => {
   availableNamespaces.value = [];
@@ -61,16 +64,19 @@ watch(selectedClusterId, async (clusterId) => {
   } catch (error) { errorMessage.value = errorToMessage(error); }
 });
 
+/** loadConversations 처리 결과를 조회해 반환한다. */
 async function loadConversations() {
   listLoading.value = true;
   try { conversations.value = await api.listConversations(showingArchived.value); }
   finally { listLoading.value = false; }
 }
 
+/** loadClusters 처리 결과를 조회해 반환한다. */
 async function loadClusters() {
   try { clusters.value = await api.listClusters(); } catch { clusters.value = []; }
 }
 
+/** setConversationList 처리 대상의 상태를 갱신한다. */
 async function setConversationList(archived: boolean) {
   if (streaming.value) return;
   showingArchived.value = archived;
@@ -80,6 +86,7 @@ async function setConversationList(archived: boolean) {
   if (conversations.value[0]) await selectConversation(conversations.value[0].id);
 }
 
+/** createConversation 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function createConversation(mode: ChatMode = chatMode.value) {
   if (streaming.value) return;
   if (mode === 'CLUSTER' && !selectedClusterId.value) {
@@ -101,6 +108,7 @@ async function createConversation(mode: ChatMode = chatMode.value) {
   await selectConversation(created.id);
 }
 
+/** changeMode 처리 대상의 상태를 갱신한다. */
 async function changeMode(mode: ChatMode) {
   if (streaming.value) return;
   if (chatMode.value === mode && activeConversation.value?.mode === mode) return;
@@ -115,17 +123,20 @@ async function changeMode(mode: ChatMode) {
   }
 }
 
+/** handleClusterChange 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
 async function handleClusterChange() {
   if (streaming.value) return;
   selectedNamespace.value = '';
   resourceName.value = '';
 }
 
+/** handleNamespaceChange 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
 async function handleNamespaceChange() {
   if (streaming.value || chatMode.value !== 'CLUSTER') return;
   resourceName.value = '';
 }
 
+/** selectConversation 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function selectConversation(conversationId: string) {
   const selected = conversations.value.find((item) => item.id === conversationId);
   activeConversationId.value = conversationId;
@@ -141,6 +152,7 @@ async function selectConversation(conversationId: string) {
   finally { loading.value = false; }
 }
 
+/** 사용자 질문을 화면에 즉시 반영하고 SSE 답변 진행 상태와 실패 fallback을 관리한다. */
 async function sendMessage() {
   const text = draft.value.trim();
   if (!text || !activeConversationId.value || !canSend.value) return;
@@ -163,8 +175,12 @@ async function sendMessage() {
   streaming.value = true;
   streamingConversationId.value = conversationId;
   abortController.value = new AbortController();
+  startStreamingClock();
   try {
-    await streamAiChatMessage(conversationId, request, async (delta) => { assistantMessage.content += delta; await scrollToBottom(); }, abortController.value.signal);
+    await streamAiChatMessage(conversationId, request, async (delta) => {
+      assistantMessage.content += delta;
+      await scrollToBottom();
+    }, abortController.value.signal, () => { streamHeartbeatReceived.value = true; });
   } catch (error) {
     if (abortController.value?.signal.aborted) { assistantMessage.content += `\n\n${t('chat.stopped')}`; return; }
     if (error instanceof AiChatStreamError) {
@@ -180,6 +196,7 @@ async function sendMessage() {
     const wasAborted = abortController.value?.signal.aborted;
     assistantMessage.streaming = false;
     streaming.value = false;
+    stopStreamingClock();
     abortController.value = null;
     streamingConversationId.value = '';
     await loadConversations();
@@ -188,6 +205,7 @@ async function sendMessage() {
   }
 }
 
+/** 저장된 대화와 답변별 근거 참조를 다시 결합해 화면 상태를 최신화한다. */
 async function refreshMessagesWithLatestEvidence(conversationId: string) {
   if (!conversationId) return;
   const persisted = (await api.listMessages(conversationId)).map(toUiMessage);
@@ -201,6 +219,7 @@ async function refreshMessagesWithLatestEvidence(conversationId: string) {
   messages.value = persisted;
 }
 
+/** SSE 연결을 사용할 수 없을 때 일반 요청 방식으로 답변을 복구한다. */
 async function sendMessageWithoutStreaming(conversationId: string, request: SendMessageRequest, assistantMessage: UiMessage) {
   try {
     const response = await api.sendMessage(conversationId, request);
@@ -213,10 +232,12 @@ async function sendMessageWithoutStreaming(conversationId: string, request: Send
   } catch (error) { assistantMessage.content = t('chat.responseFailed'); errorMessage.value = errorToMessage(error); }
 }
 
+/** toggleFavorite 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 async function toggleFavorite(conversation: AiChatConversationResponse) {
   if (streaming.value || !await updateConversation(conversation, { favorite: !conversation.favorite })) return;
   conversations.value = sortConversations(conversations.value);
 }
+/** toggleArchive 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 async function toggleArchive(conversation: AiChatConversationResponse, event?: Event) {
   if (streaming.value) return;
   closeConversationMenu(event);
@@ -226,6 +247,7 @@ async function toggleArchive(conversation: AiChatConversationResponse, event?: E
   if (conversations.value[0]) await selectConversation(conversations.value[0].id);
 }
 
+/** updateConversation 처리 대상의 상태를 갱신한다. */
 async function updateConversation(conversation: AiChatConversationResponse, changes: { title?: string; favorite?: boolean; archived?: boolean }): Promise<boolean> {
   try {
     const updated = await api.updateConversation(conversation.id, changes);
@@ -234,21 +256,27 @@ async function updateConversation(conversation: AiChatConversationResponse, chan
   } catch (error) { errorMessage.value = errorToMessage(error); return false; }
 }
 
+/** sortConversations 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function sortConversations(items: AiChatConversationResponse[]) {
   return [...items].sort((left, right) => Number(right.favorite) - Number(left.favorite)
     || String(right.updatedAt ?? '').localeCompare(String(left.updatedAt ?? '')));
 }
 
+/** openRenameDialog 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openRenameDialog(conversation: AiChatConversationResponse, event?: Event) {
   if (!streaming.value) { closeConversationMenu(event); dialog.value = 'rename'; dialogConversation.value = conversation; renameTitle.value = conversation.title; }
 }
+/** openDeleteDialog 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openDeleteDialog(conversation: AiChatConversationResponse, event?: Event) {
   if (!streaming.value) { closeConversationMenu(event); dialog.value = 'delete'; dialogConversation.value = conversation; }
 }
+/** closeConversationMenu 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeConversationMenu(event?: Event) {
   (event?.currentTarget as HTMLElement | null)?.closest('details')?.removeAttribute('open');
 }
+/** closeDialog 처리 대상과 관련 상태를 안전하게 정리한다. */
 function closeDialog() { if (!dialogBusy.value) { dialog.value = null; dialogConversation.value = null; } }
+/** confirmDialog 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function confirmDialog() {
   if (!dialogConversation.value || !dialog.value) return;
   dialogBusy.value = true;
@@ -260,6 +288,7 @@ async function confirmDialog() {
     dialog.value = null; dialogConversation.value = null;
   } finally { dialogBusy.value = false; }
 }
+/** deleteConversation 처리 대상과 관련 상태를 안전하게 정리한다. */
 async function deleteConversation(conversation: AiChatConversationResponse): Promise<boolean> {
   try {
     await api.deleteConversation(conversation.id);
@@ -272,11 +301,31 @@ async function deleteConversation(conversation: AiChatConversationResponse): Pro
   } catch (error) { errorMessage.value = errorToMessage(error); return false; }
 }
 
+/** 진행 중인 SSE 요청을 사용자가 명시적으로 중단한다. */
 function stopStreaming() { abortController.value?.abort(); }
+
+/** 첫 AI 응답 전 대기 시간을 표시하고 새 요청의 연결 상태를 초기화한다. */
+function startStreamingClock() {
+  stopStreamingClock();
+  streamingElapsedSeconds.value = 0;
+  streamHeartbeatReceived.value = false;
+  streamingClock = setInterval(() => { streamingElapsedSeconds.value += 1; }, 1000);
+}
+
+/** 응답 완료·실패·화면 이탈 시 대기 시간 갱신 타이머를 정리한다. */
+function stopStreamingClock() {
+  if (streamingClock != null) clearInterval(streamingClock);
+  streamingClock = null;
+}
+/** toUiMessage 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function toUiMessage(message: AiChatMessageResponse): UiMessage { return { id: message.id, role: message.role, content: message.content, model: message.model, latencyMs: message.latencyMs, firstTokenLatencyMs: message.firstTokenLatencyMs, totalLatencyMs: message.totalLatencyMs, contextChars: message.contextChars, errorCode: message.errorCode, errorMessage: message.errorMessage }; }
+/** formatDuration 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function formatDuration(milliseconds?: number): string { if (milliseconds == null) return '-'; return milliseconds < 1000 ? `${milliseconds}ms` : `${(milliseconds / 1000).toFixed(milliseconds < 10000 ? 1 : 0)}s`; }
+/** formatCount 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 function formatCount(value?: number): string { return value == null ? '-' : new Intl.NumberFormat().format(value); }
+/** scrollToBottom 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function scrollToBottom() { await nextTick(); if (chatLog.value) chatLog.value.scrollTop = chatLog.value.scrollHeight; }
+/** errorToMessage 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function errorToMessage(error: unknown): string { return error instanceof Error ? error.message : t('chat.requestFailed'); }
 </script>
 
@@ -344,7 +393,7 @@ function errorToMessage(error: unknown): string { return error instanceof Error 
         <div v-else-if="messages.length === 0" class="chat-empty"><i :class="chatMode === 'CLUSTER' ? 'pi pi-server' : 'pi pi-comments'"></i><strong>{{ chatMode === 'CLUSTER' ? $t('chat.clusterEmptyTitle') : $t('chat.generalEmptyTitle') }}</strong><span>{{ chatMode === 'CLUSTER' ? $t('chat.clusterExample', { cluster: selectedClusterName || $t('chat.selectedCluster') }) : $t('chat.generalExample') }}</span></div>
         <article v-for="message in messages" v-else :key="message.id" class="chat-message" :class="message.role.toLowerCase()">
           <div class="message-avatar"><i :class="message.role === 'USER' ? 'pi pi-user' : 'pi pi-sparkles'"></i></div>
-          <div class="message-body"><div class="message-meta"><strong>{{ message.role === 'USER' ? $t('chat.user') : 'AI Assistant' }}</strong><span v-if="message.model">{{ message.model }}</span><span v-if="message.streaming" class="streaming-dot">streaming</span><span v-if="message.errorCode" class="message-error-state"><i class="pi pi-exclamation-circle"></i>{{ $t('chat.interrupted') }}</span></div><p>{{ message.content || (message.errorCode ? $t('chat.responseFailed') : $t('chat.generating')) }}</p><div v-if="message.role === 'ASSISTANT' && (message.latencyMs != null || message.totalLatencyMs != null || message.contextChars != null)" class="message-runtime" :aria-label="$t('chat.runtime')"><span v-if="message.firstTokenLatencyMs != null" :title="$t('chat.firstTokenHelp')"><i class="pi pi-bolt"></i>{{ $t('chat.firstToken') }} {{ formatDuration(message.firstTokenLatencyMs) }}</span><span v-if="message.latencyMs != null" :title="$t('chat.llmTimeHelp')"><i class="pi pi-sparkles"></i>{{ $t('chat.llmTime') }} {{ formatDuration(message.latencyMs) }}</span><span v-if="message.totalLatencyMs != null" :title="$t('chat.totalTimeHelp')"><i class="pi pi-clock"></i>{{ $t('chat.totalTime') }} {{ formatDuration(message.totalLatencyMs) }}</span><span v-if="message.contextChars != null" :title="$t('chat.contextSizeHelp')"><i class="pi pi-database"></i>{{ $t('chat.contextSize') }} {{ formatCount(message.contextChars) }}</span></div><div v-if="message.references?.length" class="message-evidence"><span><i class="pi pi-link"></i>{{ $t('chat.usedEvidence') }}</span><small v-for="reference in message.references" :key="reference.id" :title="`${reference.referenceType} · ${reference.createdAt ?? ''}`">{{ reference.label }}</small></div></div>
+          <div class="message-body"><div class="message-meta"><strong>{{ message.role === 'USER' ? $t('chat.user') : 'AI Assistant' }}</strong><span v-if="message.model">{{ message.model }}</span><span v-if="message.streaming" class="streaming-dot">streaming</span><span v-if="message.errorCode" class="message-error-state"><i class="pi pi-exclamation-circle"></i>{{ $t('chat.interrupted') }}</span></div><div v-if="message.streaming && !message.content && !message.errorCode" class="message-wait-state"><i class="pi pi-spin pi-spinner"></i><span><strong>{{ $t('chat.generatingElapsed', { seconds: streamingElapsedSeconds }) }}</strong><small>{{ streamHeartbeatReceived ? $t('chat.connectionAlive') : $t('chat.preparingContext') }}</small></span></div><p v-else>{{ message.content || $t('chat.responseFailed') }}</p><div v-if="message.role === 'ASSISTANT' && (message.latencyMs != null || message.totalLatencyMs != null || message.contextChars != null)" class="message-runtime" :aria-label="$t('chat.runtime')"><span v-if="message.firstTokenLatencyMs != null" :title="$t('chat.firstTokenHelp')"><i class="pi pi-bolt"></i>{{ $t('chat.firstToken') }} {{ formatDuration(message.firstTokenLatencyMs) }}</span><span v-if="message.latencyMs != null" :title="$t('chat.llmTimeHelp')"><i class="pi pi-sparkles"></i>{{ $t('chat.llmTime') }} {{ formatDuration(message.latencyMs) }}</span><span v-if="message.totalLatencyMs != null" :title="$t('chat.totalTimeHelp')"><i class="pi pi-clock"></i>{{ $t('chat.totalTime') }} {{ formatDuration(message.totalLatencyMs) }}</span><span v-if="message.contextChars != null" :title="$t('chat.contextSizeHelp')"><i class="pi pi-database"></i>{{ $t('chat.contextSize') }} {{ formatCount(message.contextChars) }}</span></div><div v-if="message.references?.length" class="message-evidence"><span><i class="pi pi-link"></i>{{ $t('chat.usedEvidence') }}</span><small v-for="reference in message.references" :key="reference.id" :title="`${reference.referenceType} · ${reference.createdAt ?? ''}`">{{ reference.label }}</small></div></div>
         </article>
       </div>
       <form class="chat-composer" @submit.prevent="sendMessage"><textarea v-model="draft" :placeholder="chatMode === 'CLUSTER' ? $t('chat.clusterPlaceholder') : $t('chat.generalPlaceholder')" rows="3" @keydown.meta.enter.prevent="sendMessage" @keydown.ctrl.enter.prevent="sendMessage" /><div class="composer-actions"><button v-if="streaming && streamingConversationId === activeConversationId" class="secondary-button" type="button" @click="stopStreaming"><i class="pi pi-stop-circle"></i><span>{{ $t('chat.stop') }}</span></button><button class="primary-button" :disabled="!canSend" type="submit"><i class="pi pi-send"></i><span>{{ $t('chat.send') }}</span></button></div></form>

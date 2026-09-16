@@ -12,7 +12,7 @@ data:
   AIOPS_AI_BASE_URL: {{ .Values.portal.ai.baseUrl | quote }}
   AIOPS_AI_MODEL: {{ .Values.portal.ai.model | quote }}
   AIOPS_PUBLIC_BASE_URL: {{ .Values.authentication.publicBaseUrl | quote }}
-  AIOPS_CREDENTIAL_REVEAL_ENABLED: "false"
+  AIOPS_CREDENTIAL_REVEAL_ENABLED: {{ .Values.portal.security.credentialRevealEnabled | quote }}
   AIOPS_VALIDATION_LAB_LIVE_ENABLED: "false"
   AIOPS_SESSION_COOKIE_SECURE: {{ .Values.portal.session.cookieSecure | quote }}
   AIOPS_SESSION_TIMEOUT: {{ .Values.portal.session.timeout | quote }}

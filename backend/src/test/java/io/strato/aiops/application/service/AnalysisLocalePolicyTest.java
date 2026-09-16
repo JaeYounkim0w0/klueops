@@ -10,6 +10,7 @@ class AnalysisLocalePolicyTest {
 
     private final AnalysisLocalePolicy policy = new AnalysisLocalePolicy(new ObjectMapper());
 
+    /** AnalysisLocalePolicyTest의 attachesRequestedLocaleWithoutChangingAnalysisPayload 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void attachesRequestedLocaleWithoutChangingAnalysisPayload() {
         String localized = policy.attachLocale("{\"schemaVersion\":\"analysis-result.v1\",\"summary\":\"ok\"}",
@@ -20,6 +21,7 @@ class AnalysisLocalePolicyTest {
                 .contains("\"summary\":\"ok\"");
     }
 
+    /** AnalysisLocalePolicyTest의 keepsKubernetesEvidenceAndCommandsInTheirOriginalLanguage 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void keepsKubernetesEvidenceAndCommandsInTheirOriginalLanguage() {
         assertThat(policy.instruction(SupportedLocale.ENGLISH))

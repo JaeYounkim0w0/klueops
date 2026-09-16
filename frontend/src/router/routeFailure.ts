@@ -8,6 +8,7 @@ export interface RouteFailure {
 
 export const routeFailure = ref<RouteFailure | null>(null);
 
+/** reportRouteFailure 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function reportRouteFailure(error: unknown): void {
   const detail = error instanceof Error ? error.message : String(error);
   const lazyModuleFailure = /dynamically imported module|loading chunk|importing a module script/i.test(detail);
@@ -20,6 +21,7 @@ export function reportRouteFailure(error: unknown): void {
   };
 }
 
+/** clearRouteFailure 처리 대상과 관련 상태를 안전하게 정리한다. */
 export function clearRouteFailure(): void {
   routeFailure.value = null;
 }

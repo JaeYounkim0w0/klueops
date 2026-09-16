@@ -21,7 +21,7 @@ const editingId = ref<string | null>(null);
 const selectedRunbook = ref<ManagedRunbookResponse | null>(null);
 const canEdit = computed(() => auth.hasCapability('operation:execute'));
 
-const emptyForm = (): RunbookWriteRequest => ({
+const emptyForm = /** emptyForm 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (): RunbookWriteRequest => ({
   signal: '', category: '', resourceKind: 'Pod', title: '', beginnerExplanation: '',
   verificationCommand: '', expectedResult: '', safeAction: '', validationCommand: '',
   rollbackGuidance: '', safetyLevel: 'READ_ONLY', enabled: true, changeNote: ''
@@ -36,6 +36,7 @@ const filtered = computed(() => runbooks.value.filter((item) => {
     && (source.value === 'ALL' || item.sourceType === source.value);
 }));
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load() {
   loading.value = true;
   error.value = '';
@@ -44,12 +45,14 @@ async function load() {
   finally { loading.value = false; }
 }
 
+/** createRunbook 처리에 필요한 데이터를 생성하거나 저장한다. */
 function createRunbook() {
   editingId.value = null;
   form.value = emptyForm();
   editorOpen.value = true;
 }
 
+/** editRunbook 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function editRunbook(runbook: ManagedRunbookResponse) {
   if (runbook.sourceType !== 'CUSTOM') return;
   editingId.value = runbook.id;
@@ -64,6 +67,7 @@ function editRunbook(runbook: ManagedRunbookResponse) {
   editorOpen.value = true;
 }
 
+/** saveRunbook 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function saveRunbook() {
   saving.value = true;
   error.value = '';
@@ -76,28 +80,33 @@ async function saveRunbook() {
   finally { saving.value = false; }
 }
 
+/** duplicate 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function duplicate(runbook: ManagedRunbookResponse) {
   try { await api.duplicateRunbook(runbook.id); await load(); }
   catch (cause) { error.value = cause instanceof ApiError ? cause.message : 'Runbook 복제에 실패했습니다.'; }
 }
 
+/** toggle 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 async function toggle(runbook: ManagedRunbookResponse) {
   try { await api.setCustomRunbookEnabled(runbook.id, !runbook.enabled); await load(); }
   catch (cause) { error.value = cause instanceof ApiError ? cause.message : 'Runbook 상태를 변경하지 못했습니다.'; }
 }
 
+/** remove 처리 대상과 관련 상태를 안전하게 정리한다. */
 async function remove(runbook: ManagedRunbookResponse) {
   if (!window.confirm(`사용자 Runbook '${runbook.title}'과 버전 이력을 삭제할까요?`)) return;
   try { await api.deleteCustomRunbook(runbook.id); await load(); }
   catch (cause) { error.value = cause instanceof ApiError ? cause.message : 'Runbook을 삭제하지 못했습니다.'; }
 }
 
+/** showVersions 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function showVersions(runbook: ManagedRunbookResponse) {
   selectedRunbook.value = runbook;
   versionsOpen.value = true;
   versions.value = await api.listCustomRunbookVersions(runbook.id);
 }
 
+/** restore 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function restore(version: RunbookVersionResponse) {
   if (!selectedRunbook.value || !window.confirm(`v${version.version} 내용을 새 버전으로 복원할까요?`)) return;
   await api.restoreCustomRunbookVersion(selectedRunbook.value.id, version.version);
@@ -105,6 +114,7 @@ async function restore(version: RunbookVersionResponse) {
   await load();
 }
 
+/** copy 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function copy(command: string) { await navigator.clipboard.writeText(command); }
 onMounted(load);
 </script>

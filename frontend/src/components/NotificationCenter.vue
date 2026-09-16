@@ -13,10 +13,12 @@ const notifications = ref<OperationNotificationResponse[]>([]);
 const loading = ref(false);
 let timer: number | undefined;
 
+/** refreshCount 처리의 핵심 작업 흐름을 실행한다. */
 async function refreshCount() {
   try { unreadCount.value = (await api.getUnreadNotificationCount()).count; } catch { unreadCount.value = 0; }
 }
 
+/** toggle 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 async function toggle() {
   open.value = !open.value;
   if (!open.value) return;
@@ -25,6 +27,7 @@ async function toggle() {
   finally { loading.value = false; }
 }
 
+/** openNotification 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openNotification(item: OperationNotificationResponse) {
   if (!item.read) {
     await api.readNotification(item.id);
@@ -35,6 +38,7 @@ async function openNotification(item: OperationNotificationResponse) {
   if (item.targetPath?.startsWith('/')) await router.push(item.targetPath);
 }
 
+/** readAll 처리 결과를 조회해 반환한다. */
 async function readAll() {
   await api.readAllNotifications();
   notifications.value = notifications.value.map((item) => ({ ...item, read: true }));

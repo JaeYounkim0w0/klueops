@@ -33,10 +33,12 @@ public class OperationsPolicyEvaluator {
 
     private final ObjectMapper objectMapper;
 
+    /** OperationsPolicyEvaluator 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationsPolicyEvaluator(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /** OperationsPolicyEvaluator의 evaluate 처리에 필요한 업무 로직을 수행한다. */
     public List<PolicyEvaluation> evaluate(Cluster cluster,
                                            List<KubernetesResourceSnapshot> resources,
                                            List<PolicyDefinition> definitions) {
@@ -96,6 +98,7 @@ public class OperationsPolicyEvaluator {
         return List.copyOf(result);
     }
 
+    /** OperationsPolicyEvaluator의 evaluateResource 처리에 필요한 업무 로직을 수행한다. */
     private void evaluateResource(List<PolicyEvaluation> result,
                                   Map<String, PolicyDefinition> policies,
                                   Cluster cluster,
@@ -169,6 +172,7 @@ public class OperationsPolicyEvaluator {
         }
     }
 
+    /** OperationsPolicyEvaluator의 evaluateService 처리에 필요한 업무 로직을 수행한다. */
     private void evaluateService(List<PolicyEvaluation> result,
                                  Map<String, PolicyDefinition> policies,
                                  Cluster cluster,
@@ -194,6 +198,7 @@ public class OperationsPolicyEvaluator {
                 "Service selector가 선택한 workload의 named/numeric containerPort와 targetPort를 비교하세요.", now);
     }
 
+    /** OperationsPolicyEvaluator의 evaluateNamespace 처리에 필요한 업무 로직을 수행한다. */
     private void evaluateNamespace(List<PolicyEvaluation> result,
                                    Map<String, PolicyDefinition> policies,
                                    Cluster cluster,
@@ -223,6 +228,7 @@ public class OperationsPolicyEvaluator {
                 "Namespace AI Analysis 진단 요약에서 workload spec 근거를 추가 확인하세요.", now);
     }
 
+    /** OperationsPolicyEvaluator의 addContainerPolicyEvaluations 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addContainerPolicyEvaluations(List<PolicyEvaluation> target,
                                                Map<String, PolicyDefinition> policies,
                                                Cluster cluster,
@@ -265,6 +271,7 @@ public class OperationsPolicyEvaluator {
                 "재현 가능한 version 또는 digest로 image를 고정하세요.", evaluatedAt);
     }
 
+    /** OperationsPolicyEvaluator의 anyContainer 처리에 필요한 업무 로직을 수행한다. */
     private boolean anyContainer(JsonNode containers, java.util.function.Predicate<JsonNode> predicate) {
         for (JsonNode container : containers) {
             if (predicate.test(container)) {
@@ -274,6 +281,7 @@ public class OperationsPolicyEvaluator {
         return false;
     }
 
+    /** OperationsPolicyEvaluator의 addReferencePolicyEvaluation 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addReferencePolicyEvaluation(List<PolicyEvaluation> target,
                                               Map<String, PolicyDefinition> policies,
                                               Cluster cluster,
@@ -308,6 +316,7 @@ public class OperationsPolicyEvaluator {
                 "참조 이름과 namespace를 확인하고 누락 리소스를 복구하거나 workload 참조를 수정하세요.", evaluatedAt);
     }
 
+    /** OperationsPolicyEvaluator의 servicePortPolicyResult 처리에 필요한 업무 로직을 수행한다. */
     private PolicyResult servicePortPolicyResult(JsonNode service, List<KubernetesResourceSnapshot> workloads) {
         JsonNode selector = service.path("selector");
         JsonNode ports = service.path("ports");
@@ -349,6 +358,7 @@ public class OperationsPolicyEvaluator {
         return PolicyResult.PASS;
     }
 
+    /** OperationsPolicyEvaluator의 servicePortEvidence 처리에 필요한 업무 로직을 수행한다. */
     private String servicePortEvidence(PolicyResult result) {
         return switch (result) {
             case PASS -> "all Service targetPorts match declared container ports";
@@ -357,6 +367,7 @@ public class OperationsPolicyEvaluator {
         };
     }
 
+    /** OperationsPolicyEvaluator의 selectorMatches 처리에 필요한 업무 로직을 수행한다. */
     private boolean selectorMatches(JsonNode selector, JsonNode labels) {
         if (!selector.isObject() || selector.isEmpty() || !labels.isObject()) {
             return false;
@@ -369,6 +380,7 @@ public class OperationsPolicyEvaluator {
         return true;
     }
 
+    /** OperationsPolicyEvaluator의 addEvaluation 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addEvaluation(List<PolicyEvaluation> target, PolicyDefinition policy, Cluster cluster,
                                KubernetesResourceSnapshot resource, PolicyResult result, String evidence,
                                String recommendation, Instant evaluatedAt) {
@@ -380,6 +392,7 @@ public class OperationsPolicyEvaluator {
                 recommendation, evaluatedAt));
     }
 
+    /** OperationsPolicyEvaluator의 addScopeEvaluation 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addScopeEvaluation(List<PolicyEvaluation> target, PolicyDefinition policy, Cluster cluster,
                                     String namespace, PolicyResult result, String evidence, String recommendation,
                                     Instant evaluatedAt) {
@@ -390,6 +403,7 @@ public class OperationsPolicyEvaluator {
                 "Namespace", namespace, result, evidence, recommendation, evaluatedAt));
     }
 
+    /** OperationsPolicyEvaluator의 readTree 처리 결과를 조회해 반환한다. */
     private JsonNode readTree(String json) {
         try {
             return objectMapper.readTree(defaultText(json, "{}"));
@@ -398,6 +412,7 @@ public class OperationsPolicyEvaluator {
         }
     }
 
+    /** OperationsPolicyEvaluator의 firstInt 처리에 필요한 업무 로직을 수행한다. */
     private int firstInt(JsonNode node, String... fields) {
         for (String field : fields) {
             if (node.has(field) && node.path(field).canConvertToInt()) {
@@ -407,14 +422,17 @@ public class OperationsPolicyEvaluator {
         return 0;
     }
 
+    /** OperationsPolicyEvaluator의 resourceKey 처리에 필요한 업무 로직을 수행한다. */
     private String resourceKey(String namespace, String kind, String name) {
         return defaultText(namespace, "") + "|" + kind + "|" + name;
     }
 
+    /** OperationsPolicyEvaluator의 normalizeUpper 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeUpper(String value) {
         return value == null || value.isBlank() ? null : value.trim().toUpperCase(Locale.ROOT);
     }
 
+    /** OperationsPolicyEvaluator의 defaultText 처리에 필요한 업무 로직을 수행한다. */
     private String defaultText(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }

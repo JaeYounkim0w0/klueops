@@ -18,14 +18,18 @@ public class TenancyApplicationService implements TenancyUseCase {
     private final TenantRepositoryPort tenants;
     private final WorkspaceRepositoryPort workspaces;
 
+    /** TenancyApplicationService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public TenancyApplicationService(TenantRepositoryPort tenants, WorkspaceRepositoryPort workspaces) {
         this.tenants = tenants;
         this.workspaces = workspaces;
     }
 
+    /** TenancyApplicationService의 listTenants 처리 결과를 조회해 반환한다. */
     @Override @Transactional(readOnly = true) public List<Tenant> listTenants() { return tenants.findAll(); }
+    /** TenancyApplicationService의 getTenant 처리 결과를 조회해 반환한다. */
     @Override @Transactional(readOnly = true) public Tenant getTenant(UUID tenantId) { return tenants.findById(tenantId).orElseThrow(() -> new NoSuchElementException("Tenant not found: " + tenantId)); }
 
+    /** TenancyApplicationService의 createTenant 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     @Transactional
     public Tenant createTenant(String code, String name, String description, String actor) {
@@ -34,6 +38,7 @@ public class TenancyApplicationService implements TenancyUseCase {
         return tenants.save(tenant);
     }
 
+    /** TenancyApplicationService의 listWorkspaces 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public List<Workspace> listWorkspaces(UUID tenantId) {
@@ -41,8 +46,10 @@ public class TenancyApplicationService implements TenancyUseCase {
         return workspaces.findByTenantId(tenantId);
     }
 
+    /** TenancyApplicationService의 getWorkspace 처리 결과를 조회해 반환한다. */
     @Override @Transactional(readOnly = true) public Workspace getWorkspace(UUID workspaceId) { return workspaces.findById(workspaceId).orElseThrow(() -> new NoSuchElementException("Workspace not found: " + workspaceId)); }
 
+    /** TenancyApplicationService의 createWorkspace 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     @Transactional
     public Workspace createWorkspace(UUID tenantId, String code, String name, String description, String actor) {

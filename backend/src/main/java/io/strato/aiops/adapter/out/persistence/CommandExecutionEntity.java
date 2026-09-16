@@ -61,9 +61,11 @@ class CommandExecutionEntity {
     private Instant startedAt;
     private Instant completedAt;
 
+    /** CommandExecutionEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected CommandExecutionEntity() {
     }
 
+    /** CommandExecutionEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static CommandExecutionEntity fromDomain(CommandExecution value) {
         CommandExecutionEntity entity = new CommandExecutionEntity();
         entity.id = value.id();
@@ -93,6 +95,7 @@ class CommandExecutionEntity {
         return entity;
     }
 
+    /** CommandExecutionEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     CommandExecution toDomain() {
         return new CommandExecution(id, clusterId, sourceAnalysisId, namespace, command, argvJson, safety, status, stdoutText,
                 stderrText, exitCode, durationMs, truncated, verificationStatus, verificationSummary,

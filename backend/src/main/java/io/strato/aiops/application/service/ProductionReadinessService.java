@@ -33,6 +33,7 @@ public class ProductionReadinessService {
     private final String aiBaseUrl;
     private final String commandRunnerMode;
 
+    /** ProductionReadinessService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ProductionReadinessService(
             Environment environment,
             @Value("${spring.datasource.url:}") String datasourceUrl,
@@ -71,6 +72,7 @@ public class ProductionReadinessService {
         this.commandRunnerMode = commandRunnerMode;
     }
 
+    /** ProductionReadinessService의 assess 처리에 필요한 업무 로직을 수행한다. */
     public RuntimeReadiness assess() {
         boolean localProfile = Arrays.asList(environment.getActiveProfiles()).contains("local")
                 || environment.getActiveProfiles().length == 0;
@@ -98,6 +100,7 @@ public class ProductionReadinessService {
         return new RuntimeReadiness(status, mode, Instant.now(), List.copyOf(checks));
     }
 
+    /** ProductionReadinessService의 authenticationCheck 처리에 필요한 업무 로직을 수행한다. */
     private ReadinessCheck authenticationCheck(boolean localProfile) {
         if (localProfile) {
             return check("AUTHENTICATION_MODE", ReadinessStatus.PILOT, "Local authentication mode",
@@ -123,6 +126,7 @@ public class ProductionReadinessService {
                 "Verify MFA, group claims, JWKS rotation, and scoped two-user acceptance.", oidcIssuerUri);
     }
 
+    /** ProductionReadinessService의 identityProviderEndpointsCheck 처리에 필요한 업무 로직을 수행한다. */
     private ReadinessCheck identityProviderEndpointsCheck(boolean localProfile) {
         if (localProfile) {
             return check("IDENTITY_PROVIDER_ENDPOINTS", ReadinessStatus.PILOT,
@@ -160,6 +164,7 @@ public class ProductionReadinessService {
                 String.join(",", endpointLabel(oidcAuthorizationUri), endpointLabel(oidcTokenUri)));
     }
 
+    /** ProductionReadinessService의 isHttps 처리 조건의 충족 여부를 판단한다. */
     private boolean isHttps(String value) {
         try {
             return "https".equalsIgnoreCase(URI.create(value).getScheme());
@@ -168,6 +173,7 @@ public class ProductionReadinessService {
         }
     }
 
+    /** ProductionReadinessService의 isSecureOrClusterInternal 처리 조건의 충족 여부를 판단한다. */
     private boolean isSecureOrClusterInternal(String value) {
         try {
             URI uri = URI.create(value);
@@ -182,6 +188,7 @@ public class ProductionReadinessService {
         }
     }
 
+    /** ProductionReadinessService의 endpointLabel 처리에 필요한 업무 로직을 수행한다. */
     private String endpointLabel(String value) {
         try {
             URI uri = URI.create(value);
@@ -191,6 +198,7 @@ public class ProductionReadinessService {
         }
     }
 
+    /** ProductionReadinessService의 sessionCookieCheck 처리에 필요한 업무 로직을 수행한다. */
     private ReadinessCheck sessionCookieCheck(boolean localProfile) {
         if (sessionCookieSecure) {
             return check("SESSION_COOKIE", ReadinessStatus.READY, "Secure session cookie",
@@ -202,6 +210,7 @@ public class ProductionReadinessService {
                 "Set AIOPS_SESSION_COOKIE_SECURE=true behind HTTPS outside local development.", "not-secure");
     }
 
+    /** ProductionReadinessService의 publicPortalOriginCheck 처리에 필요한 업무 로직을 수행한다. */
     private ReadinessCheck publicPortalOriginCheck(boolean localProfile) {
         if (isHttps(publicBaseUrl)) {
             return check("PUBLIC_PORTAL_ORIGIN", ReadinessStatus.READY, "HTTPS public Portal origin",
@@ -215,6 +224,7 @@ public class ProductionReadinessService {
                 "Set AIOPS_PUBLIC_BASE_URL to the externally reachable HTTPS Portal origin.", endpointLabel(publicBaseUrl));
     }
 
+    /** ProductionReadinessService의 aiProviderTransportCheck 처리에 필요한 업무 로직을 수행한다. */
     private ReadinessCheck aiProviderTransportCheck(boolean localProfile) {
         if (isSecureOrClusterInternal(aiBaseUrl)) {
             return check("AI_PROVIDER_TRANSPORT", ReadinessStatus.READY, "Trusted AI provider transport",
@@ -228,6 +238,7 @@ public class ProductionReadinessService {
                 "Expose Ollama through an internal .svc address or trusted HTTPS endpoint.", endpointLabel(aiBaseUrl));
     }
 
+    /** ProductionReadinessService의 commandRunnerIsolationCheck 처리에 필요한 업무 로직을 수행한다. */
     private ReadinessCheck commandRunnerIsolationCheck(boolean localProfile) {
         if ("remote".equalsIgnoreCase(commandRunnerMode)) {
             return check("COMMAND_RUNNER_ISOLATION", ReadinessStatus.READY, "Isolated command runner",
@@ -239,6 +250,7 @@ public class ProductionReadinessService {
                 "Set AIOPS_COMMAND_RUNNER_MODE=remote and deploy the isolated command-runner component.", "local");
     }
 
+    /** ProductionReadinessService의 databaseCheck 처리에 필요한 업무 로직을 수행한다. */
     private ReadinessCheck databaseCheck() {
         boolean fileH2 = datasourceUrl.toLowerCase().startsWith("jdbc:h2:file:");
         if (fileH2) {
@@ -251,6 +263,7 @@ public class ProductionReadinessService {
                 "Verify backup, restore, failover, and connection-pool alerts.", datasourceFamily());
     }
 
+    /** ProductionReadinessService의 masterKeyCheck 처리에 필요한 업무 로직을 수행한다. */
     private ReadinessCheck masterKeyCheck(boolean localProfile) {
         boolean weak = masterKey.isBlank() || DEFAULT_LOCAL_MASTER_KEY.equals(masterKey);
         if (!weak) {
@@ -264,6 +277,7 @@ public class ProductionReadinessService {
                 "Set AIOPS_LOCAL_MASTER_KEY to a strong secret before registering production clusters.", "default-or-empty");
     }
 
+    /** ProductionReadinessService의 credentialRevealCheck 처리에 필요한 업무 로직을 수행한다. */
     private ReadinessCheck credentialRevealCheck(boolean localProfile) {
         if (!credentialRevealEnabled) {
             return check("CREDENTIAL_REVEAL", ReadinessStatus.READY, "Credential reveal disabled",
@@ -276,6 +290,7 @@ public class ProductionReadinessService {
                 "Set AIOPS_CREDENTIAL_REVEAL_ENABLED=false outside isolated development.", "enabled");
     }
 
+    /** ProductionReadinessService의 validationLabCheck 처리에 필요한 업무 로직을 수행한다. */
     private ReadinessCheck validationLabCheck() {
         if (validationLabProductionAllowed) {
             return check("VALIDATION_LAB_SAFETY", ReadinessStatus.BLOCKED, "Production validation allowed",
@@ -292,11 +307,13 @@ public class ProductionReadinessService {
                 "Enable only in an isolated test cluster when required.", "disabled");
     }
 
+    /** ProductionReadinessService의 datasourceFamily 처리에 필요한 업무 로직을 수행한다. */
     private String datasourceFamily() {
         int separator = datasourceUrl.indexOf(':', "jdbc:".length());
         return separator > 0 ? datasourceUrl.substring("jdbc:".length(), separator) : "external";
     }
 
+    /** ProductionReadinessService의 check 처리 입력과 현재 상태의 유효성을 검증한다. */
     private ReadinessCheck check(String code, ReadinessStatus status, String title, String detail,
                                  String action, String observedValue) {
         return new ReadinessCheck(code, status, title, detail, action, observedValue);
@@ -315,10 +332,12 @@ public class ProductionReadinessService {
 
         private final int severity;
 
+        /** ReadinessStatus 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         ReadinessStatus(int severity) {
             this.severity = severity;
         }
 
+        /** ReadinessStatus의 compareSeverity 처리에 필요한 업무 로직을 수행한다. */
         private static int compareSeverity(ReadinessStatus left, ReadinessStatus right) {
             return Integer.compare(left.severity, right.severity);
         }

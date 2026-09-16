@@ -66,4 +66,33 @@ describe('requestJson', () => {
     expect(listener).toHaveBeenCalledOnce();
     unsubscribe();
   });
+
+  it('parses RFC Problem Details instead of exposing raw JSON text', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      title: 'Internal server error', detail: 'Unexpected server error', status: 500,
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/problem+json' },
+    })));
+
+    await expect(requestJson('/api/failure')).rejects.toMatchObject({
+      status: 500,
+      message: 'Unexpected server error',
+    });
+  });
+
+  it('includes validation field details in the user-facing API error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      title: 'Invalid request', detail: 'Request validation failed', status: 400,
+      errors: ['instruction: size must be between 0 and 2000'],
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/problem+json' },
+    })));
+
+    await expect(requestJson('/api/invalid')).rejects.toMatchObject({
+      status: 400,
+      message: 'Request validation failed (instruction: size must be between 0 and 2000)',
+    });
+  });
 });

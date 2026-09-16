@@ -4,6 +4,8 @@ import io.strato.aiops.application.port.out.RoleBindingRepositoryPort;
 import io.strato.aiops.application.port.out.UserAccountRepositoryPort;
 import io.strato.aiops.application.port.out.ClusterRepositoryPort;
 import io.strato.aiops.application.port.out.WorkspaceRepositoryPort;
+import io.strato.aiops.application.port.out.OidcGroupMappingRepositoryPort;
+import io.strato.aiops.application.port.out.TenantMembershipRepositoryPort;
 import io.strato.aiops.domain.cluster.Cluster;
 import io.strato.aiops.domain.identity.AccessPolicy;
 import io.strato.aiops.domain.identity.Capability;
@@ -36,49 +38,76 @@ public class IdentityAccessService {
 
     private static final Duration LOGIN_ACTIVITY_WRITE_INTERVAL = Duration.ofMinutes(5);
 
+    // Bootstrap 관리자 그룹만 Platform scope로 허용한다. 나머지 OIDC 그룹은 명시적인 Tenant Mapping이 필요하다.
     private static final Map<String, PlatformRole> STANDARD_GROUP_ROLES = Map.of(
-            "aiops-platform-admins", PlatformRole.PLATFORM_ADMIN,
-            "aiops-cluster-admins", PlatformRole.CLUSTER_ADMIN,
-            "aiops-operators", PlatformRole.OPERATOR,
-            "aiops-viewers", PlatformRole.VIEWER
+            "aiops-platform-admins", PlatformRole.PLATFORM_ADMIN
     );
 
     private final UserAccountRepositoryPort users;
     private final RoleBindingRepositoryPort bindings;
     private final ClusterRepositoryPort clusters;
     private final WorkspaceRepositoryPort workspaces;
+    private final OidcGroupMappingRepositoryPort groupMappings;
+    private final TenantMembershipRepositoryPort memberships;
     private final Clock clock;
     private final AccessPolicy policy = new AccessPolicy();
 
+    /** IdentityAccessService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public IdentityAccessService(UserAccountRepositoryPort users, RoleBindingRepositoryPort bindings,
-                                 ClusterRepositoryPort clusters, WorkspaceRepositoryPort workspaces, Clock clock) {
+                                 ClusterRepositoryPort clusters, WorkspaceRepositoryPort workspaces,
+                                 OidcGroupMappingRepositoryPort groupMappings,
+                                 TenantMembershipRepositoryPort memberships, Clock clock) {
         this.users = users;
         this.bindings = bindings;
         this.clusters = clusters;
         this.workspaces = workspaces;
+        this.groupMappings = groupMappings;
+        this.memberships = memberships;
         this.clock = clock;
     }
 
+    /** IdentityAccessService의 provision 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public UserAccount provision(ExternalIdentity identity) {
         Instant now = clock.instant();
         UserAccount existing = users.findByIssuerAndSubject(identity.issuer(), identity.subject()).orElse(null);
         if (existing != null) {
-            return refreshIfNeeded(existing, identity, now);
+            UserAccount refreshed = refreshIfNeeded(existing, identity, now);
+            linkPendingMemberships(refreshed, identity, now);
+            return refreshed;
         }
 
         users.lockProvisioning(identity.issuer(), identity.subject());
-        return users.findByIssuerAndSubject(identity.issuer(), identity.subject())
+        UserAccount provisioned = users.findByIssuerAndSubject(identity.issuer(), identity.subject())
                 .map(account -> refreshIfNeeded(account, identity, now))
                 .orElseGet(() -> users.save(UserAccount.firstLogin(identity, now)));
+        linkPendingMemberships(provisioned, identity, now);
+        return provisioned;
     }
 
+    /** IdentityAccessService의 linkPendingMemberships 처리에 필요한 업무 로직을 수행한다. */
+    private void linkPendingMemberships(UserAccount user, ExternalIdentity identity, Instant now) {
+        Set<UUID> linked = new HashSet<>();
+        List<io.strato.aiops.domain.identity.TenantMembership> pending = new ArrayList<>(
+                memberships.findInvitedByIssuerAndSubject(identity.issuer(), identity.subject()));
+        if (identity.emailVerified() && identity.email() != null && !identity.email().isBlank()) {
+            pending.addAll(memberships.findInvitedByIssuerAndEmail(identity.issuer(), identity.email()));
+        }
+        pending.stream().filter(item -> linked.add(item.id())).forEach(item -> {
+            memberships.save(item.activate(user.id(), now));
+            saveBinding(RoleBinding.create(PrincipalType.USER, user.id().toString(), item.role(), item.scope(),
+                    item.createdBy(), now));
+        });
+    }
+
+    /** IdentityAccessService의 refreshIfNeeded 처리에 필요한 업무 로직을 수행한다. */
     private UserAccount refreshIfNeeded(UserAccount existing, ExternalIdentity identity, Instant now) {
         return existing.needsRefresh(identity, now, LOGIN_ACTIVITY_WRITE_INTERVAL)
                 ? users.save(existing.refresh(identity, now))
                 : existing;
     }
 
+    /** IdentityAccessService의 resolveAccess 처리에 필요한 결과를 조합해 반환한다. */
     @Transactional(readOnly = true)
     public ResolvedAccess resolveAccess(UserAccount user, Set<String> groups) {
         if (!user.active()) {
@@ -88,6 +117,9 @@ public class IdentityAccessService {
         principals.add(user.id().toString());
         List<RoleBinding> assigned = new ArrayList<>(bindings.findByPrincipals(principals));
         Set<String> oidcGroups = groups == null ? Set.of() : groups;
+        groupMappings.findActive(user.issuer(), oidcGroups).forEach(mapping -> assigned.add(new RoleBinding(
+                mapping.id(), PrincipalType.GROUP, mapping.groupValue(), mapping.role(), mapping.scope(),
+                mapping.createdBy(), mapping.createdAt())));
         oidcGroups.forEach(group -> {
             String normalized = group.startsWith("/") ? group.substring(1) : group;
             PlatformRole role = STANDARD_GROUP_ROLES.get(normalized);
@@ -104,25 +136,42 @@ public class IdentityAccessService {
         return new ResolvedAccess(user, Set.copyOf(capabilities), List.copyOf(assigned));
     }
 
+    /** IdentityAccessService의 effectiveCapabilities 처리에 필요한 업무 로직을 수행한다. */
+    public Set<Capability> effectiveCapabilities(ResolvedAccess access, UUID tenantId, UUID workspaceId) {
+        AccessTarget target = new AccessTarget(tenantId, workspaceId, null, null);
+        Set<Capability> result = new LinkedHashSet<>();
+        access.bindings().stream()
+                .filter(binding -> binding.scope().type() == ScopeType.PLATFORM || binding.scope().includes(target))
+                .forEach(binding -> result.addAll(policy.capabilities(binding.role())));
+        return Set.copyOf(result);
+    }
+
+    /** IdentityAccessService의 listUsers 처리 결과를 조회해 반환한다. */
     @Transactional(readOnly = true)
     public List<UserAccount> listUsers() {
         return users.findAll();
     }
 
+    /** IdentityAccessService의 listBindings 처리 결과를 조회해 반환한다. */
     @Transactional(readOnly = true)
     public List<RoleBinding> listBindings() {
         return bindings.findAll();
     }
 
+    /** IdentityAccessService의 setActive 처리 대상의 상태를 갱신한다. */
     @Transactional
     public UserAccount setActive(UUID userId, boolean active, UUID actorUserId) {
         if (!active && userId.equals(actorUserId)) {
             throw new IllegalArgumentException("You cannot disable your own active session account");
         }
         UserAccount user = users.findById(userId).orElseThrow();
+        if (!active && isOnlyRemainingPlatformManager(userId, null)) {
+            throw new IllegalArgumentException("At least one active Platform Manager must remain");
+        }
         return users.save(user.withActive(active, clock.instant()));
     }
 
+    /** IdentityAccessService의 saveBinding 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Transactional
     public RoleBinding saveBinding(RoleBinding binding) {
         if (binding.principalType() == PrincipalType.USER) {
@@ -149,15 +198,49 @@ public class IdentityAccessService {
         return bindings.save(binding);
     }
 
+    /** IdentityAccessService의 deleteBinding 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Transactional
     public void deleteBinding(UUID id) {
+        RoleBinding binding = bindings.findById(id).orElseThrow();
+        if (isPlatformManagerBinding(binding) && isOnlyRemainingPlatformManager(null, id)) {
+            throw new IllegalArgumentException("At least one active Platform Manager must remain");
+        }
         bindings.deleteById(id);
     }
 
+    // 관리 실수로 전체 플랫폼 관리 권한이 사라지는 상황을 방지한다.
+    private boolean isOnlyRemainingPlatformManager(UUID disabledUserId, UUID deletedBindingId) {
+        return bindings.findAll().stream()
+                .filter(binding -> !binding.id().equals(deletedBindingId))
+                .filter(this::isPlatformManagerBinding)
+                .noneMatch(binding -> isUsablePlatformManager(binding, disabledUserId));
+    }
+
+    /** IdentityAccessService의 isPlatformManagerBinding 처리 조건의 충족 여부를 판단한다. */
+    private boolean isPlatformManagerBinding(RoleBinding binding) {
+        return binding.role() == PlatformRole.PLATFORM_ADMIN
+                && binding.scope().type() == ScopeType.PLATFORM;
+    }
+
+    /** IdentityAccessService의 isUsablePlatformManager 처리 조건의 충족 여부를 판단한다. */
+    private boolean isUsablePlatformManager(RoleBinding binding, UUID disabledUserId) {
+        if (binding.principalType() == PrincipalType.GROUP) {
+            return true;
+        }
+        try {
+            UUID userId = UUID.fromString(binding.principalKey());
+            return !userId.equals(disabledUserId) && users.findById(userId).map(UserAccount::active).orElse(false);
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    /** IdentityAccessService의 hasCapability 처리 조건의 충족 여부를 판단한다. */
     public boolean hasCapability(Collection<Capability> capabilities, Capability required) {
         return capabilities.contains(required);
     }
 
+    /** IdentityAccessService의 allows 처리에 필요한 업무 로직을 수행한다. */
     public boolean allows(ResolvedAccess access, Capability required, UUID clusterId, String namespace) {
         if (clusterId == null) {
             return hasPlatformScope(access, required);
@@ -171,15 +254,18 @@ public class IdentityAccessService {
                         && binding.scope().includes(target));
     }
 
+    /** IdentityAccessService의 hasAccessAtAnyScope 처리 조건의 충족 여부를 판단한다. */
     public boolean hasAccessAtAnyScope(ResolvedAccess access, Capability required) {
         return access.bindings().stream().anyMatch(binding -> policy.allows(binding.role(), required));
     }
 
+    /** IdentityAccessService의 hasPlatformScope 처리 조건의 충족 여부를 판단한다. */
     public boolean hasPlatformScope(ResolvedAccess access, Capability required) {
         return access.bindings().stream().anyMatch(binding ->
                 binding.scope().type() == ScopeType.PLATFORM && policy.allows(binding.role(), required));
     }
 
+    /** IdentityAccessService의 visibleClusterIds 처리에 필요한 업무 로직을 수행한다. */
     public Set<UUID> visibleClusterIds(ResolvedAccess access) {
         if (hasPlatformScope(access, Capability.CLUSTER_READ)) return Set.of();
         Set<UUID> result = new LinkedHashSet<>();
@@ -196,6 +282,7 @@ public class IdentityAccessService {
         return Set.copyOf(result);
     }
 
+    /** IdentityAccessService의 visibleTenantIds 처리에 필요한 업무 로직을 수행한다. */
     public Set<UUID> visibleTenantIds(ResolvedAccess access) {
         if (hasPlatformScope(access, Capability.CLUSTER_READ)) return Set.of();
         Set<UUID> result = new LinkedHashSet<>();
@@ -209,6 +296,7 @@ public class IdentityAccessService {
         return Set.copyOf(result);
     }
 
+    /** IdentityAccessService의 visibleWorkspaceIds 처리에 필요한 업무 로직을 수행한다. */
     public Set<UUID> visibleWorkspaceIds(ResolvedAccess access) {
         if (hasPlatformScope(access, Capability.CLUSTER_READ)) return Set.of();
         Set<UUID> result = new LinkedHashSet<>();
@@ -225,6 +313,7 @@ public class IdentityAccessService {
         return Set.copyOf(result);
     }
 
+    /** IdentityAccessService의 allowsTenant 처리에 필요한 업무 로직을 수행한다. */
     public boolean allowsTenant(ResolvedAccess access, Capability required, UUID tenantId) {
         return access.bindings().stream()
                 .filter(binding -> policy.allows(binding.role(), required))
@@ -236,6 +325,7 @@ public class IdentityAccessService {
                 });
     }
 
+    /** IdentityAccessService의 allowsWorkspace 처리에 필요한 업무 로직을 수행한다. */
     public boolean allowsWorkspace(ResolvedAccess access, Capability required, UUID tenantId, UUID workspaceId) {
         return access.bindings().stream()
                 .filter(binding -> policy.allows(binding.role(), required))
@@ -248,6 +338,7 @@ public class IdentityAccessService {
                 });
     }
 
+    /** IdentityAccessService의 allowsWorkspace 처리에 필요한 업무 로직을 수행한다. */
     public boolean allowsWorkspace(ResolvedAccess access, Capability required, UUID workspaceId) {
         return workspaces.findById(workspaceId)
                 .map(workspace -> allowsWorkspace(access, required, workspace.tenantId(), workspace.id()))

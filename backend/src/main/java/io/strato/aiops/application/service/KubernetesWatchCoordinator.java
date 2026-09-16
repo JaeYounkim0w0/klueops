@@ -73,6 +73,7 @@ public class KubernetesWatchCoordinator {
     private final Set<UUID> pollingClusters = ConcurrentHashMap.newKeySet();
     private final Set<UUID> pausedClusters = ConcurrentHashMap.newKeySet();
 
+    /** KubernetesWatchCoordinator 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     @Autowired
     public KubernetesWatchCoordinator(
             ClusterRepositoryPort clusterRepository,
@@ -119,6 +120,7 @@ public class KubernetesWatchCoordinator {
         });
     }
 
+    /** KubernetesWatchCoordinator 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     KubernetesWatchCoordinator(
             ClusterRepositoryPort clusterRepository,
             ClusterCredentialRepositoryPort credentialRepository,
@@ -134,6 +136,7 @@ public class KubernetesWatchCoordinator {
                 3, 3, 30000, null, null, RuntimeLeasePort.localOnly());
     }
 
+    /** KubernetesWatchCoordinator 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     KubernetesWatchCoordinator(
             ClusterRepositoryPort clusterRepository,
             ClusterCredentialRepositoryPort credentialRepository,
@@ -150,6 +153,7 @@ public class KubernetesWatchCoordinator {
                 pollingFailureThreshold, 3, 30000, null, null, RuntimeLeasePort.localOnly());
     }
 
+    /** KubernetesWatchCoordinator의 reconcileWatches 처리에 필요한 업무 로직을 수행한다. */
     @Scheduled(initialDelayString = "${aiops.kubernetes.watch.initial-delay-ms:15000}",
             fixedDelayString = "${aiops.kubernetes.watch.reconcile-delay-ms:30000}")
     public void reconcileWatches() {
@@ -185,6 +189,7 @@ public class KubernetesWatchCoordinator {
         recentlyPersisted.entrySet().removeIf(entry -> entry.getValue().isBefore(cutoff));
     }
 
+    /** KubernetesWatchCoordinator의 statuses 처리에 필요한 업무 로직을 수행한다. */
     public List<WatchRuntimeStatus> statuses() {
         List<WatchRuntimeStatus> result = new ArrayList<>();
         for (Cluster cluster : clusterRepository.findAll()) {
@@ -197,10 +202,12 @@ public class KubernetesWatchCoordinator {
         return List.copyOf(result);
     }
 
+    /** KubernetesWatchCoordinator의 signals 처리에 필요한 업무 로직을 수행한다. */
     public List<WatchSignal> signals(UUID clusterId, String namespace, int limit) {
         return assuranceRepository.findWatchSignals(clusterId, namespace, limit);
     }
 
+    /** KubernetesWatchCoordinator의 restart 처리에 필요한 업무 로직을 수행한다. */
     public WatchRuntimeStatus restart(UUID clusterId) {
         Cluster cluster = clusterRepository.findById(clusterId)
                 .orElseThrow(() -> new java.util.NoSuchElementException("Cluster not found: " + clusterId));
@@ -221,6 +228,7 @@ public class KubernetesWatchCoordinator {
         return statuses.get(clusterId);
     }
 
+    /** KubernetesWatchCoordinator의 pause 처리에 필요한 업무 로직을 수행한다. */
     public WatchRuntimeStatus pause(UUID clusterId) {
         Cluster cluster = requireCluster(clusterId);
         pausedClusters.add(clusterId);
@@ -234,6 +242,7 @@ public class KubernetesWatchCoordinator {
         return status;
     }
 
+    /** KubernetesWatchCoordinator의 resume 처리에 필요한 업무 로직을 수행한다. */
     public WatchRuntimeStatus resume(UUID clusterId) {
         Cluster cluster = requireCluster(clusterId);
         pausedClusters.remove(clusterId);
@@ -247,6 +256,7 @@ public class KubernetesWatchCoordinator {
         return statuses.get(clusterId);
     }
 
+    /** KubernetesWatchCoordinator의 start 처리에 필요한 업무 로직을 수행한다. */
     private void start(Cluster cluster) {
         WatchRuntimeStatus previous = statuses.get(cluster.id());
         int reconnects = previous == null ? 0 : previous.reconnectCount() + 1;
@@ -270,6 +280,7 @@ public class KubernetesWatchCoordinator {
         });
     }
 
+    /** KubernetesWatchCoordinator의 startBlocking 처리에 필요한 업무 로직을 수행한다. */
     private void startBlocking(Cluster cluster, WatchRuntimeStatus previous, int reconnects, long attempt) {
         try {
             AtomicBoolean closedDuringStart = new AtomicBoolean(false);
@@ -286,22 +297,26 @@ public class KubernetesWatchCoordinator {
             KubernetesWatchPort.WatchRegistration registration = watchPort.watch(cluster.id(),
                     new KubernetesConnectionCredential(stored.credentialType(), payload), cursor,
                     new KubernetesWatchPort.WatchListener() {
+                        /** 익명 구현체의 onSignal 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
                         @Override
                         public void onSignal(KubernetesWatchPort.CollectedWatchSignal signal) {
                             persist(cluster, signal);
                         }
 
+                        /** 익명 구현체의 onHeartbeat 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
                         @Override
                         public void onHeartbeat(Instant observedAt) {
                             heartbeat(cluster, observedAt);
                         }
 
+                        /** 익명 구현체의 onCheckpoint 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
                         @Override
                         public void onCheckpoint(String podResourceVersion, String eventResourceVersion,
                                                  Instant reconciledAt, int gapSignalCount) {
                             checkpoint(cluster, podResourceVersion, eventResourceVersion, reconciledAt, gapSignalCount);
                         }
 
+                        /** 익명 구현체의 onClosed 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
                         @Override
                         public void onClosed(String message) {
                             if (!isCurrentAttempt(cluster.id(), attempt)) return;
@@ -345,10 +360,12 @@ public class KubernetesWatchCoordinator {
         }
     }
 
+    /** KubernetesWatchCoordinator의 persist 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void persist(Cluster cluster, KubernetesWatchPort.CollectedWatchSignal signal) {
         persist(cluster, signal, "CONNECTED");
     }
 
+    /** KubernetesWatchCoordinator의 persist 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void persist(Cluster cluster, KubernetesWatchPort.CollectedWatchSignal signal, String state) {
         String fingerprint = signalFingerprint(cluster, signal);
         Instant now = Instant.now();
@@ -366,6 +383,7 @@ public class KubernetesWatchCoordinator {
         if (eventStream != null) eventStream.publish("watch-signal", stored);
     }
 
+    /** KubernetesWatchCoordinator의 heartbeat 처리에 필요한 업무 로직을 수행한다. */
     private void heartbeat(Cluster cluster, Instant observedAt) {
         WatchRuntimeStatus current = statuses.get(cluster.id());
         Instant now = observedAt == null ? Instant.now() : observedAt;
@@ -376,6 +394,7 @@ public class KubernetesWatchCoordinator {
         publishStatus(cluster.id());
     }
 
+    /** KubernetesWatchCoordinator의 registerFailure 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void registerFailure(Cluster cluster, WatchRuntimeStatus previous, int reconnects,
                                  String message, String state) {
         int failures = consecutiveFailures.merge(cluster.id(), 1, Integer::sum);
@@ -403,6 +422,7 @@ public class KubernetesWatchCoordinator {
         publishStatus(cluster.id());
     }
 
+    /** KubernetesWatchCoordinator의 poll 처리에 필요한 업무 로직을 수행한다. */
     private void poll(Cluster cluster) {
         WatchRuntimeStatus previous = statuses.get(cluster.id());
         statuses.put(cluster.id(), runtime(cluster, "POLLING", previous,
@@ -424,6 +444,7 @@ public class KubernetesWatchCoordinator {
         });
     }
 
+    /** KubernetesWatchCoordinator의 pollBlocking 처리에 필요한 업무 로직을 수행한다. */
     private void pollBlocking(Cluster cluster) {
         EncryptedClusterCredential stored = credentialRepository.findByClusterId(cluster.id())
                 .orElseThrow(() -> new IllegalStateException("Cluster credential not found"));
@@ -461,23 +482,27 @@ public class KubernetesWatchCoordinator {
         publishStatus(cluster.id());
     }
 
+    /** KubernetesWatchCoordinator의 signalFingerprint 처리에 필요한 업무 로직을 수행한다. */
     private String signalFingerprint(Cluster cluster, KubernetesWatchPort.CollectedWatchSignal signal) {
         return String.join("|", cluster.id().toString(), text(signal.namespace()),
                 text(signal.resourceKind()), text(signal.resourceName()), text(signal.action()), text(signal.reason()),
                 text(signal.status()), text(signal.summary()));
     }
 
+    /** KubernetesWatchCoordinator의 retryReady 처리에 필요한 업무 로직을 수행한다. */
     private boolean retryReady(UUID clusterId) {
         Instant next = nextRetries.get(clusterId);
         return next == null || !next.isAfter(Instant.now());
     }
 
+    /** KubernetesWatchCoordinator의 shouldRenew 처리 조건의 충족 여부를 판단한다. */
     private boolean shouldRenew(UUID clusterId) {
         WatchRuntimeStatus status = statuses.get(clusterId);
         return registrations.containsKey(clusterId) && status != null && status.connectedAt() != null
                 && status.connectedAt().isBefore(Instant.now().minusMillis(renewalMs));
     }
 
+    /** KubernetesWatchCoordinator의 checkpoint 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void checkpoint(Cluster cluster, String podResourceVersion, String eventResourceVersion,
                             Instant reconciledAt, int gapSignalCount) {
         if (evolutionRepository == null) return;
@@ -492,12 +517,14 @@ public class KubernetesWatchCoordinator {
         if (eventStream != null && reconciledAt != null) eventStream.publish("watch-continuity", saved);
     }
 
+    /** KubernetesWatchCoordinator의 publishStatus 처리 결과를 지정된 대상에 전달한다. */
     private void publishStatus(UUID clusterId) {
         if (eventStream != null && statuses.containsKey(clusterId)) {
             eventStream.publish("watch-status", statuses.get(clusterId));
         }
     }
 
+    /** KubernetesWatchCoordinator의 runtime 처리의 핵심 작업 흐름을 실행한다. */
     private WatchRuntimeStatus runtime(Cluster cluster, String state, WatchRuntimeStatus previous,
                                        String error, boolean paused) {
         return new WatchRuntimeStatus(cluster.id(), cluster.name(), state,
@@ -507,11 +534,13 @@ public class KubernetesWatchCoordinator {
                 consecutiveFailures.getOrDefault(cluster.id(), 0), paused);
     }
 
+    /** KubernetesWatchCoordinator의 requireCluster 처리 입력과 현재 상태의 유효성을 검증한다. */
     private Cluster requireCluster(UUID clusterId) {
         return clusterRepository.findById(clusterId)
                 .orElseThrow(() -> new java.util.NoSuchElementException("Cluster not found: " + clusterId));
     }
 
+    /** KubernetesWatchCoordinator의 close 처리 대상과 관련 상태를 안전하게 정리한다. */
     private void close(UUID clusterId) {
         attemptSequences.merge(clusterId, 1L, Long::sum);
         CompletableFuture<Void> pending = pendingStarts.remove(clusterId);
@@ -528,6 +557,7 @@ public class KubernetesWatchCoordinator {
         }
     }
 
+    /** KubernetesWatchCoordinator의 shutdown 처리에 필요한 업무 로직을 수행한다. */
     @PreDestroy
     public void shutdown() {
         pendingStarts.values().forEach(pending -> pending.cancel(true));
@@ -541,14 +571,17 @@ public class KubernetesWatchCoordinator {
         startupExecutor.shutdownNow();
     }
 
+    /** KubernetesWatchCoordinator의 watchLeaseKey 처리에 필요한 업무 로직을 수행한다. */
     private String watchLeaseKey(UUID clusterId) {
         return "kubernetes-watch:" + clusterId;
     }
 
+    /** KubernetesWatchCoordinator의 isCurrentAttempt 처리 조건의 충족 여부를 판단한다. */
     private boolean isCurrentAttempt(UUID clusterId, long attempt) {
         return attemptSequences.getOrDefault(clusterId, 0L) == attempt;
     }
 
+    /** KubernetesWatchCoordinator의 unwrap 처리에 필요한 업무 로직을 수행한다. */
     private Throwable unwrap(Throwable throwable) {
         Throwable current = throwable;
         while (current.getCause() != null
@@ -559,11 +592,13 @@ public class KubernetesWatchCoordinator {
         return current;
     }
 
+    /** KubernetesWatchCoordinator의 clean 처리에 필요한 업무 로직을 수행한다. */
     private String clean(String value) {
         if (value == null) return null;
         return value.length() > 1800 ? value.substring(0, 1800) : value;
     }
 
+    /** KubernetesWatchCoordinator의 text 처리에 필요한 업무 로직을 수행한다. */
     private String text(String value) {
         return value == null || value.isBlank() ? "unknown" : value;
     }

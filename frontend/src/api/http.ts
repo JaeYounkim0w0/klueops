@@ -7,15 +7,22 @@ export interface ApiErrorBody {
   detail?: string;
   status?: number;
   code?: string;
+  errors?: string[];
 }
 
 export class ApiError extends Error {
   readonly status: number;
   readonly body: ApiErrorBody | string | null;
 
+  /** 컴포넌트 또는 서비스 인스턴스를 필요한 초기 상태로 구성한다. */
   constructor(status: number, body: ApiErrorBody | string | null) {
+    const fieldDetails = typeof body === 'object' && body !== null && body.errors?.length
+      ? body.errors.join(', ')
+      : undefined;
     const message = typeof body === 'object' && body !== null
-      ? body.detail ?? body.title ?? `Request failed with status ${status}`
+      ? fieldDetails
+        ? `${body.detail ?? body.title ?? `Request failed with status ${status}`} (${fieldDetails})`
+        : body.detail ?? body.title ?? `Request failed with status ${status}`
       : body ?? `Request failed with status ${status}`;
     super(message);
     this.name = 'ApiError';
@@ -31,16 +38,21 @@ export interface RequestOptions {
 const DEFAULT_TIMEOUT_MS = 30_000;
 const unauthorizedListeners = new Set<() => void>();
 
+/** onUnauthorized 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
 export function onUnauthorized(listener: () => void): () => void {
   unauthorizedListeners.add(listener);
   return () => unauthorizedListeners.delete(listener);
 }
 
+/** requestJson 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export async function requestJson<T>(path: string, init?: RequestInit, options: RequestOptions = {}): Promise<T> {
   const controller = new AbortController();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const headers = new Headers(init?.headers);
-  headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
+  // FormData는 브라우저가 multipart boundary를 포함한 Content-Type을 생성해야 한다.
+  if (!(init?.body instanceof FormData)) {
+    headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
+  }
   headers.set('X-Request-Id', headers.get('X-Request-Id') ?? createRequestId());
   headers.set('Accept-Language', headers.get('Accept-Language') ?? getLocale());
   if (isMutation(init?.method)) {
@@ -48,7 +60,7 @@ export async function requestJson<T>(path: string, init?: RequestInit, options: 
     if (csrfToken) headers.set('X-XSRF-TOKEN', csrfToken);
   }
 
-  const abortFromCaller = () => controller.abort(init?.signal?.reason);
+  const abortFromCaller = /** abortFromCaller 처리에 필요한 화면 또는 업무 로직을 수행한다. */ () => controller.abort(init?.signal?.reason);
   if (init?.signal?.aborted) {
     abortFromCaller();
   } else {
@@ -91,10 +103,12 @@ export async function requestJson<T>(path: string, init?: RequestInit, options: 
   }
 }
 
+/** isMutation 처리 조건의 충족 여부를 판단한다. */
 function isMutation(method: string | undefined): boolean {
   return !['GET', 'HEAD', 'OPTIONS'].includes((method ?? 'GET').toUpperCase());
 }
 
+/** readCookie 처리 결과를 조회해 반환한다. */
 export function readCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
   const prefix = `${encodeURIComponent(name)}=`;
@@ -102,15 +116,18 @@ export function readCookie(name: string): string | null {
   return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
 }
 
+/** parseError 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 export async function parseError(response: Response): Promise<ApiErrorBody | string | null> {
   const contentType = response.headers.get('content-type') ?? '';
-  if (contentType.includes('application/json')) {
+  // RFC 9457 Problem Details(application/problem+json)도 구조화된 오류로 해석한다.
+  if (contentType.toLowerCase().includes('json')) {
     return response.json() as Promise<ApiErrorBody>;
   }
   const text = await response.text();
   return text || null;
 }
 
+/** createRequestId 처리에 필요한 데이터를 생성하거나 저장한다. */
 function createRequestId(): string {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
     return globalThis.crypto.randomUUID();

@@ -5,6 +5,59 @@
  * Evidence-guided Kubernetes Operations API
  * OpenAPI spec version: 0.1.0
  */
+export interface RoutingRequest {
+  tenantId: string;
+  primaryProfileId: string;
+  /** @minLength 1 */
+  model: string;
+  fallbackProfileId?: string;
+  fallbackModel?: string;
+  externalTransferAllowed?: boolean;
+  maximumContextChars?: number;
+  maximumOutputTokens?: number;
+}
+
+export interface RoutingResponse {
+  purpose?: string;
+  primaryProfileId?: string;
+  model?: string;
+  fallbackProfileId?: string;
+  fallbackModel?: string;
+  externalTransferAllowed?: boolean;
+  maximumContextChars?: number;
+  maximumOutputTokens?: number;
+  updatedAt?: string;
+}
+
+export interface UpdateProviderRequest {
+  tenantId: string;
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  providerType: string;
+  baseUrl?: string;
+  apiKey?: string;
+  /** @minLength 1 */
+  defaultModel: string;
+  allowedModels?: string[];
+  enabled?: boolean;
+  externalDataTransfer?: boolean;
+}
+
+export interface ProviderResponse {
+  id?: string;
+  name?: string;
+  providerType?: string;
+  baseUrl?: string;
+  credentialConfigured?: boolean;
+  defaultModel?: string;
+  allowedModels?: string[];
+  enabled?: boolean;
+  externalDataTransfer?: boolean;
+  validationStatus?: string;
+  lastValidatedAt?: string;
+}
+
 export interface OperationSettingsRequest {
   /**
    * @minimum 1
@@ -333,6 +386,282 @@ export interface AnalysisFeedback {
   updatedAt?: string;
 }
 
+export interface ValuesSuggestionRequest {
+  tenantId: string;
+  chartVersionId: string;
+  /** @minLength 1 */
+  currentValuesYaml: string;
+  /** @minLength 1 */
+  instruction: string;
+}
+
+export interface ValuesSuggestionResponse {
+  valuesYaml?: string;
+  promptVersion?: string;
+  validationStatus?: string;
+  attempts?: number;
+  chartName?: string;
+  providerName?: string;
+  chartVersion?: string;
+  applicationVersion?: string;
+  schemaIncluded?: boolean;
+}
+
+export interface CreateValuesProfileRequest {
+  tenantId: string;
+  chartVersionId: string;
+  /** @minLength 1 */
+  name: string;
+  description?: string;
+}
+
+export interface ValuesProfileResponse {
+  id?: string;
+  tenantId?: string;
+  chartVersionId?: string;
+  name?: string;
+  description?: string;
+  updatedAt?: string;
+}
+
+export interface CreateValuesRevisionRequest {
+  tenantId: string;
+  /** @minLength 1 */
+  valuesYaml: string;
+}
+
+export interface ValuesRevisionResponse {
+  id?: string;
+  revision?: number;
+  valuesSha256?: string;
+  parentRevision?: number;
+  createdBy?: string;
+  createdAt?: string;
+}
+
+export type CreateChartSourceRequestSourceType = typeof CreateChartSourceRequestSourceType[keyof typeof CreateChartSourceRequestSourceType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const CreateChartSourceRequestSourceType = {
+  ARTIFACT_HUB: 'ARTIFACT_HUB',
+  HELM_REPOSITORY: 'HELM_REPOSITORY',
+  OCI_REGISTRY: 'OCI_REGISTRY',
+  UPLOAD: 'UPLOAD',
+} as const;
+
+export interface CreateChartSourceRequest {
+  tenantId: string;
+  sourceType: CreateChartSourceRequestSourceType;
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  endpoint: string;
+  credential?: string;
+}
+
+export interface ChartSourceResponse {
+  id?: string;
+  tenantId?: string;
+  sourceType?: string;
+  name?: string;
+  endpoint?: string;
+  credentialConfigured?: boolean;
+  tlsPolicy?: string;
+  enabled?: boolean;
+  updatedAt?: string;
+}
+
+export interface TargetOptionsRequest {
+  tenantId: string;
+  clusterId: string;
+  chartVersionId: string;
+  valuesRevisionId?: string;
+  /** @minLength 1 */
+  namespace: string;
+  /** @minLength 1 */
+  releaseName: string;
+}
+
+export interface DeploymentTargetOptionsResponse {
+  services?: RenderedServiceResponse[];
+  gateways?: GatewayResponse[];
+  gatewayDiscoveryStatus?: string;
+  gatewayDiscoveryMessage?: string;
+}
+
+export interface GatewayListenerResponse {
+  name?: string;
+  protocol?: string;
+  port?: number;
+  hostname?: string;
+}
+
+export interface GatewayResponse {
+  namespace?: string;
+  name?: string;
+  readiness?: string;
+  listeners?: GatewayListenerResponse[];
+}
+
+export interface RenderedServiceResponse {
+  namespace?: string;
+  name?: string;
+  type?: string;
+  portName?: string;
+  port?: number;
+  targetPort?: string;
+  nodePort?: number;
+  protocol?: string;
+  appProtocol?: string;
+  httpRouteCompatibility?: string;
+  compatibilityMessage?: string;
+}
+
+export interface PreviewRequest {
+  tenantId: string;
+  applicationId?: string;
+  clusterId: string;
+  chartVersionId: string;
+  valuesRevisionId?: string;
+  /** @minLength 1 */
+  namespace: string;
+  /** @minLength 1 */
+  releaseName: string;
+  createNamespace?: boolean;
+  exposureType?: string;
+  hostname?: string;
+  exposurePath?: string;
+  backendServiceName?: string;
+  backendServicePort?: number;
+  gatewayName?: string;
+  gatewayNamespace?: string;
+}
+
+export interface DeploymentPlanResponse {
+  id?: string;
+  applicationId?: string;
+  clusterId?: string;
+  chartVersionId?: string;
+  valuesRevisionId?: string;
+  namespace?: string;
+  releaseName?: string;
+  createNamespace?: boolean;
+  exposureType?: string;
+  hostname?: string;
+  exposurePath?: string;
+  backendServiceName?: string;
+  backendServicePort?: number;
+  gatewayName?: string;
+  gatewayNamespace?: string;
+  manifestSha256?: string;
+  warnings?: string[];
+  confirmationText?: string;
+  renderedManifest?: string;
+  expiresAt?: string;
+}
+
+export interface ExecuteRequest {
+  tenantId: string;
+  /** @minLength 1 */
+  confirmationText: string;
+}
+
+export interface DeploymentAcceptedResponse {
+  applicationId?: string;
+  jobId?: string;
+  operationId?: string;
+}
+
+export interface ChartVersionResponse {
+  id?: string;
+  chartVersion?: string;
+  appVersion?: string;
+  digestSha256?: string;
+  provenanceStatus?: string;
+  sourceReference?: string;
+  importedAt?: string;
+}
+
+export interface ImportedChartResponse {
+  chart?: LibraryChartResponse;
+  compressedBytes?: number;
+  fileCount?: number;
+  expandedBytes?: number;
+}
+
+export interface LibraryChartResponse {
+  id?: string;
+  tenantId?: string;
+  name?: string;
+  packageName?: string;
+  description?: string;
+  sourceType?: string;
+  sourceName?: string;
+  providerName?: string;
+  repositoryUrl?: string;
+  trustStatus?: string;
+  versions?: ChartVersionResponse[];
+}
+
+export interface ImportChartRequest {
+  tenantId: string;
+  /** @minLength 1 */
+  repository: string;
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  version: string;
+}
+
+export interface RollbackRequest {
+  tenantId: string;
+  revision?: number;
+  /** @minLength 1 */
+  confirmationText: string;
+}
+
+export interface ProviderRequest {
+  tenantId: string;
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  providerType: string;
+  baseUrl?: string;
+  apiKey?: string;
+  /** @minLength 1 */
+  defaultModel: string;
+  allowedModels?: string[];
+  externalDataTransfer?: boolean;
+}
+
+export interface ValidationResponse {
+  valid?: boolean;
+  message?: string;
+  checkedAt?: string;
+}
+
+export interface LocalModelResponse {
+  id?: string;
+  modelTag?: string;
+  parameterBillions?: number;
+  status?: string;
+  sizeBytes?: number;
+  digest?: string;
+  updatedAt?: string;
+}
+
+export interface ModelPullRequest {
+  tenantId: string;
+  /** @minLength 1 */
+  modelTag: string;
+}
+
+export interface ModelPullResponse {
+  jobId?: string;
+  status?: string;
+}
+
 export interface CreateTenancyRequest {
   /** @minLength 1 */
   code: string;
@@ -364,6 +693,134 @@ export interface WorkspaceResponse {
   updatedAt?: string;
 }
 
+export type CreateGroupMappingRequestRole = typeof CreateGroupMappingRequestRole[keyof typeof CreateGroupMappingRequestRole];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const CreateGroupMappingRequestRole = {
+  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
+  TENANT_ADMIN: 'TENANT_ADMIN',
+  CLUSTER_ADMIN: 'CLUSTER_ADMIN',
+  OPERATOR: 'OPERATOR',
+  VIEWER: 'VIEWER',
+} as const;
+
+export type CreateGroupMappingRequestScopeType = typeof CreateGroupMappingRequestScopeType[keyof typeof CreateGroupMappingRequestScopeType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const CreateGroupMappingRequestScopeType = {
+  PLATFORM: 'PLATFORM',
+  TENANT: 'TENANT',
+  WORKSPACE: 'WORKSPACE',
+  CLUSTER: 'CLUSTER',
+  NAMESPACE: 'NAMESPACE',
+} as const;
+
+export interface CreateGroupMappingRequest {
+  /** @minLength 1 */
+  issuer: string;
+  /** @minLength 1 */
+  groupValue: string;
+  role: CreateGroupMappingRequestRole;
+  scopeType: CreateGroupMappingRequestScopeType;
+  workspaceId?: string;
+  clusterId?: string;
+  namespace?: string;
+}
+
+export interface GroupMappingResponse {
+  id?: string;
+  issuer?: string;
+  groupValue?: string;
+  tenantId?: string;
+  role?: string;
+  scopeType?: string;
+  workspaceId?: string;
+  clusterId?: string;
+  namespace?: string;
+  active?: boolean;
+  updatedAt?: string;
+}
+
+export type InviteMemberRequestRole = typeof InviteMemberRequestRole[keyof typeof InviteMemberRequestRole];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const InviteMemberRequestRole = {
+  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
+  TENANT_ADMIN: 'TENANT_ADMIN',
+  CLUSTER_ADMIN: 'CLUSTER_ADMIN',
+  OPERATOR: 'OPERATOR',
+  VIEWER: 'VIEWER',
+} as const;
+
+export type InviteMemberRequestScopeType = typeof InviteMemberRequestScopeType[keyof typeof InviteMemberRequestScopeType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const InviteMemberRequestScopeType = {
+  PLATFORM: 'PLATFORM',
+  TENANT: 'TENANT',
+  WORKSPACE: 'WORKSPACE',
+  CLUSTER: 'CLUSTER',
+  NAMESPACE: 'NAMESPACE',
+} as const;
+
+export interface InviteMemberRequest {
+  /** @minLength 1 */
+  issuer: string;
+  subject?: string;
+  email?: string;
+  role: InviteMemberRequestRole;
+  scopeType: InviteMemberRequestScopeType;
+  workspaceId?: string;
+  clusterId?: string;
+  namespace?: string;
+}
+
+export interface MemberResponse {
+  id?: string;
+  tenantId?: string;
+  userId?: string;
+  username?: string;
+  displayName?: string;
+  email?: string;
+  role?: string;
+  scopeType?: string;
+  workspaceId?: string;
+  clusterId?: string;
+  namespace?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface OffboardRequest {
+  /** @minLength 1 */
+  confirmationText: string;
+}
+
+export type OffboardPlanStatus = typeof OffboardPlanStatus[keyof typeof OffboardPlanStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const OffboardPlanStatus = {
+  INVITED: 'INVITED',
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  OFFBOARDED: 'OFFBOARDED',
+} as const;
+
+export interface OffboardPlan {
+  membershipId?: string;
+  username?: string;
+  status?: OffboardPlanStatus;
+  roleBindingsToRemove?: number;
+  sessionsRevoked?: boolean;
+  confirmationText?: string;
+}
+
 export interface CleanupPreview {
   eventSnapshots?: number;
   jobs?: number;
@@ -372,10 +829,10 @@ export interface CleanupPreview {
   resolvedIncidents?: number;
   policyEvaluations?: number;
   analyses?: number;
-  auditLogs?: number;
-  commandExecutions?: number;
   watchSignals?: number;
   regressionRuns?: number;
+  auditLogs?: number;
+  commandExecutions?: number;
   executed?: boolean;
 }
 
@@ -394,6 +851,7 @@ export type CreateRoleBindingRequestRole = typeof CreateRoleBindingRequestRole[k
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateRoleBindingRequestRole = {
   PLATFORM_ADMIN: 'PLATFORM_ADMIN',
+  TENANT_ADMIN: 'TENANT_ADMIN',
   CLUSTER_ADMIN: 'CLUSTER_ADMIN',
   OPERATOR: 'OPERATOR',
   VIEWER: 'VIEWER',
@@ -853,6 +1311,8 @@ export const JobResponseType = {
   HELM_INSTALL: 'HELM_INSTALL',
   HELM_UPGRADE: 'HELM_UPGRADE',
   HELM_ROLLBACK: 'HELM_ROLLBACK',
+  HELM_UNINSTALL: 'HELM_UNINSTALL',
+  AI_MODEL_PULL: 'AI_MODEL_PULL',
   AI_ANALYSIS: 'AI_ANALYSIS',
 } as const;
 
@@ -1392,7 +1852,13 @@ export type ApplicationResponseStatus = typeof ApplicationResponseStatus[keyof t
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const ApplicationResponseStatus = {
   DEPLOY_REQUESTED: 'DEPLOY_REQUESTED',
+  DEPLOYING: 'DEPLOYING',
+  UPGRADING: 'UPGRADING',
+  ROLLING_BACK: 'ROLLING_BACK',
+  UNINSTALLING: 'UNINSTALLING',
   RUNNING: 'RUNNING',
+  RUNNING_ENDPOINT_DEGRADED: 'RUNNING_ENDPOINT_DEGRADED',
+  UNINSTALLED: 'UNINSTALLED',
   DEGRADED: 'DEGRADED',
   FAILED: 'FAILED',
   UNKNOWN: 'UNKNOWN',
@@ -1417,6 +1883,9 @@ export interface ApplicationResponse {
   lastSyncedAt?: string;
   lastSyncStatus?: string;
   lastSyncError?: string;
+  currentReleaseRevision?: number;
+  chartVersionId?: string;
+  valuesRevisionId?: string;
 }
 
 /**
@@ -1754,6 +2223,57 @@ export interface AiChatSendMessageResponse {
 
 export interface StreamingResponseBody {}
 
+export interface UpdateChartSourceRequest {
+  tenantId: string;
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  endpoint: string;
+  credential?: string;
+  enabled?: boolean;
+}
+
+export interface UpdateGroupMappingRequest {
+  active?: boolean;
+}
+
+export type UpdateMembershipRequestStatus = typeof UpdateMembershipRequestStatus[keyof typeof UpdateMembershipRequestStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const UpdateMembershipRequestStatus = {
+  INVITED: 'INVITED',
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  OFFBOARDED: 'OFFBOARDED',
+} as const;
+
+export interface UpdateMembershipRequest {
+  status: UpdateMembershipRequestStatus;
+}
+
+export type UpdateFeatureRequestFeatureKey = typeof UpdateFeatureRequestFeatureKey[keyof typeof UpdateFeatureRequestFeatureKey];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const UpdateFeatureRequestFeatureKey = {
+  CORE_OVERVIEW: 'CORE_OVERVIEW',
+  CLUSTER_OPERATIONS: 'CLUSTER_OPERATIONS',
+  KUBERNETES_CONSOLE: 'KUBERNETES_CONSOLE',
+  AI_OPERATIONS: 'AI_OPERATIONS',
+  APPLICATION_DELIVERY: 'APPLICATION_DELIVERY',
+  AI_PROVIDER_ROUTING: 'AI_PROVIDER_ROUTING',
+  AI_PROVIDER_PLATFORM: 'AI_PROVIDER_PLATFORM',
+  ACCESS_CONTROL: 'ACCESS_CONTROL',
+  AUDIT: 'AUDIT',
+  PLATFORM_ADMINISTRATION: 'PLATFORM_ADMINISTRATION',
+} as const;
+
+export interface UpdateFeatureRequest {
+  featureKey: UpdateFeatureRequestFeatureKey;
+  enabled?: boolean;
+}
+
 export interface UpdateUserRequest {
   active?: boolean;
 }
@@ -1847,6 +2367,82 @@ export interface UpdateAiChatConversationRequest {
   title?: string;
   favorite?: boolean;
   archived?: boolean;
+}
+
+export interface ValuesPayloadResponse {
+  valuesYaml?: string;
+}
+
+export interface CatalogPackageResponse {
+  packageId?: string;
+  repository?: string;
+  repositoryDisplayName?: string;
+  repositoryUrl?: string;
+  name?: string;
+  description?: string;
+  version?: string;
+  appVersion?: string;
+  contentUrl?: string;
+  official?: boolean;
+  verifiedPublisher?: boolean;
+  availableVersions?: string[];
+}
+
+export interface LifecycleConfirmationResponse {
+  confirmationText?: string;
+  impactSummary?: string;
+}
+
+export interface Endpoint {
+  type?: string;
+  name?: string;
+  url?: string;
+  status?: string;
+  address?: string;
+  port?: number;
+  targetPort?: string;
+  nodePort?: number;
+  accessScope?: string;
+}
+
+export interface RuntimeOverviewResponse {
+  readyPods?: number;
+  totalPods?: number;
+  restarts?: number;
+  workloads?: Workload[];
+  endpoints?: Endpoint[];
+}
+
+export interface Workload {
+  kind?: string;
+  name?: string;
+  ready?: number;
+  desired?: number;
+  status?: string;
+}
+
+export interface ReleaseResponse {
+  id?: string;
+  revision?: number;
+  chartVersionId?: string;
+  valuesRevisionId?: string;
+  manifestSha256?: string;
+  status?: string;
+  createdBy?: string;
+  createdAt?: string;
+}
+
+export interface OperationResponse {
+  id?: string;
+  jobId?: string;
+  type?: string;
+  status?: string;
+  releaseRevision?: number;
+  outputSummary?: string;
+  errorMessage?: string;
+  requestedBy?: string;
+  requestedAt?: string;
+  completedAt?: string;
 }
 
 export interface SearchResult {
@@ -2190,6 +2786,17 @@ export interface Notification {
 
 export interface UnreadCountResponse {
   count?: number;
+}
+
+export type AccessResponseNavigation = {[key: string]: boolean};
+
+export interface AccessResponse {
+  platformRole?: string;
+  tenantId?: string;
+  workspaceId?: string;
+  effectiveCapabilities?: string[];
+  enabledFeatures?: string[];
+  navigation?: AccessResponseNavigation;
 }
 
 export interface ChangeCandidate {
@@ -2654,6 +3261,7 @@ export interface CommandCapabilityResponse {
   kubectlVersion?: string;
   executionBoundary?: string;
   terminalBoundary?: string;
+  metricsApiAvailable?: boolean;
   supportedModes?: string[];
   maximumCommandLength?: number;
   maximumOutputBytes?: number;
@@ -2662,7 +3270,6 @@ export interface CommandCapabilityResponse {
   maximumClusterCommands?: number;
   maximumClusterTerminals?: number;
   maximumUserStartsPerMinute?: number;
-  metricsApiAvailable?: boolean;
 }
 
 export interface ResourceChange {
@@ -2682,8 +3289,8 @@ export interface ResourceChange {
 }
 
 export interface CsrfToken {
-  parameterName?: string;
   token?: string;
+  parameterName?: string;
   headerName?: string;
 }
 
@@ -2731,7 +3338,13 @@ export type ApplicationStatusResponseStatus = typeof ApplicationStatusResponseSt
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const ApplicationStatusResponseStatus = {
   DEPLOY_REQUESTED: 'DEPLOY_REQUESTED',
+  DEPLOYING: 'DEPLOYING',
+  UPGRADING: 'UPGRADING',
+  ROLLING_BACK: 'ROLLING_BACK',
+  UNINSTALLING: 'UNINSTALLING',
   RUNNING: 'RUNNING',
+  RUNNING_ENDPOINT_DEGRADED: 'RUNNING_ENDPOINT_DEGRADED',
+  UNINSTALLED: 'UNINSTALLED',
   DEGRADED: 'DEGRADED',
   FAILED: 'FAILED',
   UNKNOWN: 'UNKNOWN',
@@ -2898,6 +3511,46 @@ export interface RunbookAction {
   destructive?: boolean;
 }
 
+export interface RemoveChartRequest {
+  tenantId: string;
+  /** @minLength 1 */
+  confirmationText: string;
+}
+
+export type ProfilesParams = {
+tenantId: string;
+chartVersionId: string;
+};
+
+export type RevisionsParams = {
+tenantId: string;
+};
+
+export type SourcesParams = {
+tenantId: string;
+};
+
+export type UploadParams = {
+tenantId: string;
+sourceName?: string;
+};
+
+export type UploadBody = {
+  file: Blob;
+};
+
+export type Profiles1Params = {
+tenantId: string;
+};
+
+export type ValidateParams = {
+tenantId: string;
+};
+
+export type RefreshLocalModelsParams = {
+tenantId: string;
+};
+
 export type EvaluatePoliciesParams = {
 clusterId: string;
 };
@@ -2953,7 +3606,68 @@ export type ListConversationsParams = {
 archived?: boolean;
 };
 
+export type DeleteSourceParams = {
+tenantId: string;
+};
+
+export type Features200 = {[key: string]: boolean};
+
+export type UpdateFeature200 = {[key: string]: boolean};
+
+export type ValuesParams = {
+tenantId: string;
+};
+
+export type ChartsParams = {
+tenantId: string;
+includeArchived?: boolean;
+};
+
 export type SearchParams = {
+tenantId: string;
+query?: string;
+limit?: number;
+};
+
+export type DetailsParams = {
+tenantId: string;
+version?: string;
+};
+
+export type ApplicationsParams = {
+tenantId: string;
+};
+
+export type UninstallConfirmationParams = {
+tenantId: string;
+};
+
+export type RuntimeParams = {
+tenantId: string;
+};
+
+export type RollbackConfirmationParams = {
+tenantId: string;
+revision: number;
+};
+
+export type ReleasesParams = {
+tenantId: string;
+};
+
+export type OperationsParams = {
+tenantId: string;
+};
+
+export type RoutingParams = {
+tenantId: string;
+};
+
+export type LocalModelsParams = {
+tenantId: string;
+};
+
+export type Search1Params = {
 /**
  * @minLength 1
  */
@@ -3026,6 +3740,11 @@ unreadOnly?: boolean;
  * @maximum 500
  */
 limit?: number;
+};
+
+export type AccessParams = {
+tenantId: string;
+workspaceId?: string;
 };
 
 export type IncidentsParams = {
@@ -3170,6 +3889,88 @@ applicationId?: string;
 namespace?: string;
 };
 
+export type routeResponse200 = {
+  data: RoutingResponse
+  status: 200
+}
+
+export type routeResponseSuccess = (routeResponse200) & {
+  headers: Headers;
+};
+;
+
+export type routeResponse = (routeResponseSuccess)
+
+export const getRouteUrl = (purpose: string,) => {
+
+
+
+
+  return `/api/v2/ai-configuration/routing/${purpose}`
+}
+
+export const route = async (purpose: string,
+    routingRequest: RoutingRequest, options?: RequestInit): Promise<routeResponse> => {
+
+  const res = await fetch(getRouteUrl(purpose),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      routingRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: routeResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as routeResponse
+}
+
+
+
+export type updateResponse200 = {
+  data: ProviderResponse
+  status: 200
+}
+
+export type updateResponseSuccess = (updateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type updateResponse = (updateResponseSuccess)
+
+export const getUpdateUrl = (profileId: string,) => {
+
+
+
+
+  return `/api/v2/ai-configuration/providers/${profileId}`
+}
+
+export const update = async (profileId: string,
+    updateProviderRequest: UpdateProviderRequest, options?: RequestInit): Promise<updateResponse> => {
+
+  const res = await fetch(getUpdateUrl(profileId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateProviderRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: updateResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as updateResponse
+}
+
+
+
 /**
  * @summary Get operation and retention settings
  */
@@ -3177,7 +3978,7 @@ export type settingsResponse200 = {
   data: OperationSettings
   status: 200
 }
-    
+
 export type settingsResponseSuccess = (settingsResponse200) & {
   headers: Headers;
 };
@@ -3188,24 +3989,24 @@ export type settingsResponse = (settingsResponseSuccess)
 export const getSettingsUrl = () => {
 
 
-  
+
 
   return `/api/settings/operations`
 }
 
 export const settings = async ( options?: RequestInit): Promise<settingsResponse> => {
-  
+
   const res = await fetch(getSettingsUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: settingsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as settingsResponse
 }
@@ -3219,7 +4020,7 @@ export type updateSettingsResponse200 = {
   data: OperationSettings
   status: 200
 }
-    
+
 export type updateSettingsResponseSuccess = (updateSettingsResponse200) & {
   headers: Headers;
 };
@@ -3230,15 +4031,15 @@ export type updateSettingsResponse = (updateSettingsResponseSuccess)
 export const getUpdateSettingsUrl = () => {
 
 
-  
+
 
   return `/api/settings/operations`
 }
 
 export const updateSettings = async (operationSettingsRequest: OperationSettingsRequest, options?: RequestInit): Promise<updateSettingsResponse> => {
-  
+
   const res = await fetch(getUpdateSettingsUrl(),
-  {      
+  {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -3248,7 +4049,7 @@ export const updateSettings = async (operationSettingsRequest: OperationSettings
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateSettingsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateSettingsResponse
 }
@@ -3262,7 +4063,7 @@ export type updateRunbookResponse200 = {
   data: ManagedRunbook
   status: 200
 }
-    
+
 export type updateRunbookResponseSuccess = (updateRunbookResponse200) & {
   headers: Headers;
 };
@@ -3273,16 +4074,16 @@ export type updateRunbookResponse = (updateRunbookResponseSuccess)
 export const getUpdateRunbookUrl = (runbookId: string,) => {
 
 
-  
+
 
   return `/api/runbooks/custom/${runbookId}`
 }
 
 export const updateRunbook = async (runbookId: string,
     runbookRequest: RunbookRequest, options?: RequestInit): Promise<updateRunbookResponse> => {
-  
+
   const res = await fetch(getUpdateRunbookUrl(runbookId),
-  {      
+  {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -3292,7 +4093,7 @@ export const updateRunbook = async (runbookId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateRunbookResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateRunbookResponse
 }
@@ -3306,7 +4107,7 @@ export type deleteRunbookResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type deleteRunbookResponseSuccess = (deleteRunbookResponse204) & {
   headers: Headers;
 };
@@ -3317,24 +4118,24 @@ export type deleteRunbookResponse = (deleteRunbookResponseSuccess)
 export const getDeleteRunbookUrl = (runbookId: string,) => {
 
 
-  
+
 
   return `/api/runbooks/custom/${runbookId}`
 }
 
 export const deleteRunbook = async (runbookId: string, options?: RequestInit): Promise<deleteRunbookResponse> => {
-  
+
   const res = await fetch(getDeleteRunbookUrl(runbookId),
-  {      
+  {
     ...options,
     method: 'DELETE'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: deleteRunbookResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as deleteRunbookResponse
 }
@@ -3348,7 +4149,7 @@ export type updatePolicyResponse200 = {
   data: PolicyDefinition
   status: 200
 }
-    
+
 export type updatePolicyResponseSuccess = (updatePolicyResponse200) & {
   headers: Headers;
 };
@@ -3359,16 +4160,16 @@ export type updatePolicyResponse = (updatePolicyResponseSuccess)
 export const getUpdatePolicyUrl = (policyId: string,) => {
 
 
-  
+
 
   return `/api/policies/${policyId}`
 }
 
 export const updatePolicy = async (policyId: string,
     policyUpdateRequest: PolicyUpdateRequest, options?: RequestInit): Promise<updatePolicyResponse> => {
-  
+
   const res = await fetch(getUpdatePolicyUrl(policyId),
-  {      
+  {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -3378,7 +4179,7 @@ export const updatePolicy = async (policyId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updatePolicyResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updatePolicyResponse
 }
@@ -3392,7 +4193,7 @@ export type updateNoisePolicyResponse200 = {
   data: SignalNoisePolicy
   status: 200
 }
-    
+
 export type updateNoisePolicyResponseSuccess = (updateNoisePolicyResponse200) & {
   headers: Headers;
 };
@@ -3403,16 +4204,16 @@ export type updateNoisePolicyResponse = (updateNoisePolicyResponseSuccess)
 export const getUpdateNoisePolicyUrl = (policyId: string,) => {
 
 
-  
+
 
   return `/api/operations/noise-policies/${policyId}`
 }
 
 export const updateNoisePolicy = async (policyId: string,
     noisePolicyRequest: NoisePolicyRequest, options?: RequestInit): Promise<updateNoisePolicyResponse> => {
-  
+
   const res = await fetch(getUpdateNoisePolicyUrl(policyId),
-  {      
+  {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -3422,7 +4223,7 @@ export const updateNoisePolicy = async (policyId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateNoisePolicyResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateNoisePolicyResponse
 }
@@ -3436,7 +4237,7 @@ export type deleteNoisePolicyResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type deleteNoisePolicyResponseSuccess = (deleteNoisePolicyResponse204) & {
   headers: Headers;
 };
@@ -3447,24 +4248,24 @@ export type deleteNoisePolicyResponse = (deleteNoisePolicyResponseSuccess)
 export const getDeleteNoisePolicyUrl = (policyId: string,) => {
 
 
-  
+
 
   return `/api/operations/noise-policies/${policyId}`
 }
 
 export const deleteNoisePolicy = async (policyId: string, options?: RequestInit): Promise<deleteNoisePolicyResponse> => {
-  
+
   const res = await fetch(getDeleteNoisePolicyUrl(policyId),
-  {      
+  {
     ...options,
     method: 'DELETE'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: deleteNoisePolicyResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as deleteNoisePolicyResponse
 }
@@ -3478,7 +4279,7 @@ export type getSyncSettingsResponse200 = {
   data: ClusterSyncSettingsResponse
   status: 200
 }
-    
+
 export type getSyncSettingsResponseSuccess = (getSyncSettingsResponse200) & {
   headers: Headers;
 };
@@ -3489,24 +4290,24 @@ export type getSyncSettingsResponse = (getSyncSettingsResponseSuccess)
 export const getGetSyncSettingsUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/sync-settings`
 }
 
 export const getSyncSettings = async (clusterId: string, options?: RequestInit): Promise<getSyncSettingsResponse> => {
-  
+
   const res = await fetch(getGetSyncSettingsUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getSyncSettingsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getSyncSettingsResponse
 }
@@ -3520,7 +4321,7 @@ export type updateSyncSettingsResponse200 = {
   data: ClusterSyncSettingsResponse
   status: 200
 }
-    
+
 export type updateSyncSettingsResponseSuccess = (updateSyncSettingsResponse200) & {
   headers: Headers;
 };
@@ -3531,16 +4332,16 @@ export type updateSyncSettingsResponse = (updateSyncSettingsResponseSuccess)
 export const getUpdateSyncSettingsUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/sync-settings`
 }
 
 export const updateSyncSettings = async (clusterId: string,
     updateClusterSyncSettingsRequest: UpdateClusterSyncSettingsRequest, options?: RequestInit): Promise<updateSyncSettingsResponse> => {
-  
+
   const res = await fetch(getUpdateSyncSettingsUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -3550,7 +4351,7 @@ export const updateSyncSettings = async (clusterId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateSyncSettingsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateSyncSettingsResponse
 }
@@ -3564,7 +4365,7 @@ export type updateFavoriteResponse200 = {
   data: CommandFavoriteResponse
   status: 200
 }
-    
+
 export type updateFavoriteResponseSuccess = (updateFavoriteResponse200) & {
   headers: Headers;
 };
@@ -3576,7 +4377,7 @@ export const getUpdateFavoriteUrl = (clusterId: string,
     favoriteId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/command-favorites/${favoriteId}`
 }
@@ -3584,9 +4385,9 @@ export const getUpdateFavoriteUrl = (clusterId: string,
 export const updateFavorite = async (clusterId: string,
     favoriteId: string,
     commandFavoriteRequest: CommandFavoriteRequest, options?: RequestInit): Promise<updateFavoriteResponse> => {
-  
+
   const res = await fetch(getUpdateFavoriteUrl(clusterId,favoriteId),
-  {      
+  {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -3596,7 +4397,7 @@ export const updateFavorite = async (clusterId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateFavoriteResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateFavoriteResponse
 }
@@ -3610,7 +4411,7 @@ export type deleteFavoriteResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type deleteFavoriteResponseSuccess = (deleteFavoriteResponse204) & {
   headers: Headers;
 };
@@ -3622,25 +4423,25 @@ export const getDeleteFavoriteUrl = (clusterId: string,
     favoriteId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/command-favorites/${favoriteId}`
 }
 
 export const deleteFavorite = async (clusterId: string,
     favoriteId: string, options?: RequestInit): Promise<deleteFavoriteResponse> => {
-  
+
   const res = await fetch(getDeleteFavoriteUrl(clusterId,favoriteId),
-  {      
+  {
     ...options,
     method: 'DELETE'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: deleteFavoriteResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as deleteFavoriteResponse
 }
@@ -3654,7 +4455,7 @@ export type feedbackResponse200 = {
   data: AnalysisFeedback
   status: 200
 }
-    
+
 export type feedbackResponseSuccess = (feedbackResponse200) & {
   headers: Headers;
 };
@@ -3665,24 +4466,24 @@ export type feedbackResponse = (feedbackResponseSuccess)
 export const getFeedbackUrl = (analysisId: string,) => {
 
 
-  
+
 
   return `/api/analysis/${analysisId}/feedback`
 }
 
 export const feedback = async (analysisId: string, options?: RequestInit): Promise<feedbackResponse> => {
-  
+
   const res = await fetch(getFeedbackUrl(analysisId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: feedbackResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as feedbackResponse
 }
@@ -3696,7 +4497,7 @@ export type saveFeedbackResponse200 = {
   data: AnalysisFeedback
   status: 200
 }
-    
+
 export type saveFeedbackResponseSuccess = (saveFeedbackResponse200) & {
   headers: Headers;
 };
@@ -3707,16 +4508,16 @@ export type saveFeedbackResponse = (saveFeedbackResponseSuccess)
 export const getSaveFeedbackUrl = (analysisId: string,) => {
 
 
-  
+
 
   return `/api/analysis/${analysisId}/feedback`
 }
 
 export const saveFeedback = async (analysisId: string,
     analysisFeedbackRequest: AnalysisFeedbackRequest, options?: RequestInit): Promise<saveFeedbackResponse> => {
-  
+
   const res = await fetch(getSaveFeedbackUrl(analysisId),
-  {      
+  {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -3726,9 +4527,856 @@ export const saveFeedback = async (analysisId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: saveFeedbackResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as saveFeedbackResponse
+}
+
+
+
+/**
+ * @summary Suggest and Helm-validate custom Values for an exact chart version
+ */
+export type suggestValuesResponse200 = {
+  data: ValuesSuggestionResponse
+  status: 200
+}
+
+export type suggestValuesResponseSuccess = (suggestValuesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type suggestValuesResponse = (suggestValuesResponseSuccess)
+
+export const getSuggestValuesUrl = () => {
+
+
+
+
+  return `/api/v2/application-delivery/values-suggestions`
+}
+
+export const suggestValues = async (valuesSuggestionRequest: ValuesSuggestionRequest, options?: RequestInit): Promise<suggestValuesResponse> => {
+
+  const res = await fetch(getSuggestValuesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      valuesSuggestionRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: suggestValuesResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as suggestValuesResponse
+}
+
+
+
+export type profilesResponse200 = {
+  data: ValuesProfileResponse[]
+  status: 200
+}
+
+export type profilesResponseSuccess = (profilesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type profilesResponse = (profilesResponseSuccess)
+
+export const getProfilesUrl = (params: ProfilesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/values-profiles?${stringifiedParams}` : `/api/v2/application-delivery/values-profiles`
+}
+
+export const profiles = async (params: ProfilesParams, options?: RequestInit): Promise<profilesResponse> => {
+
+  const res = await fetch(getProfilesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: profilesResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as profilesResponse
+}
+
+
+
+/**
+ * @summary Create a reusable custom values profile
+ */
+export type createProfileResponse201 = {
+  data: ValuesProfileResponse
+  status: 201
+}
+
+export type createProfileResponseSuccess = (createProfileResponse201) & {
+  headers: Headers;
+};
+;
+
+export type createProfileResponse = (createProfileResponseSuccess)
+
+export const getCreateProfileUrl = () => {
+
+
+
+
+  return `/api/v2/application-delivery/values-profiles`
+}
+
+export const createProfile = async (createValuesProfileRequest: CreateValuesProfileRequest, options?: RequestInit): Promise<createProfileResponse> => {
+
+  const res = await fetch(getCreateProfileUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createValuesProfileRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createProfileResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as createProfileResponse
+}
+
+
+
+export type revisionsResponse200 = {
+  data: ValuesRevisionResponse[]
+  status: 200
+}
+
+export type revisionsResponseSuccess = (revisionsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type revisionsResponse = (revisionsResponseSuccess)
+
+export const getRevisionsUrl = (profileId: string,
+    params: RevisionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/values-profiles/${profileId}/revisions?${stringifiedParams}` : `/api/v2/application-delivery/values-profiles/${profileId}/revisions`
+}
+
+export const revisions = async (profileId: string,
+    params: RevisionsParams, options?: RequestInit): Promise<revisionsResponse> => {
+
+  const res = await fetch(getRevisionsUrl(profileId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: revisionsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as revisionsResponse
+}
+
+
+
+/**
+ * @summary Create an immutable custom values revision
+ */
+export type createRevisionResponse201 = {
+  data: ValuesRevisionResponse
+  status: 201
+}
+
+export type createRevisionResponseSuccess = (createRevisionResponse201) & {
+  headers: Headers;
+};
+;
+
+export type createRevisionResponse = (createRevisionResponseSuccess)
+
+export const getCreateRevisionUrl = (profileId: string,) => {
+
+
+
+
+  return `/api/v2/application-delivery/values-profiles/${profileId}/revisions`
+}
+
+export const createRevision = async (profileId: string,
+    createValuesRevisionRequest: CreateValuesRevisionRequest, options?: RequestInit): Promise<createRevisionResponse> => {
+
+  const res = await fetch(getCreateRevisionUrl(profileId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createValuesRevisionRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createRevisionResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as createRevisionResponse
+}
+
+
+
+/**
+ * @summary List tenant Helm and OCI sources
+ */
+export type sourcesResponse200 = {
+  data: ChartSourceResponse[]
+  status: 200
+}
+
+export type sourcesResponseSuccess = (sourcesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type sourcesResponse = (sourcesResponseSuccess)
+
+export const getSourcesUrl = (params: SourcesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/sources?${stringifiedParams}` : `/api/v2/application-delivery/sources`
+}
+
+export const sources = async (params: SourcesParams, options?: RequestInit): Promise<sourcesResponse> => {
+
+  const res = await fetch(getSourcesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: sourcesResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as sourcesResponse
+}
+
+
+
+/**
+ * @summary Add a tenant Helm or OCI source
+ */
+export type createSourceResponse201 = {
+  data: ChartSourceResponse
+  status: 201
+}
+
+export type createSourceResponseSuccess = (createSourceResponse201) & {
+  headers: Headers;
+};
+;
+
+export type createSourceResponse = (createSourceResponseSuccess)
+
+export const getCreateSourceUrl = () => {
+
+
+
+
+  return `/api/v2/application-delivery/sources`
+}
+
+export const createSource = async (createChartSourceRequest: CreateChartSourceRequest, options?: RequestInit): Promise<createSourceResponse> => {
+
+  const res = await fetch(getCreateSourceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createChartSourceRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createSourceResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as createSourceResponse
+}
+
+
+
+/**
+ * @summary Render Service ports and discover HTTP Gateways for a deployment target
+ */
+export type targetOptionsResponse200 = {
+  data: DeploymentTargetOptionsResponse
+  status: 200
+}
+
+export type targetOptionsResponseSuccess = (targetOptionsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type targetOptionsResponse = (targetOptionsResponseSuccess)
+
+export const getTargetOptionsUrl = () => {
+
+
+
+
+  return `/api/v2/application-delivery/deployment-target-options`
+}
+
+export const targetOptions = async (targetOptionsRequest: TargetOptionsRequest, options?: RequestInit): Promise<targetOptionsResponse> => {
+
+  const res = await fetch(getTargetOptionsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      targetOptionsRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: targetOptionsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as targetOptionsResponse
+}
+
+
+
+/**
+ * @summary Render and inspect an immutable Helm deployment plan
+ */
+export type previewResponse201 = {
+  data: DeploymentPlanResponse
+  status: 201
+}
+
+export type previewResponseSuccess = (previewResponse201) & {
+  headers: Headers;
+};
+;
+
+export type previewResponse = (previewResponseSuccess)
+
+export const getPreviewUrl = () => {
+
+
+
+
+  return `/api/v2/application-delivery/deployment-plans`
+}
+
+export const preview = async (previewRequest: PreviewRequest, options?: RequestInit): Promise<previewResponse> => {
+
+  const res = await fetch(getPreviewUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      previewRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: previewResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as previewResponse
+}
+
+
+
+/**
+ * @summary Execute an unexpired plan after exact text confirmation
+ */
+export type deployResponse202 = {
+  data: DeploymentAcceptedResponse
+  status: 202
+}
+
+export type deployResponseSuccess = (deployResponse202) & {
+  headers: Headers;
+};
+;
+
+export type deployResponse = (deployResponseSuccess)
+
+export const getDeployUrl = (planId: string,) => {
+
+
+
+
+  return `/api/v2/application-delivery/deployment-plans/${planId}/execute`
+}
+
+export const deploy = async (planId: string,
+    executeRequest: ExecuteRequest, options?: RequestInit): Promise<deployResponse> => {
+
+  const res = await fetch(getDeployUrl(planId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      executeRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: deployResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as deployResponse
+}
+
+
+
+/**
+ * @summary Upload a Helm chart archive into the tenant library
+ */
+export type uploadResponse201 = {
+  data: ImportedChartResponse
+  status: 201
+}
+
+export type uploadResponseSuccess = (uploadResponse201) & {
+  headers: Headers;
+};
+;
+
+export type uploadResponse = (uploadResponseSuccess)
+
+export const getUploadUrl = (params: UploadParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/charts/upload?${stringifiedParams}` : `/api/v2/application-delivery/charts/upload`
+}
+
+export const upload = async (uploadBody: UploadBody,
+    params: UploadParams, options?: RequestInit): Promise<uploadResponse> => {
+    const formData = new FormData();
+formData.append(`file`, uploadBody.file)
+
+  const res = await fetch(getUploadUrl(params),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body:
+      formData,
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: uploadResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as uploadResponse
+}
+
+
+
+/**
+ * @summary Import an Artifact Hub Helm chart into the tenant library
+ */
+export type importChartResponse201 = {
+  data: ImportedChartResponse
+  status: 201
+}
+
+export type importChartResponseSuccess = (importChartResponse201) & {
+  headers: Headers;
+};
+;
+
+export type importChartResponse = (importChartResponseSuccess)
+
+export const getImportChartUrl = () => {
+
+
+
+
+  return `/api/v2/application-delivery/charts/import`
+}
+
+export const importChart = async (importChartRequest: ImportChartRequest, options?: RequestInit): Promise<importChartResponse> => {
+
+  const res = await fetch(getImportChartUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      importChartRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: importChartResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as importChartResponse
+}
+
+
+
+export type uninstallResponse202 = {
+  data: DeploymentAcceptedResponse
+  status: 202
+}
+
+export type uninstallResponseSuccess = (uninstallResponse202) & {
+  headers: Headers;
+};
+;
+
+export type uninstallResponse = (uninstallResponseSuccess)
+
+export const getUninstallUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/v2/application-delivery/applications/${applicationId}/uninstall`
+}
+
+export const uninstall = async (applicationId: string,
+    executeRequest: ExecuteRequest, options?: RequestInit): Promise<uninstallResponse> => {
+
+  const res = await fetch(getUninstallUrl(applicationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      executeRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: uninstallResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as uninstallResponse
+}
+
+
+
+export type rollbackResponse202 = {
+  data: DeploymentAcceptedResponse
+  status: 202
+}
+
+export type rollbackResponseSuccess = (rollbackResponse202) & {
+  headers: Headers;
+};
+;
+
+export type rollbackResponse = (rollbackResponseSuccess)
+
+export const getRollbackUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/v2/application-delivery/applications/${applicationId}/rollback`
+}
+
+export const rollback = async (applicationId: string,
+    rollbackRequest: RollbackRequest, options?: RequestInit): Promise<rollbackResponse> => {
+
+  const res = await fetch(getRollbackUrl(applicationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      rollbackRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: rollbackResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as rollbackResponse
+}
+
+
+
+export type profiles1Response200 = {
+  data: ProviderResponse[]
+  status: 200
+}
+
+export type profiles1ResponseSuccess = (profiles1Response200) & {
+  headers: Headers;
+};
+;
+
+export type profiles1Response = (profiles1ResponseSuccess)
+
+export const getProfiles1Url = (params: Profiles1Params,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/ai-configuration/providers?${stringifiedParams}` : `/api/v2/ai-configuration/providers`
+}
+
+export const profiles1 = async (params: Profiles1Params, options?: RequestInit): Promise<profiles1Response> => {
+
+  const res = await fetch(getProfiles1Url(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: profiles1Response['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as profiles1Response
+}
+
+
+
+export type createResponse201 = {
+  data: ProviderResponse
+  status: 201
+}
+
+export type createResponseSuccess = (createResponse201) & {
+  headers: Headers;
+};
+;
+
+export type createResponse = (createResponseSuccess)
+
+export const getCreateUrl = () => {
+
+
+
+
+  return `/api/v2/ai-configuration/providers`
+}
+
+export const create = async (providerRequest: ProviderRequest, options?: RequestInit): Promise<createResponse> => {
+
+  const res = await fetch(getCreateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      providerRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as createResponse
+}
+
+
+
+export type validateResponse200 = {
+  data: ValidationResponse
+  status: 200
+}
+
+export type validateResponseSuccess = (validateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type validateResponse = (validateResponseSuccess)
+
+export const getValidateUrl = (profileId: string,
+    params: ValidateParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/ai-configuration/providers/${profileId}/validate?${stringifiedParams}` : `/api/v2/ai-configuration/providers/${profileId}/validate`
+}
+
+export const validate = async (profileId: string,
+    params: ValidateParams, options?: RequestInit): Promise<validateResponse> => {
+
+  const res = await fetch(getValidateUrl(profileId,params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: validateResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as validateResponse
+}
+
+
+
+export type refreshLocalModelsResponse200 = {
+  data: LocalModelResponse[]
+  status: 200
+}
+
+export type refreshLocalModelsResponseSuccess = (refreshLocalModelsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type refreshLocalModelsResponse = (refreshLocalModelsResponseSuccess)
+
+export const getRefreshLocalModelsUrl = (profileId: string,
+    params: RefreshLocalModelsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/ai-configuration/providers/${profileId}/models/refresh?${stringifiedParams}` : `/api/v2/ai-configuration/providers/${profileId}/models/refresh`
+}
+
+export const refreshLocalModels = async (profileId: string,
+    params: RefreshLocalModelsParams, options?: RequestInit): Promise<refreshLocalModelsResponse> => {
+
+  const res = await fetch(getRefreshLocalModelsUrl(profileId,params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: refreshLocalModelsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as refreshLocalModelsResponse
+}
+
+
+
+export type pullLocalModelResponse202 = {
+  data: ModelPullResponse
+  status: 202
+}
+
+export type pullLocalModelResponseSuccess = (pullLocalModelResponse202) & {
+  headers: Headers;
+};
+;
+
+export type pullLocalModelResponse = (pullLocalModelResponseSuccess)
+
+export const getPullLocalModelUrl = (profileId: string,) => {
+
+
+
+
+  return `/api/v2/ai-configuration/providers/${profileId}/models/pull`
+}
+
+export const pullLocalModel = async (profileId: string,
+    modelPullRequest: ModelPullRequest, options?: RequestInit): Promise<pullLocalModelResponse> => {
+
+  const res = await fetch(getPullLocalModelUrl(profileId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      modelPullRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: pullLocalModelResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as pullLocalModelResponse
 }
 
 
@@ -3740,7 +5388,7 @@ export type listTenantsResponse200 = {
   data: TenantResponse[]
   status: 200
 }
-    
+
 export type listTenantsResponseSuccess = (listTenantsResponse200) & {
   headers: Headers;
 };
@@ -3751,24 +5399,24 @@ export type listTenantsResponse = (listTenantsResponseSuccess)
 export const getListTenantsUrl = () => {
 
 
-  
+
 
   return `/api/tenants`
 }
 
 export const listTenants = async ( options?: RequestInit): Promise<listTenantsResponse> => {
-  
+
   const res = await fetch(getListTenantsUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listTenantsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listTenantsResponse
 }
@@ -3782,7 +5430,7 @@ export type createTenantResponse201 = {
   data: TenantResponse
   status: 201
 }
-    
+
 export type createTenantResponseSuccess = (createTenantResponse201) & {
   headers: Headers;
 };
@@ -3793,15 +5441,15 @@ export type createTenantResponse = (createTenantResponseSuccess)
 export const getCreateTenantUrl = () => {
 
 
-  
+
 
   return `/api/tenants`
 }
 
 export const createTenant = async (createTenancyRequest: CreateTenancyRequest, options?: RequestInit): Promise<createTenantResponse> => {
-  
+
   const res = await fetch(getCreateTenantUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -3811,7 +5459,7 @@ export const createTenant = async (createTenancyRequest: CreateTenancyRequest, o
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: createTenantResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as createTenantResponse
 }
@@ -3825,7 +5473,7 @@ export type listWorkspacesResponse200 = {
   data: WorkspaceResponse[]
   status: 200
 }
-    
+
 export type listWorkspacesResponseSuccess = (listWorkspacesResponse200) & {
   headers: Headers;
 };
@@ -3836,24 +5484,24 @@ export type listWorkspacesResponse = (listWorkspacesResponseSuccess)
 export const getListWorkspacesUrl = (tenantId: string,) => {
 
 
-  
+
 
   return `/api/tenants/${tenantId}/workspaces`
 }
 
 export const listWorkspaces = async (tenantId: string, options?: RequestInit): Promise<listWorkspacesResponse> => {
-  
+
   const res = await fetch(getListWorkspacesUrl(tenantId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listWorkspacesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listWorkspacesResponse
 }
@@ -3867,7 +5515,7 @@ export type createWorkspaceResponse201 = {
   data: WorkspaceResponse
   status: 201
 }
-    
+
 export type createWorkspaceResponseSuccess = (createWorkspaceResponse201) & {
   headers: Headers;
 };
@@ -3878,16 +5526,16 @@ export type createWorkspaceResponse = (createWorkspaceResponseSuccess)
 export const getCreateWorkspaceUrl = (tenantId: string,) => {
 
 
-  
+
 
   return `/api/tenants/${tenantId}/workspaces`
 }
 
 export const createWorkspace = async (tenantId: string,
     createTenancyRequest: CreateTenancyRequest, options?: RequestInit): Promise<createWorkspaceResponse> => {
-  
+
   const res = await fetch(getCreateWorkspaceUrl(tenantId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -3897,9 +5545,265 @@ export const createWorkspace = async (tenantId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: createWorkspaceResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as createWorkspaceResponse
+}
+
+
+
+export type mappingsResponse200 = {
+  data: GroupMappingResponse[]
+  status: 200
+}
+
+export type mappingsResponseSuccess = (mappingsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mappingsResponse = (mappingsResponseSuccess)
+
+export const getMappingsUrl = (tenantId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/oidc-group-mappings`
+}
+
+export const mappings = async (tenantId: string, options?: RequestInit): Promise<mappingsResponse> => {
+
+  const res = await fetch(getMappingsUrl(tenantId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: mappingsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as mappingsResponse
+}
+
+
+
+export type createMappingResponse201 = {
+  data: GroupMappingResponse
+  status: 201
+}
+
+export type createMappingResponseSuccess = (createMappingResponse201) & {
+  headers: Headers;
+};
+;
+
+export type createMappingResponse = (createMappingResponseSuccess)
+
+export const getCreateMappingUrl = (tenantId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/oidc-group-mappings`
+}
+
+export const createMapping = async (tenantId: string,
+    createGroupMappingRequest: CreateGroupMappingRequest, options?: RequestInit): Promise<createMappingResponse> => {
+
+  const res = await fetch(getCreateMappingUrl(tenantId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createGroupMappingRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createMappingResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as createMappingResponse
+}
+
+
+
+/**
+ * @summary List tenant memberships
+ */
+export type membersResponse200 = {
+  data: MemberResponse[]
+  status: 200
+}
+
+export type membersResponseSuccess = (membersResponse200) & {
+  headers: Headers;
+};
+;
+
+export type membersResponse = (membersResponseSuccess)
+
+export const getMembersUrl = (tenantId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/members`
+}
+
+export const members = async (tenantId: string, options?: RequestInit): Promise<membersResponse> => {
+
+  const res = await fetch(getMembersUrl(tenantId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: membersResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as membersResponse
+}
+
+
+
+/**
+ * @summary Invite or pre-authorize a tenant member
+ */
+export type inviteResponse201 = {
+  data: MemberResponse
+  status: 201
+}
+
+export type inviteResponseSuccess = (inviteResponse201) & {
+  headers: Headers;
+};
+;
+
+export type inviteResponse = (inviteResponseSuccess)
+
+export const getInviteUrl = (tenantId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/members`
+}
+
+export const invite = async (tenantId: string,
+    inviteMemberRequest: InviteMemberRequest, options?: RequestInit): Promise<inviteResponse> => {
+
+  const res = await fetch(getInviteUrl(tenantId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      inviteMemberRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: inviteResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as inviteResponse
+}
+
+
+
+/**
+ * @summary Execute an approved tenant member offboarding plan
+ */
+export type offboardResponse200 = {
+  data: MemberResponse
+  status: 200
+}
+
+export type offboardResponseSuccess = (offboardResponse200) & {
+  headers: Headers;
+};
+;
+
+export type offboardResponse = (offboardResponseSuccess)
+
+export const getOffboardUrl = (tenantId: string,
+    membershipId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/members/${membershipId}/offboard`
+}
+
+export const offboard = async (tenantId: string,
+    membershipId: string,
+    offboardRequest: OffboardRequest, options?: RequestInit): Promise<offboardResponse> => {
+
+  const res = await fetch(getOffboardUrl(tenantId,membershipId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      offboardRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: offboardResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as offboardResponse
+}
+
+
+
+/**
+ * @summary Preview tenant member offboarding
+ */
+export type offboardPlanResponse200 = {
+  data: OffboardPlan
+  status: 200
+}
+
+export type offboardPlanResponseSuccess = (offboardPlanResponse200) & {
+  headers: Headers;
+};
+;
+
+export type offboardPlanResponse = (offboardPlanResponseSuccess)
+
+export const getOffboardPlanUrl = (tenantId: string,
+    membershipId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/members/${membershipId}/offboard-plan`
+}
+
+export const offboardPlan = async (tenantId: string,
+    membershipId: string, options?: RequestInit): Promise<offboardPlanResponse> => {
+
+  const res = await fetch(getOffboardPlanUrl(tenantId,membershipId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: offboardPlanResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as offboardPlanResponse
 }
 
 
@@ -3911,7 +5815,7 @@ export type cleanupResponse200 = {
   data: CleanupPreview
   status: 200
 }
-    
+
 export type cleanupResponseSuccess = (cleanupResponse200) & {
   headers: Headers;
 };
@@ -3922,24 +5826,24 @@ export type cleanupResponse = (cleanupResponseSuccess)
 export const getCleanupUrl = () => {
 
 
-  
+
 
   return `/api/settings/operations/cleanup`
 }
 
 export const cleanup = async ( options?: RequestInit): Promise<cleanupResponse> => {
-  
+
   const res = await fetch(getCleanupUrl(),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: cleanupResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as cleanupResponse
 }
@@ -3953,7 +5857,7 @@ export type cleanupPreviewResponse200 = {
   data: CleanupPreview
   status: 200
 }
-    
+
 export type cleanupPreviewResponseSuccess = (cleanupPreviewResponse200) & {
   headers: Headers;
 };
@@ -3964,24 +5868,24 @@ export type cleanupPreviewResponse = (cleanupPreviewResponseSuccess)
 export const getCleanupPreviewUrl = () => {
 
 
-  
+
 
   return `/api/settings/operations/cleanup-preview`
 }
 
 export const cleanupPreview = async ( options?: RequestInit): Promise<cleanupPreviewResponse> => {
-  
+
   const res = await fetch(getCleanupPreviewUrl(),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: cleanupPreviewResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as cleanupPreviewResponse
 }
@@ -3995,7 +5899,7 @@ export type listBindingsResponse200 = {
   data: RoleBindingResponse[]
   status: 200
 }
-    
+
 export type listBindingsResponseSuccess = (listBindingsResponse200) & {
   headers: Headers;
 };
@@ -4006,24 +5910,24 @@ export type listBindingsResponse = (listBindingsResponseSuccess)
 export const getListBindingsUrl = () => {
 
 
-  
+
 
   return `/api/security/role-bindings`
 }
 
 export const listBindings = async ( options?: RequestInit): Promise<listBindingsResponse> => {
-  
+
   const res = await fetch(getListBindingsUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listBindingsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listBindingsResponse
 }
@@ -4037,7 +5941,7 @@ export type createBindingResponse201 = {
   data: RoleBindingResponse
   status: 201
 }
-    
+
 export type createBindingResponseSuccess = (createBindingResponse201) & {
   headers: Headers;
 };
@@ -4048,15 +5952,15 @@ export type createBindingResponse = (createBindingResponseSuccess)
 export const getCreateBindingUrl = () => {
 
 
-  
+
 
   return `/api/security/role-bindings`
 }
 
 export const createBinding = async (createRoleBindingRequest: CreateRoleBindingRequest, options?: RequestInit): Promise<createBindingResponse> => {
-  
+
   const res = await fetch(getCreateBindingUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -4066,7 +5970,7 @@ export const createBinding = async (createRoleBindingRequest: CreateRoleBindingR
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: createBindingResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as createBindingResponse
 }
@@ -4080,7 +5984,7 @@ export type duplicateRunbookResponse201 = {
   data: ManagedRunbook
   status: 201
 }
-    
+
 export type duplicateRunbookResponseSuccess = (duplicateRunbookResponse201) & {
   headers: Headers;
 };
@@ -4091,24 +5995,24 @@ export type duplicateRunbookResponse = (duplicateRunbookResponseSuccess)
 export const getDuplicateRunbookUrl = (runbookId: string,) => {
 
 
-  
+
 
   return `/api/runbooks/${runbookId}/duplicate`
 }
 
 export const duplicateRunbook = async (runbookId: string, options?: RequestInit): Promise<duplicateRunbookResponse> => {
-  
+
   const res = await fetch(getDuplicateRunbookUrl(runbookId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: duplicateRunbookResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as duplicateRunbookResponse
 }
@@ -4122,7 +6026,7 @@ export type matchRunbooksResponse200 = {
   data: RunbookTemplate[]
   status: 200
 }
-    
+
 export type matchRunbooksResponseSuccess = (matchRunbooksResponse200) & {
   headers: Headers;
 };
@@ -4133,15 +6037,15 @@ export type matchRunbooksResponse = (matchRunbooksResponseSuccess)
 export const getMatchRunbooksUrl = () => {
 
 
-  
+
 
   return `/api/runbooks/match`
 }
 
 export const matchRunbooks = async (runbookMatchRequest: RunbookMatchRequest, options?: RequestInit): Promise<matchRunbooksResponse> => {
-  
+
   const res = await fetch(getMatchRunbooksUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -4151,7 +6055,7 @@ export const matchRunbooks = async (runbookMatchRequest: RunbookMatchRequest, op
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: matchRunbooksResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as matchRunbooksResponse
 }
@@ -4165,7 +6069,7 @@ export type createRunbookResponse201 = {
   data: ManagedRunbook
   status: 201
 }
-    
+
 export type createRunbookResponseSuccess = (createRunbookResponse201) & {
   headers: Headers;
 };
@@ -4176,15 +6080,15 @@ export type createRunbookResponse = (createRunbookResponseSuccess)
 export const getCreateRunbookUrl = () => {
 
 
-  
+
 
   return `/api/runbooks/custom`
 }
 
 export const createRunbook = async (runbookRequest: RunbookRequest, options?: RequestInit): Promise<createRunbookResponse> => {
-  
+
   const res = await fetch(getCreateRunbookUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -4194,7 +6098,7 @@ export const createRunbook = async (runbookRequest: RunbookRequest, options?: Re
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: createRunbookResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as createRunbookResponse
 }
@@ -4208,7 +6112,7 @@ export type restoreRunbookResponse200 = {
   data: ManagedRunbook
   status: 200
 }
-    
+
 export type restoreRunbookResponseSuccess = (restoreRunbookResponse200) & {
   headers: Headers;
 };
@@ -4220,25 +6124,25 @@ export const getRestoreRunbookUrl = (runbookId: string,
     version: number,) => {
 
 
-  
+
 
   return `/api/runbooks/custom/${runbookId}/versions/${version}/restore`
 }
 
 export const restoreRunbook = async (runbookId: string,
     version: number, options?: RequestInit): Promise<restoreRunbookResponse> => {
-  
+
   const res = await fetch(getRestoreRunbookUrl(runbookId,version),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: restoreRunbookResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as restoreRunbookResponse
 }
@@ -4252,7 +6156,7 @@ export type evaluateObservationResponse200 = {
   data: RemediationObservation
   status: 200
 }
-    
+
 export type evaluateObservationResponseSuccess = (evaluateObservationResponse200) & {
   headers: Headers;
 };
@@ -4263,24 +6167,24 @@ export type evaluateObservationResponse = (evaluateObservationResponseSuccess)
 export const getEvaluateObservationUrl = (observationId: string,) => {
 
 
-  
+
 
   return `/api/remediation-observations/${observationId}/evaluate`
 }
 
 export const evaluateObservation = async (observationId: string, options?: RequestInit): Promise<evaluateObservationResponse> => {
-  
+
   const res = await fetch(getEvaluateObservationUrl(observationId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: evaluateObservationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as evaluateObservationResponse
 }
@@ -4294,7 +6198,7 @@ export type cancelObservationResponse200 = {
   data: RemediationObservation
   status: 200
 }
-    
+
 export type cancelObservationResponseSuccess = (cancelObservationResponse200) & {
   headers: Headers;
 };
@@ -4305,24 +6209,24 @@ export type cancelObservationResponse = (cancelObservationResponseSuccess)
 export const getCancelObservationUrl = (observationId: string,) => {
 
 
-  
+
 
   return `/api/remediation-observations/${observationId}/cancel`
 }
 
 export const cancelObservation = async (observationId: string, options?: RequestInit): Promise<cancelObservationResponse> => {
-  
+
   const res = await fetch(getCancelObservationUrl(observationId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: cancelObservationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as cancelObservationResponse
 }
@@ -4336,7 +6240,7 @@ export type evaluatePoliciesResponse200 = {
   data: PolicyEvaluation[]
   status: 200
 }
-    
+
 export type evaluatePoliciesResponseSuccess = (evaluatePoliciesResponse200) & {
   headers: Headers;
 };
@@ -4348,7 +6252,7 @@ export const getEvaluatePoliciesUrl = (params: EvaluatePoliciesParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -4360,18 +6264,18 @@ export const getEvaluatePoliciesUrl = (params: EvaluatePoliciesParams,) => {
 }
 
 export const evaluatePolicies = async (params: EvaluatePoliciesParams, options?: RequestInit): Promise<evaluatePoliciesResponse> => {
-  
+
   const res = await fetch(getEvaluatePoliciesUrl(params),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: evaluatePoliciesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as evaluatePoliciesResponse
 }
@@ -4385,7 +6289,7 @@ export type resumeWatchResponse200 = {
   data: WatchRuntimeStatus
   status: 200
 }
-    
+
 export type resumeWatchResponseSuccess = (resumeWatchResponse200) & {
   headers: Headers;
 };
@@ -4396,24 +6300,24 @@ export type resumeWatchResponse = (resumeWatchResponseSuccess)
 export const getResumeWatchUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/operations/watch/clusters/${clusterId}/resume`
 }
 
 export const resumeWatch = async (clusterId: string, options?: RequestInit): Promise<resumeWatchResponse> => {
-  
+
   const res = await fetch(getResumeWatchUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: resumeWatchResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as resumeWatchResponse
 }
@@ -4427,7 +6331,7 @@ export type restartWatchResponse200 = {
   data: WatchRuntimeStatus
   status: 200
 }
-    
+
 export type restartWatchResponseSuccess = (restartWatchResponse200) & {
   headers: Headers;
 };
@@ -4438,24 +6342,24 @@ export type restartWatchResponse = (restartWatchResponseSuccess)
 export const getRestartWatchUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/operations/watch/clusters/${clusterId}/restart`
 }
 
 export const restartWatch = async (clusterId: string, options?: RequestInit): Promise<restartWatchResponse> => {
-  
+
   const res = await fetch(getRestartWatchUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: restartWatchResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as restartWatchResponse
 }
@@ -4469,7 +6373,7 @@ export type pauseWatchResponse200 = {
   data: WatchRuntimeStatus
   status: 200
 }
-    
+
 export type pauseWatchResponseSuccess = (pauseWatchResponse200) & {
   headers: Headers;
 };
@@ -4480,24 +6384,24 @@ export type pauseWatchResponse = (pauseWatchResponseSuccess)
 export const getPauseWatchUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/operations/watch/clusters/${clusterId}/pause`
 }
 
 export const pauseWatch = async (clusterId: string, options?: RequestInit): Promise<pauseWatchResponse> => {
-  
+
   const res = await fetch(getPauseWatchUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: pauseWatchResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as pauseWatchResponse
 }
@@ -4511,7 +6415,7 @@ export type runValidationResponse200 = {
   data: ValidationLabRun
   status: 200
 }
-    
+
 export type runValidationResponseSuccess = (runValidationResponse200) & {
   headers: Headers;
 };
@@ -4522,24 +6426,24 @@ export type runValidationResponse = (runValidationResponseSuccess)
 export const getRunValidationUrl = () => {
 
 
-  
+
 
   return `/api/operations/validation-lab/runs`
 }
 
 export const runValidation = async ( options?: RequestInit): Promise<runValidationResponse> => {
-  
+
   const res = await fetch(getRunValidationUrl(),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: runValidationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as runValidationResponse
 }
@@ -4553,7 +6457,7 @@ export type runLiveValidationResponse201 = {
   data: LiveValidationRun
   status: 201
 }
-    
+
 export type runLiveValidationResponseSuccess = (runLiveValidationResponse201) & {
   headers: Headers;
 };
@@ -4564,15 +6468,15 @@ export type runLiveValidationResponse = (runLiveValidationResponseSuccess)
 export const getRunLiveValidationUrl = () => {
 
 
-  
+
 
   return `/api/operations/validation-lab/live/runs`
 }
 
 export const runLiveValidation = async (liveValidationRunRequest: LiveValidationRunRequest, options?: RequestInit): Promise<runLiveValidationResponse> => {
-  
+
   const res = await fetch(getRunLiveValidationUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -4582,7 +6486,7 @@ export const runLiveValidation = async (liveValidationRunRequest: LiveValidation
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: runLiveValidationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as runLiveValidationResponse
 }
@@ -4596,7 +6500,7 @@ export type previewLiveValidationResponse200 = {
   data: LiveValidationPreview
   status: 200
 }
-    
+
 export type previewLiveValidationResponseSuccess = (previewLiveValidationResponse200) & {
   headers: Headers;
 };
@@ -4607,15 +6511,15 @@ export type previewLiveValidationResponse = (previewLiveValidationResponseSucces
 export const getPreviewLiveValidationUrl = () => {
 
 
-  
+
 
   return `/api/operations/validation-lab/live/preview`
 }
 
 export const previewLiveValidation = async (liveValidationPreviewRequest: LiveValidationPreviewRequest, options?: RequestInit): Promise<previewLiveValidationResponse> => {
-  
+
   const res = await fetch(getPreviewLiveValidationUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -4625,7 +6529,7 @@ export const previewLiveValidation = async (liveValidationPreviewRequest: LiveVa
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: previewLiveValidationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as previewLiveValidationResponse
 }
@@ -4639,7 +6543,7 @@ export type runBenchmarkResponse201 = {
   data: AnalysisBenchmark
   status: 201
 }
-    
+
 export type runBenchmarkResponseSuccess = (runBenchmarkResponse201) & {
   headers: Headers;
 };
@@ -4650,24 +6554,24 @@ export type runBenchmarkResponse = (runBenchmarkResponseSuccess)
 export const getRunBenchmarkUrl = () => {
 
 
-  
+
 
   return `/api/operations/validation-lab/benchmarks`
 }
 
 export const runBenchmark = async ( options?: RequestInit): Promise<runBenchmarkResponse> => {
-  
+
   const res = await fetch(getRunBenchmarkUrl(),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: runBenchmarkResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as runBenchmarkResponse
 }
@@ -4681,7 +6585,7 @@ export type reconcileResponse200 = {
   data: OperationsOverview
   status: 200
 }
-    
+
 export type reconcileResponseSuccess = (reconcileResponse200) & {
   headers: Headers;
 };
@@ -4692,24 +6596,24 @@ export type reconcileResponse = (reconcileResponseSuccess)
 export const getReconcileUrl = () => {
 
 
-  
+
 
   return `/api/operations/reconcile`
 }
 
 export const reconcile = async ( options?: RequestInit): Promise<reconcileResponse> => {
-  
+
   const res = await fetch(getReconcileUrl(),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: reconcileResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as reconcileResponse
 }
@@ -4723,7 +6627,7 @@ export type runsResponse200 = {
   data: Run[]
   status: 200
 }
-    
+
 export type runsResponseSuccess = (runsResponse200) & {
   headers: Headers;
 };
@@ -4735,7 +6639,7 @@ export const getRunsUrl = (params?: RunsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -4747,18 +6651,18 @@ export const getRunsUrl = (params?: RunsParams,) => {
 }
 
 export const runs = async (params?: RunsParams, options?: RequestInit): Promise<runsResponse> => {
-  
+
   const res = await fetch(getRunsUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: runsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as runsResponse
 }
@@ -4772,7 +6676,7 @@ export type importRunResponse200 = {
   data: Run
   status: 200
 }
-    
+
 export type importRunResponseSuccess = (importRunResponse200) & {
   headers: Headers;
 };
@@ -4783,15 +6687,15 @@ export type importRunResponse = (importRunResponseSuccess)
 export const getImportRunUrl = () => {
 
 
-  
+
 
   return `/api/operations/production-evidence/runs`
 }
 
 export const importRun = async (importRequest: ImportRequest, options?: RequestInit): Promise<importRunResponse> => {
-  
+
   const res = await fetch(getImportRunUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -4801,7 +6705,7 @@ export const importRun = async (importRequest: ImportRequest, options?: RequestI
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: importRunResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as importRunResponse
 }
@@ -4815,7 +6719,7 @@ export type noisePoliciesResponse200 = {
   data: SignalNoisePolicy[]
   status: 200
 }
-    
+
 export type noisePoliciesResponseSuccess = (noisePoliciesResponse200) & {
   headers: Headers;
 };
@@ -4826,24 +6730,24 @@ export type noisePoliciesResponse = (noisePoliciesResponseSuccess)
 export const getNoisePoliciesUrl = () => {
 
 
-  
+
 
   return `/api/operations/noise-policies`
 }
 
 export const noisePolicies = async ( options?: RequestInit): Promise<noisePoliciesResponse> => {
-  
+
   const res = await fetch(getNoisePoliciesUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: noisePoliciesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as noisePoliciesResponse
 }
@@ -4857,7 +6761,7 @@ export type createNoisePolicyResponse201 = {
   data: SignalNoisePolicy
   status: 201
 }
-    
+
 export type createNoisePolicyResponseSuccess = (createNoisePolicyResponse201) & {
   headers: Headers;
 };
@@ -4868,15 +6772,15 @@ export type createNoisePolicyResponse = (createNoisePolicyResponseSuccess)
 export const getCreateNoisePolicyUrl = () => {
 
 
-  
+
 
   return `/api/operations/noise-policies`
 }
 
 export const createNoisePolicy = async (noisePolicyRequest: NoisePolicyRequest, options?: RequestInit): Promise<createNoisePolicyResponse> => {
-  
+
   const res = await fetch(getCreateNoisePolicyUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -4886,7 +6790,7 @@ export const createNoisePolicy = async (noisePolicyRequest: NoisePolicyRequest, 
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: createNoisePolicyResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as createNoisePolicyResponse
 }
@@ -4900,7 +6804,7 @@ export type releaseGatesResponse200 = {
   data: AiReleaseGate[]
   status: 200
 }
-    
+
 export type releaseGatesResponseSuccess = (releaseGatesResponse200) & {
   headers: Headers;
 };
@@ -4912,7 +6816,7 @@ export const getReleaseGatesUrl = (params?: ReleaseGatesParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -4924,18 +6828,18 @@ export const getReleaseGatesUrl = (params?: ReleaseGatesParams,) => {
 }
 
 export const releaseGates = async (params?: ReleaseGatesParams, options?: RequestInit): Promise<releaseGatesResponse> => {
-  
+
   const res = await fetch(getReleaseGatesUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: releaseGatesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as releaseGatesResponse
 }
@@ -4949,7 +6853,7 @@ export type evaluateReleaseGateResponse201 = {
   data: AiReleaseGate
   status: 201
 }
-    
+
 export type evaluateReleaseGateResponseSuccess = (evaluateReleaseGateResponse201) & {
   headers: Headers;
 };
@@ -4960,15 +6864,15 @@ export type evaluateReleaseGateResponse = (evaluateReleaseGateResponseSuccess)
 export const getEvaluateReleaseGateUrl = () => {
 
 
-  
+
 
   return `/api/operations/ai-release-gates`
 }
 
 export const evaluateReleaseGate = async (releaseGateRequest: ReleaseGateRequest, options?: RequestInit): Promise<evaluateReleaseGateResponse> => {
-  
+
   const res = await fetch(getEvaluateReleaseGateUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -4978,7 +6882,7 @@ export const evaluateReleaseGate = async (releaseGateRequest: ReleaseGateRequest
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: evaluateReleaseGateResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as evaluateReleaseGateResponse
 }
@@ -4992,7 +6896,7 @@ export type readAllNotificationsResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type readAllNotificationsResponseSuccess = (readAllNotificationsResponse204) & {
   headers: Headers;
 };
@@ -5003,24 +6907,24 @@ export type readAllNotificationsResponse = (readAllNotificationsResponseSuccess)
 export const getReadAllNotificationsUrl = () => {
 
 
-  
+
 
   return `/api/notifications/read-all`
 }
 
 export const readAllNotifications = async ( options?: RequestInit): Promise<readAllNotificationsResponse> => {
-  
+
   const res = await fetch(getReadAllNotificationsUrl(),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: readAllNotificationsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as readAllNotificationsResponse
 }
@@ -5034,7 +6938,7 @@ export type cancelJobResponse200 = {
   data: JobResponse
   status: 200
 }
-    
+
 export type cancelJobResponseSuccess = (cancelJobResponse200) & {
   headers: Headers;
 };
@@ -5045,24 +6949,24 @@ export type cancelJobResponse = (cancelJobResponseSuccess)
 export const getCancelJobUrl = (jobId: string,) => {
 
 
-  
+
 
   return `/api/jobs/${jobId}/cancel`
 }
 
 export const cancelJob = async (jobId: string, options?: RequestInit): Promise<cancelJobResponse> => {
-  
+
   const res = await fetch(getCancelJobUrl(jobId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: cancelJobResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as cancelJobResponse
 }
@@ -5076,7 +6980,7 @@ export type splitResponse201 = {
   data: Incident
   status: 201
 }
-    
+
 export type splitResponseSuccess = (splitResponse201) & {
   headers: Headers;
 };
@@ -5087,16 +6991,16 @@ export type splitResponse = (splitResponseSuccess)
 export const getSplitUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/split`
 }
 
 export const split = async (incidentId: string,
     splitRequest: SplitRequest, options?: RequestInit): Promise<splitResponse> => {
-  
+
   const res = await fetch(getSplitUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5106,7 +7010,7 @@ export const split = async (incidentId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: splitResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as splitResponse
 }
@@ -5120,7 +7024,7 @@ export type observationsResponse200 = {
   data: RemediationObservation[]
   status: 200
 }
-    
+
 export type observationsResponseSuccess = (observationsResponse200) & {
   headers: Headers;
 };
@@ -5133,7 +7037,7 @@ export const getObservationsUrl = (incidentId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -5146,18 +7050,18 @@ export const getObservationsUrl = (incidentId: string,
 
 export const observations = async (incidentId: string,
     params?: ObservationsParams, options?: RequestInit): Promise<observationsResponse> => {
-  
+
   const res = await fetch(getObservationsUrl(incidentId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: observationsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as observationsResponse
 }
@@ -5171,7 +7075,7 @@ export type startObservationResponse201 = {
   data: RemediationObservation
   status: 201
 }
-    
+
 export type startObservationResponseSuccess = (startObservationResponse201) & {
   headers: Headers;
 };
@@ -5182,16 +7086,16 @@ export type startObservationResponse = (startObservationResponseSuccess)
 export const getStartObservationUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/remediation-observations`
 }
 
 export const startObservation = async (incidentId: string,
     observationRequest: ObservationRequest, options?: RequestInit): Promise<startObservationResponse> => {
-  
+
   const res = await fetch(getStartObservationUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5201,7 +7105,7 @@ export const startObservation = async (incidentId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: startObservationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as startObservationResponse
 }
@@ -5215,7 +7119,7 @@ export type postmortemResponse200 = {
   data: IncidentPostmortem
   status: 200
 }
-    
+
 export type postmortemResponseSuccess = (postmortemResponse200) & {
   headers: Headers;
 };
@@ -5226,24 +7130,24 @@ export type postmortemResponse = (postmortemResponseSuccess)
 export const getPostmortemUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/postmortem`
 }
 
 export const postmortem = async (incidentId: string, options?: RequestInit): Promise<postmortemResponse> => {
-  
+
   const res = await fetch(getPostmortemUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: postmortemResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as postmortemResponse
 }
@@ -5257,7 +7161,7 @@ export type generatePostmortemResponse200 = {
   data: IncidentPostmortem
   status: 200
 }
-    
+
 export type generatePostmortemResponseSuccess = (generatePostmortemResponse200) & {
   headers: Headers;
 };
@@ -5268,24 +7172,24 @@ export type generatePostmortemResponse = (generatePostmortemResponseSuccess)
 export const getGeneratePostmortemUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/postmortem`
 }
 
 export const generatePostmortem = async (incidentId: string, options?: RequestInit): Promise<generatePostmortemResponse> => {
-  
+
   const res = await fetch(getGeneratePostmortemUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: generatePostmortemResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as generatePostmortemResponse
 }
@@ -5299,7 +7203,7 @@ export type mergeResponse200 = {
   data: IncidentCollaboration
   status: 200
 }
-    
+
 export type mergeResponseSuccess = (mergeResponse200) & {
   headers: Headers;
 };
@@ -5310,16 +7214,16 @@ export type mergeResponse = (mergeResponseSuccess)
 export const getMergeUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/merge`
 }
 
 export const merge = async (incidentId: string,
     mergeRequest: MergeRequest, options?: RequestInit): Promise<mergeResponse> => {
-  
+
   const res = await fetch(getMergeUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5329,7 +7233,7 @@ export const merge = async (incidentId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: mergeResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as mergeResponse
 }
@@ -5343,7 +7247,7 @@ export type linkResponse200 = {
   data: IncidentCollaboration
   status: 200
 }
-    
+
 export type linkResponseSuccess = (linkResponse200) & {
   headers: Headers;
 };
@@ -5354,16 +7258,16 @@ export type linkResponse = (linkResponseSuccess)
 export const getLinkUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/links`
 }
 
 export const link = async (incidentId: string,
     incidentLinkRequest: IncidentLinkRequest, options?: RequestInit): Promise<linkResponse> => {
-  
+
   const res = await fetch(getLinkUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5373,7 +7277,7 @@ export const link = async (incidentId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: linkResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as linkResponse
 }
@@ -5387,7 +7291,7 @@ export type commentResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type commentResponseSuccess = (commentResponse204) & {
   headers: Headers;
 };
@@ -5398,16 +7302,16 @@ export type commentResponse = (commentResponseSuccess)
 export const getCommentUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/comments`
 }
 
 export const comment = async (incidentId: string,
     commentRequest: CommentRequest, options?: RequestInit): Promise<commentResponse> => {
-  
+
   const res = await fetch(getCommentUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5417,7 +7321,7 @@ export const comment = async (incidentId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: commentResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as commentResponse
 }
@@ -5431,7 +7335,7 @@ export type reconcileIncidentsResponse200 = {
   data: OperationsOverview
   status: 200
 }
-    
+
 export type reconcileIncidentsResponseSuccess = (reconcileIncidentsResponse200) & {
   headers: Headers;
 };
@@ -5442,24 +7346,24 @@ export type reconcileIncidentsResponse = (reconcileIncidentsResponseSuccess)
 export const getReconcileIncidentsUrl = () => {
 
 
-  
+
 
   return `/api/incidents/reconcile`
 }
 
 export const reconcileIncidents = async ( options?: RequestInit): Promise<reconcileIncidentsResponse> => {
-  
+
   const res = await fetch(getReconcileIncidentsUrl(),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: reconcileIncidentsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as reconcileIncidentsResponse
 }
@@ -5473,7 +7377,7 @@ export type createIncidentResponse201 = {
   data: Incident
   status: 201
 }
-    
+
 export type createIncidentResponseSuccess = (createIncidentResponse201) & {
   headers: Headers;
 };
@@ -5484,15 +7388,15 @@ export type createIncidentResponse = (createIncidentResponseSuccess)
 export const getCreateIncidentUrl = () => {
 
 
-  
+
 
   return `/api/incidents/manual`
 }
 
 export const createIncident = async (manualIncidentRequest: ManualIncidentRequest, options?: RequestInit): Promise<createIncidentResponse> => {
-  
+
   const res = await fetch(getCreateIncidentUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5502,7 +7406,7 @@ export const createIncident = async (manualIncidentRequest: ManualIncidentReques
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: createIncidentResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as createIncidentResponse
 }
@@ -5516,7 +7420,7 @@ export type listClustersResponse200 = {
   data: ClusterResponse[]
   status: 200
 }
-    
+
 export type listClustersResponseSuccess = (listClustersResponse200) & {
   headers: Headers;
 };
@@ -5528,7 +7432,7 @@ export const getListClustersUrl = (params?: ListClustersParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -5540,18 +7444,18 @@ export const getListClustersUrl = (params?: ListClustersParams,) => {
 }
 
 export const listClusters = async (params?: ListClustersParams, options?: RequestInit): Promise<listClustersResponse> => {
-  
+
   const res = await fetch(getListClustersUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listClustersResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listClustersResponse
 }
@@ -5565,7 +7469,7 @@ export type registerClusterResponse201 = {
   data: ClusterResponse
   status: 201
 }
-    
+
 export type registerClusterResponseSuccess = (registerClusterResponse201) & {
   headers: Headers;
 };
@@ -5576,15 +7480,15 @@ export type registerClusterResponse = (registerClusterResponseSuccess)
 export const getRegisterClusterUrl = () => {
 
 
-  
+
 
   return `/api/clusters`
 }
 
 export const registerCluster = async (registerClusterRequest: RegisterClusterRequest, options?: RequestInit): Promise<registerClusterResponse> => {
-  
+
   const res = await fetch(getRegisterClusterUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5594,7 +7498,7 @@ export const registerCluster = async (registerClusterRequest: RegisterClusterReq
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: registerClusterResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as registerClusterResponse
 }
@@ -5608,7 +7512,7 @@ export type syncClusterResponse202 = {
   data: StartJobResponse
   status: 202
 }
-    
+
 export type syncClusterResponseSuccess = (syncClusterResponse202) & {
   headers: Headers;
 };
@@ -5619,24 +7523,24 @@ export type syncClusterResponse = (syncClusterResponseSuccess)
 export const getSyncClusterUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/sync`
 }
 
 export const syncCluster = async (clusterId: string, options?: RequestInit): Promise<syncClusterResponse> => {
-  
+
   const res = await fetch(getSyncClusterUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: syncClusterResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as syncClusterResponse
 }
@@ -5650,7 +7554,7 @@ export type testClusterConnectionResponse200 = {
   data: ClusterConnectionTestResponse
   status: 200
 }
-    
+
 export type testClusterConnectionResponseSuccess = (testClusterConnectionResponse200) & {
   headers: Headers;
 };
@@ -5661,24 +7565,24 @@ export type testClusterConnectionResponse = (testClusterConnectionResponseSucces
 export const getTestClusterConnectionUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/connection-test`
 }
 
 export const testClusterConnection = async (clusterId: string, options?: RequestInit): Promise<testClusterConnectionResponse> => {
-  
+
   const res = await fetch(getTestClusterConnectionUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: testClusterConnectionResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as testClusterConnectionResponse
 }
@@ -5688,31 +7592,31 @@ export const testClusterConnection = async (clusterId: string, options?: Request
 /**
  * @summary Validate and classify a kubectl command
  */
-export type validateResponse200 = {
+export type validate1Response200 = {
   data: CommandValidationResponse
   status: 200
 }
-    
-export type validateResponseSuccess = (validateResponse200) & {
+
+export type validate1ResponseSuccess = (validate1Response200) & {
   headers: Headers;
 };
 ;
 
-export type validateResponse = (validateResponseSuccess)
+export type validate1Response = (validate1ResponseSuccess)
 
-export const getValidateUrl = (clusterId: string,) => {
+export const getValidate1Url = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/commands/validate`
 }
 
-export const validate = async (clusterId: string,
-    commandValidationRequest: CommandValidationRequest, options?: RequestInit): Promise<validateResponse> => {
-  
-  const res = await fetch(getValidateUrl(clusterId),
-  {      
+export const validate1 = async (clusterId: string,
+    commandValidationRequest: CommandValidationRequest, options?: RequestInit): Promise<validate1Response> => {
+
+  const res = await fetch(getValidate1Url(clusterId),
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5722,9 +7626,9 @@ export const validate = async (clusterId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: validateResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as validateResponse
+
+  const data: validate1Response['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as validate1Response
 }
 
 
@@ -5736,7 +7640,7 @@ export type createTerminalResponse201 = {
   data: TerminalSessionResponse
   status: 201
 }
-    
+
 export type createTerminalResponseSuccess = (createTerminalResponse201) & {
   headers: Headers;
 };
@@ -5747,16 +7651,16 @@ export type createTerminalResponse = (createTerminalResponseSuccess)
 export const getCreateTerminalUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/command-sessions`
 }
 
 export const createTerminal = async (clusterId: string,
     commandExecutionRequest: CommandExecutionRequest, options?: RequestInit): Promise<createTerminalResponse> => {
-  
+
   const res = await fetch(getCreateTerminalUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5766,7 +7670,7 @@ export const createTerminal = async (clusterId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: createTerminalResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as createTerminalResponse
 }
@@ -5780,7 +7684,7 @@ export type favoritesResponse200 = {
   data: CommandFavoriteResponse[]
   status: 200
 }
-    
+
 export type favoritesResponseSuccess = (favoritesResponse200) & {
   headers: Headers;
 };
@@ -5791,24 +7695,24 @@ export type favoritesResponse = (favoritesResponseSuccess)
 export const getFavoritesUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/command-favorites`
 }
 
 export const favorites = async (clusterId: string, options?: RequestInit): Promise<favoritesResponse> => {
-  
+
   const res = await fetch(getFavoritesUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: favoritesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as favoritesResponse
 }
@@ -5822,7 +7726,7 @@ export type createFavoriteResponse201 = {
   data: CommandFavoriteResponse
   status: 201
 }
-    
+
 export type createFavoriteResponseSuccess = (createFavoriteResponse201) & {
   headers: Headers;
 };
@@ -5833,16 +7737,16 @@ export type createFavoriteResponse = (createFavoriteResponseSuccess)
 export const getCreateFavoriteUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/command-favorites`
 }
 
 export const createFavorite = async (clusterId: string,
     commandFavoriteRequest: CommandFavoriteRequest, options?: RequestInit): Promise<createFavoriteResponse> => {
-  
+
   const res = await fetch(getCreateFavoriteUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5852,7 +7756,7 @@ export const createFavorite = async (clusterId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: createFavoriteResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as createFavoriteResponse
 }
@@ -5866,7 +7770,7 @@ export type executionsResponse200 = {
   data: CommandExecutionResponse[]
   status: 200
 }
-    
+
 export type executionsResponseSuccess = (executionsResponse200) & {
   headers: Headers;
 };
@@ -5879,7 +7783,7 @@ export const getExecutionsUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -5892,18 +7796,18 @@ export const getExecutionsUrl = (clusterId: string,
 
 export const executions = async (clusterId: string,
     params?: ExecutionsParams, options?: RequestInit): Promise<executionsResponse> => {
-  
+
   const res = await fetch(getExecutionsUrl(clusterId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: executionsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as executionsResponse
 }
@@ -5917,7 +7821,7 @@ export type executeResponse202 = {
   data: CommandExecutionResponse
   status: 202
 }
-    
+
 export type executeResponseSuccess = (executeResponse202) & {
   headers: Headers;
 };
@@ -5928,16 +7832,16 @@ export type executeResponse = (executeResponseSuccess)
 export const getExecuteUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/command-executions`
 }
 
 export const execute = async (clusterId: string,
     commandExecutionRequest: CommandExecutionRequest, options?: RequestInit): Promise<executeResponse> => {
-  
+
   const res = await fetch(getExecuteUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -5947,7 +7851,7 @@ export const execute = async (clusterId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: executeResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as executeResponse
 }
@@ -5961,7 +7865,7 @@ export type cancelResponse200 = {
   data: CommandExecutionResponse
   status: 200
 }
-    
+
 export type cancelResponseSuccess = (cancelResponse200) & {
   headers: Headers;
 };
@@ -5973,25 +7877,25 @@ export const getCancelUrl = (clusterId: string,
     executionId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/command-executions/${executionId}/cancel`
 }
 
 export const cancel = async (clusterId: string,
     executionId: string, options?: RequestInit): Promise<cancelResponse> => {
-  
+
   const res = await fetch(getCancelUrl(clusterId,executionId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: cancelResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as cancelResponse
 }
@@ -6005,7 +7909,7 @@ export type extendResponse200 = {
   data: BrowserSessionResponse
   status: 200
 }
-    
+
 export type extendResponseSuccess = (extendResponse200) & {
   headers: Headers;
 };
@@ -6016,24 +7920,24 @@ export type extendResponse = (extendResponseSuccess)
 export const getExtendUrl = () => {
 
 
-  
+
 
   return `/api/auth/session/extend`
 }
 
 export const extend = async ( options?: RequestInit): Promise<extendResponse> => {
-  
+
   const res = await fetch(getExtendUrl(),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: extendResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as extendResponse
 }
@@ -6047,7 +7951,7 @@ export type syncApplicationResponse202 = {
   data: StartJobResponse
   status: 202
 }
-    
+
 export type syncApplicationResponseSuccess = (syncApplicationResponse202) & {
   headers: Headers;
 };
@@ -6058,24 +7962,24 @@ export type syncApplicationResponse = (syncApplicationResponseSuccess)
 export const getSyncApplicationUrl = (applicationId: string,) => {
 
 
-  
+
 
   return `/api/applications/${applicationId}/sync`
 }
 
 export const syncApplication = async (applicationId: string, options?: RequestInit): Promise<syncApplicationResponse> => {
-  
+
   const res = await fetch(getSyncApplicationUrl(applicationId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: syncApplicationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as syncApplicationResponse
 }
@@ -6089,7 +7993,7 @@ export type rollbackApplicationResponse202 = {
   data: StartJobResponse
   status: 202
 }
-    
+
 export type rollbackApplicationResponseSuccess = (rollbackApplicationResponse202) & {
   headers: Headers;
 };
@@ -6100,16 +8004,16 @@ export type rollbackApplicationResponse = (rollbackApplicationResponseSuccess)
 export const getRollbackApplicationUrl = (applicationId: string,) => {
 
 
-  
+
 
   return `/api/applications/${applicationId}/rollback`
 }
 
 export const rollbackApplication = async (applicationId: string,
     applicationRollbackRequest: ApplicationRollbackRequest, options?: RequestInit): Promise<rollbackApplicationResponse> => {
-  
+
   const res = await fetch(getRollbackApplicationUrl(applicationId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -6119,7 +8023,7 @@ export const rollbackApplication = async (applicationId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: rollbackApplicationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as rollbackApplicationResponse
 }
@@ -6133,7 +8037,7 @@ export type restartApplicationResponse202 = {
   data: StartJobResponse
   status: 202
 }
-    
+
 export type restartApplicationResponseSuccess = (restartApplicationResponse202) & {
   headers: Headers;
 };
@@ -6144,24 +8048,24 @@ export type restartApplicationResponse = (restartApplicationResponseSuccess)
 export const getRestartApplicationUrl = (applicationId: string,) => {
 
 
-  
+
 
   return `/api/applications/${applicationId}/restart`
 }
 
 export const restartApplication = async (applicationId: string, options?: RequestInit): Promise<restartApplicationResponse> => {
-  
+
   const res = await fetch(getRestartApplicationUrl(applicationId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: restartApplicationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as restartApplicationResponse
 }
@@ -6175,7 +8079,7 @@ export type deployHelmResponse202 = {
   data: ApplicationDeploymentResponse
   status: 202
 }
-    
+
 export type deployHelmResponseSuccess = (deployHelmResponse202) & {
   headers: Headers;
 };
@@ -6186,15 +8090,15 @@ export type deployHelmResponse = (deployHelmResponseSuccess)
 export const getDeployHelmUrl = () => {
 
 
-  
+
 
   return `/api/applications/deploy/helm`
 }
 
 export const deployHelm = async (deployHelmApplicationRequest: DeployHelmApplicationRequest, options?: RequestInit): Promise<deployHelmResponse> => {
-  
+
   const res = await fetch(getDeployHelmUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -6204,7 +8108,7 @@ export const deployHelm = async (deployHelmApplicationRequest: DeployHelmApplica
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: deployHelmResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as deployHelmResponse
 }
@@ -6218,7 +8122,7 @@ export type deployDockerResponse202 = {
   data: ApplicationDeploymentResponse
   status: 202
 }
-    
+
 export type deployDockerResponseSuccess = (deployDockerResponse202) & {
   headers: Headers;
 };
@@ -6229,15 +8133,15 @@ export type deployDockerResponse = (deployDockerResponseSuccess)
 export const getDeployDockerUrl = () => {
 
 
-  
+
 
   return `/api/applications/deploy/docker`
 }
 
 export const deployDocker = async (deployDockerApplicationRequest: DeployDockerApplicationRequest, options?: RequestInit): Promise<deployDockerResponse> => {
-  
+
   const res = await fetch(getDeployDockerUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -6247,7 +8151,7 @@ export const deployDocker = async (deployDockerApplicationRequest: DeployDockerA
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: deployDockerResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as deployDockerResponse
 }
@@ -6261,7 +8165,7 @@ export type updateWorkflowStateResponse200 = {
   data: AnalysisWorkflowStateResponse
   status: 200
 }
-    
+
 export type updateWorkflowStateResponseSuccess = (updateWorkflowStateResponse200) & {
   headers: Headers;
 };
@@ -6273,7 +8177,7 @@ export const getUpdateWorkflowStateUrl = (analysisId: string,
     issueGroupId: string,) => {
 
 
-  
+
 
   return `/api/analysis/${analysisId}/workflow/${issueGroupId}`
 }
@@ -6281,9 +8185,9 @@ export const getUpdateWorkflowStateUrl = (analysisId: string,
 export const updateWorkflowState = async (analysisId: string,
     issueGroupId: string,
     analysisWorkflowStateRequest: AnalysisWorkflowStateRequest, options?: RequestInit): Promise<updateWorkflowStateResponse> => {
-  
+
   const res = await fetch(getUpdateWorkflowStateUrl(analysisId,issueGroupId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -6293,7 +8197,7 @@ export const updateWorkflowState = async (analysisId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateWorkflowStateResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateWorkflowStateResponse
 }
@@ -6307,7 +8211,7 @@ export type retryAnalysisResponse202 = {
   data: StartAnalysisJobResponse
   status: 202
 }
-    
+
 export type retryAnalysisResponseSuccess = (retryAnalysisResponse202) & {
   headers: Headers;
 };
@@ -6318,24 +8222,24 @@ export type retryAnalysisResponse = (retryAnalysisResponseSuccess)
 export const getRetryAnalysisUrl = (analysisId: string,) => {
 
 
-  
+
 
   return `/api/analysis/${analysisId}/retry`
 }
 
 export const retryAnalysis = async (analysisId: string, options?: RequestInit): Promise<retryAnalysisResponse> => {
-  
+
   const res = await fetch(getRetryAnalysisUrl(analysisId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: retryAnalysisResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as retryAnalysisResponse
 }
@@ -6349,7 +8253,7 @@ export type listCommandExecutionsResponse200 = {
   data: AnalysisCommandExecutionResponse[]
   status: 200
 }
-    
+
 export type listCommandExecutionsResponseSuccess = (listCommandExecutionsResponse200) & {
   headers: Headers;
 };
@@ -6360,24 +8264,24 @@ export type listCommandExecutionsResponse = (listCommandExecutionsResponseSucces
 export const getListCommandExecutionsUrl = (analysisId: string,) => {
 
 
-  
+
 
   return `/api/analysis/${analysisId}/commands`
 }
 
 export const listCommandExecutions = async (analysisId: string, options?: RequestInit): Promise<listCommandExecutionsResponse> => {
-  
+
   const res = await fetch(getListCommandExecutionsUrl(analysisId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listCommandExecutionsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listCommandExecutionsResponse
 }
@@ -6391,7 +8295,7 @@ export type executeCommandResponse201 = {
   data: AnalysisCommandExecutionResponse
   status: 201
 }
-    
+
 export type executeCommandResponseSuccess = (executeCommandResponse201) & {
   headers: Headers;
 };
@@ -6402,16 +8306,16 @@ export type executeCommandResponse = (executeCommandResponseSuccess)
 export const getExecuteCommandUrl = (analysisId: string,) => {
 
 
-  
+
 
   return `/api/analysis/${analysisId}/commands`
 }
 
 export const executeCommand = async (analysisId: string,
     analysisCommandRequest: AnalysisCommandRequest, options?: RequestInit): Promise<executeCommandResponse> => {
-  
+
   const res = await fetch(getExecuteCommandUrl(analysisId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -6421,7 +8325,7 @@ export const executeCommand = async (analysisId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: executeCommandResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as executeCommandResponse
 }
@@ -6435,7 +8339,7 @@ export type previewCommandResponse200 = {
   data: AnalysisCommandPreviewResponse
   status: 200
 }
-    
+
 export type previewCommandResponseSuccess = (previewCommandResponse200) & {
   headers: Headers;
 };
@@ -6446,16 +8350,16 @@ export type previewCommandResponse = (previewCommandResponseSuccess)
 export const getPreviewCommandUrl = (analysisId: string,) => {
 
 
-  
+
 
   return `/api/analysis/${analysisId}/commands/preview`
 }
 
 export const previewCommand = async (analysisId: string,
     analysisCommandRequest: AnalysisCommandRequest, options?: RequestInit): Promise<previewCommandResponse> => {
-  
+
   const res = await fetch(getPreviewCommandUrl(analysisId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -6465,7 +8369,7 @@ export const previewCommand = async (analysisId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: previewCommandResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as previewCommandResponse
 }
@@ -6479,7 +8383,7 @@ export type analyzeNamespaceResponse201 = {
   data: AnalysisResponse
   status: 201
 }
-    
+
 export type analyzeNamespaceResponseSuccess = (analyzeNamespaceResponse201) & {
   headers: Headers;
 };
@@ -6492,7 +8396,7 @@ export const getAnalyzeNamespaceUrl = (namespace: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -6505,18 +8409,18 @@ export const getAnalyzeNamespaceUrl = (namespace: string,
 
 export const analyzeNamespace = async (namespace: string,
     params: AnalyzeNamespaceParams, options?: RequestInit): Promise<analyzeNamespaceResponse> => {
-  
+
   const res = await fetch(getAnalyzeNamespaceUrl(namespace,params),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: analyzeNamespaceResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as analyzeNamespaceResponse
 }
@@ -6530,7 +8434,7 @@ export type startNamespaceAnalysisResponse202 = {
   data: StartAnalysisJobResponse
   status: 202
 }
-    
+
 export type startNamespaceAnalysisResponseSuccess = (startNamespaceAnalysisResponse202) & {
   headers: Headers;
 };
@@ -6543,7 +8447,7 @@ export const getStartNamespaceAnalysisUrl = (namespace: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -6556,18 +8460,18 @@ export const getStartNamespaceAnalysisUrl = (namespace: string,
 
 export const startNamespaceAnalysis = async (namespace: string,
     params: StartNamespaceAnalysisParams, options?: RequestInit): Promise<startNamespaceAnalysisResponse> => {
-  
+
   const res = await fetch(getStartNamespaceAnalysisUrl(namespace,params),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: startNamespaceAnalysisResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as startNamespaceAnalysisResponse
 }
@@ -6581,7 +8485,7 @@ export type analyzeClusterResponse201 = {
   data: AnalysisResponse
   status: 201
 }
-    
+
 export type analyzeClusterResponseSuccess = (analyzeClusterResponse201) & {
   headers: Headers;
 };
@@ -6592,24 +8496,24 @@ export type analyzeClusterResponse = (analyzeClusterResponseSuccess)
 export const getAnalyzeClusterUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/analysis/clusters/${clusterId}`
 }
 
 export const analyzeCluster = async (clusterId: string, options?: RequestInit): Promise<analyzeClusterResponse> => {
-  
+
   const res = await fetch(getAnalyzeClusterUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: analyzeClusterResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as analyzeClusterResponse
 }
@@ -6623,7 +8527,7 @@ export type startClusterAnalysisResponse202 = {
   data: StartAnalysisJobResponse
   status: 202
 }
-    
+
 export type startClusterAnalysisResponseSuccess = (startClusterAnalysisResponse202) & {
   headers: Headers;
 };
@@ -6634,24 +8538,24 @@ export type startClusterAnalysisResponse = (startClusterAnalysisResponseSuccess)
 export const getStartClusterAnalysisUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/analysis/clusters/${clusterId}/jobs`
 }
 
 export const startClusterAnalysis = async (clusterId: string, options?: RequestInit): Promise<startClusterAnalysisResponse> => {
-  
+
   const res = await fetch(getStartClusterAnalysisUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: startClusterAnalysisResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as startClusterAnalysisResponse
 }
@@ -6665,7 +8569,7 @@ export type analyzeApplicationResponse201 = {
   data: AnalysisResponse
   status: 201
 }
-    
+
 export type analyzeApplicationResponseSuccess = (analyzeApplicationResponse201) & {
   headers: Headers;
 };
@@ -6676,24 +8580,24 @@ export type analyzeApplicationResponse = (analyzeApplicationResponseSuccess)
 export const getAnalyzeApplicationUrl = (applicationId: string,) => {
 
 
-  
+
 
   return `/api/analysis/applications/${applicationId}`
 }
 
 export const analyzeApplication = async (applicationId: string, options?: RequestInit): Promise<analyzeApplicationResponse> => {
-  
+
   const res = await fetch(getAnalyzeApplicationUrl(applicationId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: analyzeApplicationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as analyzeApplicationResponse
 }
@@ -6707,7 +8611,7 @@ export type startApplicationAnalysisResponse202 = {
   data: StartAnalysisJobResponse
   status: 202
 }
-    
+
 export type startApplicationAnalysisResponseSuccess = (startApplicationAnalysisResponse202) & {
   headers: Headers;
 };
@@ -6718,24 +8622,24 @@ export type startApplicationAnalysisResponse = (startApplicationAnalysisResponse
 export const getStartApplicationAnalysisUrl = (applicationId: string,) => {
 
 
-  
+
 
   return `/api/analysis/applications/${applicationId}/jobs`
 }
 
 export const startApplicationAnalysis = async (applicationId: string, options?: RequestInit): Promise<startApplicationAnalysisResponse> => {
-  
+
   const res = await fetch(getStartApplicationAnalysisUrl(applicationId),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: startApplicationAnalysisResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as startApplicationAnalysisResponse
 }
@@ -6749,7 +8653,7 @@ export type regressionRunsResponse200 = {
   data: RegressionRun[]
   status: 200
 }
-    
+
 export type regressionRunsResponseSuccess = (regressionRunsResponse200) & {
   headers: Headers;
 };
@@ -6761,7 +8665,7 @@ export const getRegressionRunsUrl = (params?: RegressionRunsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -6773,18 +8677,18 @@ export const getRegressionRunsUrl = (params?: RegressionRunsParams,) => {
 }
 
 export const regressionRuns = async (params?: RegressionRunsParams, options?: RequestInit): Promise<regressionRunsResponse> => {
-  
+
   const res = await fetch(getRegressionRunsUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: regressionRunsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as regressionRunsResponse
 }
@@ -6798,7 +8702,7 @@ export type runRegressionResponse200 = {
   data: RegressionRun
   status: 200
 }
-    
+
 export type runRegressionResponseSuccess = (runRegressionResponse200) & {
   headers: Headers;
 };
@@ -6809,24 +8713,24 @@ export type runRegressionResponse = (runRegressionResponseSuccess)
 export const getRunRegressionUrl = () => {
 
 
-  
+
 
   return `/api/analysis-regression/runs`
 }
 
 export const runRegression = async ( options?: RequestInit): Promise<runRegressionResponse> => {
-  
+
   const res = await fetch(getRunRegressionUrl(),
-  {      
+  {
     ...options,
     method: 'POST'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: runRegressionResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as runRegressionResponse
 }
@@ -6840,7 +8744,7 @@ export type listConversationsResponse200 = {
   data: AiChatConversationResponse[]
   status: 200
 }
-    
+
 export type listConversationsResponseSuccess = (listConversationsResponse200) & {
   headers: Headers;
 };
@@ -6852,7 +8756,7 @@ export const getListConversationsUrl = (params?: ListConversationsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -6864,18 +8768,18 @@ export const getListConversationsUrl = (params?: ListConversationsParams,) => {
 }
 
 export const listConversations = async (params?: ListConversationsParams, options?: RequestInit): Promise<listConversationsResponse> => {
-  
+
   const res = await fetch(getListConversationsUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listConversationsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listConversationsResponse
 }
@@ -6889,7 +8793,7 @@ export type createConversationResponse201 = {
   data: AiChatConversationResponse
   status: 201
 }
-    
+
 export type createConversationResponseSuccess = (createConversationResponse201) & {
   headers: Headers;
 };
@@ -6900,15 +8804,15 @@ export type createConversationResponse = (createConversationResponseSuccess)
 export const getCreateConversationUrl = () => {
 
 
-  
+
 
   return `/api/ai-chat/conversations`
 }
 
 export const createConversation = async (createAiChatConversationRequest: CreateAiChatConversationRequest, options?: RequestInit): Promise<createConversationResponse> => {
-  
+
   const res = await fetch(getCreateConversationUrl(),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -6918,7 +8822,7 @@ export const createConversation = async (createAiChatConversationRequest: Create
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: createConversationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as createConversationResponse
 }
@@ -6932,7 +8836,7 @@ export type listMessagesResponse200 = {
   data: AiChatMessageResponse[]
   status: 200
 }
-    
+
 export type listMessagesResponseSuccess = (listMessagesResponse200) & {
   headers: Headers;
 };
@@ -6943,24 +8847,24 @@ export type listMessagesResponse = (listMessagesResponseSuccess)
 export const getListMessagesUrl = (conversationId: string,) => {
 
 
-  
+
 
   return `/api/ai-chat/conversations/${conversationId}/messages`
 }
 
 export const listMessages = async (conversationId: string, options?: RequestInit): Promise<listMessagesResponse> => {
-  
+
   const res = await fetch(getListMessagesUrl(conversationId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listMessagesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listMessagesResponse
 }
@@ -6974,7 +8878,7 @@ export type sendMessageResponse201 = {
   data: AiChatSendMessageResponse
   status: 201
 }
-    
+
 export type sendMessageResponseSuccess = (sendMessageResponse201) & {
   headers: Headers;
 };
@@ -6985,16 +8889,16 @@ export type sendMessageResponse = (sendMessageResponseSuccess)
 export const getSendMessageUrl = (conversationId: string,) => {
 
 
-  
+
 
   return `/api/ai-chat/conversations/${conversationId}/messages`
 }
 
 export const sendMessage = async (conversationId: string,
     sendAiChatMessageRequest: SendAiChatMessageRequest, options?: RequestInit): Promise<sendMessageResponse> => {
-  
+
   const res = await fetch(getSendMessageUrl(conversationId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -7004,7 +8908,7 @@ export const sendMessage = async (conversationId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: sendMessageResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as sendMessageResponse
 }
@@ -7018,7 +8922,7 @@ export type streamMessageResponse200 = {
   data: StreamingResponseBody
   status: 200
 }
-    
+
 export type streamMessageResponseSuccess = (streamMessageResponse200) & {
   headers: Headers;
 };
@@ -7029,16 +8933,16 @@ export type streamMessageResponse = (streamMessageResponseSuccess)
 export const getStreamMessageUrl = (conversationId: string,) => {
 
 
-  
+
 
   return `/api/ai-chat/conversations/${conversationId}/messages/stream`
 }
 
 export const streamMessage = async (conversationId: string,
     sendAiChatMessageRequest: SendAiChatMessageRequest, options?: RequestInit): Promise<streamMessageResponse> => {
-  
+
   const res = await fetch(getStreamMessageUrl(conversationId),
-  {      
+  {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -7048,9 +8952,308 @@ export const streamMessage = async (conversationId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: streamMessageResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as streamMessageResponse
+}
+
+
+
+export type deleteSourceResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteSourceResponseSuccess = (deleteSourceResponse204) & {
+  headers: Headers;
+};
+;
+
+export type deleteSourceResponse = (deleteSourceResponseSuccess)
+
+export const getDeleteSourceUrl = (sourceId: string,
+    params: DeleteSourceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/sources/${sourceId}?${stringifiedParams}` : `/api/v2/application-delivery/sources/${sourceId}`
+}
+
+export const deleteSource = async (sourceId: string,
+    params: DeleteSourceParams, options?: RequestInit): Promise<deleteSourceResponse> => {
+
+  const res = await fetch(getDeleteSourceUrl(sourceId,params),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: deleteSourceResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as deleteSourceResponse
+}
+
+
+
+export type updateSourceResponse200 = {
+  data: ChartSourceResponse
+  status: 200
+}
+
+export type updateSourceResponseSuccess = (updateSourceResponse200) & {
+  headers: Headers;
+};
+;
+
+export type updateSourceResponse = (updateSourceResponseSuccess)
+
+export const getUpdateSourceUrl = (sourceId: string,) => {
+
+
+
+
+  return `/api/v2/application-delivery/sources/${sourceId}`
+}
+
+export const updateSource = async (sourceId: string,
+    updateChartSourceRequest: UpdateChartSourceRequest, options?: RequestInit): Promise<updateSourceResponse> => {
+
+  const res = await fetch(getUpdateSourceUrl(sourceId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateChartSourceRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: updateSourceResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as updateSourceResponse
+}
+
+
+
+export type deleteMappingResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteMappingResponseSuccess = (deleteMappingResponse204) & {
+  headers: Headers;
+};
+;
+
+export type deleteMappingResponse = (deleteMappingResponseSuccess)
+
+export const getDeleteMappingUrl = (tenantId: string,
+    mappingId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/oidc-group-mappings/${mappingId}`
+}
+
+export const deleteMapping = async (tenantId: string,
+    mappingId: string, options?: RequestInit): Promise<deleteMappingResponse> => {
+
+  const res = await fetch(getDeleteMappingUrl(tenantId,mappingId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: deleteMappingResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as deleteMappingResponse
+}
+
+
+
+export type updateMappingResponse200 = {
+  data: GroupMappingResponse
+  status: 200
+}
+
+export type updateMappingResponseSuccess = (updateMappingResponse200) & {
+  headers: Headers;
+};
+;
+
+export type updateMappingResponse = (updateMappingResponseSuccess)
+
+export const getUpdateMappingUrl = (tenantId: string,
+    mappingId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/oidc-group-mappings/${mappingId}`
+}
+
+export const updateMapping = async (tenantId: string,
+    mappingId: string,
+    updateGroupMappingRequest: UpdateGroupMappingRequest, options?: RequestInit): Promise<updateMappingResponse> => {
+
+  const res = await fetch(getUpdateMappingUrl(tenantId,mappingId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateGroupMappingRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: updateMappingResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as updateMappingResponse
+}
+
+
+
+/**
+ * @summary Suspend or reactivate a tenant membership
+ */
+export type updateMemberResponse200 = {
+  data: MemberResponse
+  status: 200
+}
+
+export type updateMemberResponseSuccess = (updateMemberResponse200) & {
+  headers: Headers;
+};
+;
+
+export type updateMemberResponse = (updateMemberResponseSuccess)
+
+export const getUpdateMemberUrl = (tenantId: string,
+    membershipId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/members/${membershipId}`
+}
+
+export const updateMember = async (tenantId: string,
+    membershipId: string,
+    updateMembershipRequest: UpdateMembershipRequest, options?: RequestInit): Promise<updateMemberResponse> => {
+
+  const res = await fetch(getUpdateMemberUrl(tenantId,membershipId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateMembershipRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: updateMemberResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as updateMemberResponse
+}
+
+
+
+export type featuresResponse200 = {
+  data: Features200
+  status: 200
+}
+
+export type featuresResponseSuccess = (featuresResponse200) & {
+  headers: Headers;
+};
+;
+
+export type featuresResponse = (featuresResponseSuccess)
+
+export const getFeaturesUrl = (tenantId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/features`
+}
+
+export const features = async (tenantId: string, options?: RequestInit): Promise<featuresResponse> => {
+
+  const res = await fetch(getFeaturesUrl(tenantId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: featuresResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as featuresResponse
+}
+
+
+
+export type updateFeatureResponse200 = {
+  data: UpdateFeature200
+  status: 200
+}
+
+export type updateFeatureResponseSuccess = (updateFeatureResponse200) & {
+  headers: Headers;
+};
+;
+
+export type updateFeatureResponse = (updateFeatureResponseSuccess)
+
+export const getUpdateFeatureUrl = (tenantId: string,) => {
+
+
+
+
+  return `/api/tenants/${tenantId}/features`
+}
+
+export const updateFeature = async (tenantId: string,
+    updateFeatureRequest: UpdateFeatureRequest, options?: RequestInit): Promise<updateFeatureResponse> => {
+
+  const res = await fetch(getUpdateFeatureUrl(tenantId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateFeatureRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: updateFeatureResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as updateFeatureResponse
 }
 
 
@@ -7062,7 +9265,7 @@ export type updateUserResponse200 = {
   data: UserAdminResponse
   status: 200
 }
-    
+
 export type updateUserResponseSuccess = (updateUserResponse200) & {
   headers: Headers;
 };
@@ -7073,16 +9276,16 @@ export type updateUserResponse = (updateUserResponseSuccess)
 export const getUpdateUserUrl = (userId: string,) => {
 
 
-  
+
 
   return `/api/security/users/${userId}`
 }
 
 export const updateUser = async (userId: string,
     updateUserRequest: UpdateUserRequest, options?: RequestInit): Promise<updateUserResponse> => {
-  
+
   const res = await fetch(getUpdateUserUrl(userId),
-  {      
+  {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -7092,7 +9295,7 @@ export const updateUser = async (userId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateUserResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateUserResponse
 }
@@ -7106,7 +9309,7 @@ export type setRunbookEnabledResponse200 = {
   data: ManagedRunbook
   status: 200
 }
-    
+
 export type setRunbookEnabledResponseSuccess = (setRunbookEnabledResponse200) & {
   headers: Headers;
 };
@@ -7117,16 +9320,16 @@ export type setRunbookEnabledResponse = (setRunbookEnabledResponseSuccess)
 export const getSetRunbookEnabledUrl = (runbookId: string,) => {
 
 
-  
+
 
   return `/api/runbooks/custom/${runbookId}/enabled`
 }
 
 export const setRunbookEnabled = async (runbookId: string,
     enabledRequest: EnabledRequest, options?: RequestInit): Promise<setRunbookEnabledResponse> => {
-  
+
   const res = await fetch(getSetRunbookEnabledUrl(runbookId),
-  {      
+  {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -7136,7 +9339,7 @@ export const setRunbookEnabled = async (runbookId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: setRunbookEnabledResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as setRunbookEnabledResponse
 }
@@ -7150,7 +9353,7 @@ export type updateTriageStateResponse200 = {
   data: WatchSignalGroup
   status: 200
 }
-    
+
 export type updateTriageStateResponseSuccess = (updateTriageStateResponse200) & {
   headers: Headers;
 };
@@ -7161,16 +9364,16 @@ export type updateTriageStateResponse = (updateTriageStateResponseSuccess)
 export const getUpdateTriageStateUrl = (groupId: string,) => {
 
 
-  
+
 
   return `/api/operations/triage/${groupId}/state`
 }
 
 export const updateTriageState = async (groupId: string,
     triageStateRequest: TriageStateRequest, options?: RequestInit): Promise<updateTriageStateResponse> => {
-  
+
   const res = await fetch(getUpdateTriageStateUrl(groupId),
-  {      
+  {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -7180,7 +9383,7 @@ export const updateTriageState = async (groupId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateTriageStateResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateTriageStateResponse
 }
@@ -7194,7 +9397,7 @@ export type readNotificationResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type readNotificationResponseSuccess = (readNotificationResponse204) & {
   headers: Headers;
 };
@@ -7205,24 +9408,24 @@ export type readNotificationResponse = (readNotificationResponseSuccess)
 export const getReadNotificationUrl = (notificationId: string,) => {
 
 
-  
+
 
   return `/api/notifications/${notificationId}/read`
 }
 
 export const readNotification = async (notificationId: string, options?: RequestInit): Promise<readNotificationResponse> => {
-  
+
   const res = await fetch(getReadNotificationUrl(notificationId),
-  {      
+  {
     ...options,
     method: 'PATCH'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: readNotificationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as readNotificationResponse
 }
@@ -7236,7 +9439,7 @@ export type updateIncidentStateResponse200 = {
   data: Incident
   status: 200
 }
-    
+
 export type updateIncidentStateResponseSuccess = (updateIncidentStateResponse200) & {
   headers: Headers;
 };
@@ -7247,16 +9450,16 @@ export type updateIncidentStateResponse = (updateIncidentStateResponseSuccess)
 export const getUpdateIncidentStateUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/state`
 }
 
 export const updateIncidentState = async (incidentId: string,
     incidentStateRequest: IncidentStateRequest, options?: RequestInit): Promise<updateIncidentStateResponse> => {
-  
+
   const res = await fetch(getUpdateIncidentStateUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -7266,7 +9469,7 @@ export const updateIncidentState = async (incidentId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateIncidentStateResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateIncidentStateResponse
 }
@@ -7280,7 +9483,7 @@ export type collaborationResponse200 = {
   data: IncidentCollaboration
   status: 200
 }
-    
+
 export type collaborationResponseSuccess = (collaborationResponse200) & {
   headers: Headers;
 };
@@ -7291,24 +9494,24 @@ export type collaborationResponse = (collaborationResponseSuccess)
 export const getCollaborationUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/collaboration`
 }
 
 export const collaboration = async (incidentId: string, options?: RequestInit): Promise<collaborationResponse> => {
-  
+
   const res = await fetch(getCollaborationUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: collaborationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as collaborationResponse
 }
@@ -7322,7 +9525,7 @@ export type updateCollaborationResponse200 = {
   data: IncidentCollaboration
   status: 200
 }
-    
+
 export type updateCollaborationResponseSuccess = (updateCollaborationResponse200) & {
   headers: Headers;
 };
@@ -7333,16 +9536,16 @@ export type updateCollaborationResponse = (updateCollaborationResponseSuccess)
 export const getUpdateCollaborationUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/collaboration`
 }
 
 export const updateCollaboration = async (incidentId: string,
     collaborationRequest: CollaborationRequest, options?: RequestInit): Promise<updateCollaborationResponse> => {
-  
+
   const res = await fetch(getUpdateCollaborationUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -7352,7 +9555,7 @@ export const updateCollaboration = async (incidentId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateCollaborationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateCollaborationResponse
 }
@@ -7366,7 +9569,7 @@ export type getConversationResponse200 = {
   data: AiChatConversationResponse
   status: 200
 }
-    
+
 export type getConversationResponseSuccess = (getConversationResponse200) & {
   headers: Headers;
 };
@@ -7377,24 +9580,24 @@ export type getConversationResponse = (getConversationResponseSuccess)
 export const getGetConversationUrl = (conversationId: string,) => {
 
 
-  
+
 
   return `/api/ai-chat/conversations/${conversationId}`
 }
 
 export const getConversation = async (conversationId: string, options?: RequestInit): Promise<getConversationResponse> => {
-  
+
   const res = await fetch(getGetConversationUrl(conversationId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getConversationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getConversationResponse
 }
@@ -7408,7 +9611,7 @@ export type deleteConversationResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type deleteConversationResponseSuccess = (deleteConversationResponse204) & {
   headers: Headers;
 };
@@ -7419,24 +9622,24 @@ export type deleteConversationResponse = (deleteConversationResponseSuccess)
 export const getDeleteConversationUrl = (conversationId: string,) => {
 
 
-  
+
 
   return `/api/ai-chat/conversations/${conversationId}`
 }
 
 export const deleteConversation = async (conversationId: string, options?: RequestInit): Promise<deleteConversationResponse> => {
-  
+
   const res = await fetch(getDeleteConversationUrl(conversationId),
-  {      
+  {
     ...options,
     method: 'DELETE'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: deleteConversationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as deleteConversationResponse
 }
@@ -7450,7 +9653,7 @@ export type updateConversationResponse200 = {
   data: AiChatConversationResponse
   status: 200
 }
-    
+
 export type updateConversationResponseSuccess = (updateConversationResponse200) & {
   headers: Headers;
 };
@@ -7461,16 +9664,16 @@ export type updateConversationResponse = (updateConversationResponseSuccess)
 export const getUpdateConversationUrl = (conversationId: string,) => {
 
 
-  
+
 
   return `/api/ai-chat/conversations/${conversationId}`
 }
 
 export const updateConversation = async (conversationId: string,
     updateAiChatConversationRequest: UpdateAiChatConversationRequest, options?: RequestInit): Promise<updateConversationResponse> => {
-  
+
   const res = await fetch(getUpdateConversationUrl(conversationId),
-  {      
+  {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -7480,7 +9683,7 @@ export const updateConversation = async (conversationId: string,
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: updateConversationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as updateConversationResponse
 }
@@ -7491,7 +9694,7 @@ export type getWorkspaceResponse200 = {
   data: WorkspaceResponse
   status: 200
 }
-    
+
 export type getWorkspaceResponseSuccess = (getWorkspaceResponse200) & {
   headers: Headers;
 };
@@ -7502,26 +9705,608 @@ export type getWorkspaceResponse = (getWorkspaceResponseSuccess)
 export const getGetWorkspaceUrl = (workspaceId: string,) => {
 
 
-  
+
 
   return `/api/workspaces/${workspaceId}`
 }
 
 export const getWorkspace = async (workspaceId: string, options?: RequestInit): Promise<getWorkspaceResponse> => {
-  
+
   const res = await fetch(getGetWorkspaceUrl(workspaceId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getWorkspaceResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getWorkspaceResponse
+}
+
+
+
+export type valuesResponse200 = {
+  data: ValuesPayloadResponse
+  status: 200
+}
+
+export type valuesResponseSuccess = (valuesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type valuesResponse = (valuesResponseSuccess)
+
+export const getValuesUrl = (revisionId: string,
+    params: ValuesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/values-revisions/${revisionId}/values?${stringifiedParams}` : `/api/v2/application-delivery/values-revisions/${revisionId}/values`
+}
+
+export const values = async (revisionId: string,
+    params: ValuesParams, options?: RequestInit): Promise<valuesResponse> => {
+
+  const res = await fetch(getValuesUrl(revisionId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: valuesResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as valuesResponse
+}
+
+
+
+/**
+ * @summary List charts in the selected tenant library
+ */
+export type chartsResponse200 = {
+  data: LibraryChartResponse[]
+  status: 200
+}
+
+export type chartsResponseSuccess = (chartsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type chartsResponse = (chartsResponseSuccess)
+
+export const getChartsUrl = (params: ChartsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/charts?${stringifiedParams}` : `/api/v2/application-delivery/charts`
+}
+
+export const charts = async (params: ChartsParams, options?: RequestInit): Promise<chartsResponse> => {
+
+  const res = await fetch(getChartsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: chartsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as chartsResponse
+}
+
+
+
+/**
+ * @summary Search Helm charts in Artifact Hub
+ */
+export type searchResponse200 = {
+  data: CatalogPackageResponse[]
+  status: 200
+}
+
+export type searchResponseSuccess = (searchResponse200) & {
+  headers: Headers;
+};
+;
+
+export type searchResponse = (searchResponseSuccess)
+
+export const getSearchUrl = (params: SearchParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/catalog/search?${stringifiedParams}` : `/api/v2/application-delivery/catalog/search`
+}
+
+export const search = async (params: SearchParams, options?: RequestInit): Promise<searchResponse> => {
+
+  const res = await fetch(getSearchUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: searchResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as searchResponse
+}
+
+
+
+/**
+ * @summary Get an Artifact Hub Helm chart version
+ */
+export type detailsResponse200 = {
+  data: CatalogPackageResponse
+  status: 200
+}
+
+export type detailsResponseSuccess = (detailsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type detailsResponse = (detailsResponseSuccess)
+
+export const getDetailsUrl = (repository: string,
+    name: string,
+    params: DetailsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/catalog/packages/${repository}/${name}?${stringifiedParams}` : `/api/v2/application-delivery/catalog/packages/${repository}/${name}`
+}
+
+export const details = async (repository: string,
+    name: string,
+    params: DetailsParams, options?: RequestInit): Promise<detailsResponse> => {
+
+  const res = await fetch(getDetailsUrl(repository,name,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: detailsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as detailsResponse
+}
+
+
+
+/**
+ * @summary List applications owned by one tenant
+ */
+export type applicationsResponse200 = {
+  data: ApplicationResponse[]
+  status: 200
+}
+
+export type applicationsResponseSuccess = (applicationsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type applicationsResponse = (applicationsResponseSuccess)
+
+export const getApplicationsUrl = (params: ApplicationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/applications?${stringifiedParams}` : `/api/v2/application-delivery/applications`
+}
+
+export const applications = async (params: ApplicationsParams, options?: RequestInit): Promise<applicationsResponse> => {
+
+  const res = await fetch(getApplicationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: applicationsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as applicationsResponse
+}
+
+
+
+export type uninstallConfirmationResponse200 = {
+  data: LifecycleConfirmationResponse
+  status: 200
+}
+
+export type uninstallConfirmationResponseSuccess = (uninstallConfirmationResponse200) & {
+  headers: Headers;
+};
+;
+
+export type uninstallConfirmationResponse = (uninstallConfirmationResponseSuccess)
+
+export const getUninstallConfirmationUrl = (applicationId: string,
+    params: UninstallConfirmationParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/applications/${applicationId}/uninstall-confirmation?${stringifiedParams}` : `/api/v2/application-delivery/applications/${applicationId}/uninstall-confirmation`
+}
+
+export const uninstallConfirmation = async (applicationId: string,
+    params: UninstallConfirmationParams, options?: RequestInit): Promise<uninstallConfirmationResponse> => {
+
+  const res = await fetch(getUninstallConfirmationUrl(applicationId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: uninstallConfirmationResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as uninstallConfirmationResponse
+}
+
+
+
+export type runtimeResponse200 = {
+  data: RuntimeOverviewResponse
+  status: 200
+}
+
+export type runtimeResponseSuccess = (runtimeResponse200) & {
+  headers: Headers;
+};
+;
+
+export type runtimeResponse = (runtimeResponseSuccess)
+
+export const getRuntimeUrl = (applicationId: string,
+    params: RuntimeParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/applications/${applicationId}/runtime?${stringifiedParams}` : `/api/v2/application-delivery/applications/${applicationId}/runtime`
+}
+
+export const runtime = async (applicationId: string,
+    params: RuntimeParams, options?: RequestInit): Promise<runtimeResponse> => {
+
+  const res = await fetch(getRuntimeUrl(applicationId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: runtimeResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as runtimeResponse
+}
+
+
+
+export type rollbackConfirmationResponse200 = {
+  data: LifecycleConfirmationResponse
+  status: 200
+}
+
+export type rollbackConfirmationResponseSuccess = (rollbackConfirmationResponse200) & {
+  headers: Headers;
+};
+;
+
+export type rollbackConfirmationResponse = (rollbackConfirmationResponseSuccess)
+
+export const getRollbackConfirmationUrl = (applicationId: string,
+    params: RollbackConfirmationParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/applications/${applicationId}/rollback-confirmation?${stringifiedParams}` : `/api/v2/application-delivery/applications/${applicationId}/rollback-confirmation`
+}
+
+export const rollbackConfirmation = async (applicationId: string,
+    params: RollbackConfirmationParams, options?: RequestInit): Promise<rollbackConfirmationResponse> => {
+
+  const res = await fetch(getRollbackConfirmationUrl(applicationId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: rollbackConfirmationResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as rollbackConfirmationResponse
+}
+
+
+
+export type releasesResponse200 = {
+  data: ReleaseResponse[]
+  status: 200
+}
+
+export type releasesResponseSuccess = (releasesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type releasesResponse = (releasesResponseSuccess)
+
+export const getReleasesUrl = (applicationId: string,
+    params: ReleasesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/applications/${applicationId}/releases?${stringifiedParams}` : `/api/v2/application-delivery/applications/${applicationId}/releases`
+}
+
+export const releases = async (applicationId: string,
+    params: ReleasesParams, options?: RequestInit): Promise<releasesResponse> => {
+
+  const res = await fetch(getReleasesUrl(applicationId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: releasesResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as releasesResponse
+}
+
+
+
+export type operationsResponse200 = {
+  data: OperationResponse[]
+  status: 200
+}
+
+export type operationsResponseSuccess = (operationsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type operationsResponse = (operationsResponseSuccess)
+
+export const getOperationsUrl = (applicationId: string,
+    params: OperationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/applications/${applicationId}/operations?${stringifiedParams}` : `/api/v2/application-delivery/applications/${applicationId}/operations`
+}
+
+export const operations = async (applicationId: string,
+    params: OperationsParams, options?: RequestInit): Promise<operationsResponse> => {
+
+  const res = await fetch(getOperationsUrl(applicationId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: operationsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as operationsResponse
+}
+
+
+
+export type routingResponse200 = {
+  data: RoutingResponse[]
+  status: 200
+}
+
+export type routingResponseSuccess = (routingResponse200) & {
+  headers: Headers;
+};
+;
+
+export type routingResponse = (routingResponseSuccess)
+
+export const getRoutingUrl = (params: RoutingParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/ai-configuration/routing?${stringifiedParams}` : `/api/v2/ai-configuration/routing`
+}
+
+export const routing = async (params: RoutingParams, options?: RequestInit): Promise<routingResponse> => {
+
+  const res = await fetch(getRoutingUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: routingResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as routingResponse
+}
+
+
+
+export type localModelsResponse200 = {
+  data: LocalModelResponse[]
+  status: 200
+}
+
+export type localModelsResponseSuccess = (localModelsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type localModelsResponse = (localModelsResponseSuccess)
+
+export const getLocalModelsUrl = (profileId: string,
+    params: LocalModelsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/ai-configuration/providers/${profileId}/models?${stringifiedParams}` : `/api/v2/ai-configuration/providers/${profileId}/models`
+}
+
+export const localModels = async (profileId: string,
+    params: LocalModelsParams, options?: RequestInit): Promise<localModelsResponse> => {
+
+  const res = await fetch(getLocalModelsUrl(profileId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: localModelsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as localModelsResponse
 }
 
 
@@ -7530,7 +10315,7 @@ export type getTenantResponse200 = {
   data: TenantResponse
   status: 200
 }
-    
+
 export type getTenantResponseSuccess = (getTenantResponse200) & {
   headers: Headers;
 };
@@ -7541,24 +10326,24 @@ export type getTenantResponse = (getTenantResponseSuccess)
 export const getGetTenantUrl = (tenantId: string,) => {
 
 
-  
+
 
   return `/api/tenants/${tenantId}`
 }
 
 export const getTenant = async (tenantId: string, options?: RequestInit): Promise<getTenantResponse> => {
-  
+
   const res = await fetch(getGetTenantUrl(tenantId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getTenantResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getTenantResponse
 }
@@ -7572,7 +10357,7 @@ export type listUsersResponse200 = {
   data: UserAdminResponse[]
   status: 200
 }
-    
+
 export type listUsersResponseSuccess = (listUsersResponse200) & {
   headers: Headers;
 };
@@ -7583,24 +10368,24 @@ export type listUsersResponse = (listUsersResponseSuccess)
 export const getListUsersUrl = () => {
 
 
-  
+
 
   return `/api/security/users`
 }
 
 export const listUsers = async ( options?: RequestInit): Promise<listUsersResponse> => {
-  
+
   const res = await fetch(getListUsersUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listUsersResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listUsersResponse
 }
@@ -7610,19 +10395,19 @@ export const listUsers = async ( options?: RequestInit): Promise<listUsersRespon
 /**
  * @summary Search accessible clusters, resources, incidents, analyses and runbooks
  */
-export type searchResponse200 = {
+export type search1Response200 = {
   data: SearchResult[]
   status: 200
 }
-    
-export type searchResponseSuccess = (searchResponse200) & {
+
+export type search1ResponseSuccess = (search1Response200) & {
   headers: Headers;
 };
 ;
 
-export type searchResponse = (searchResponseSuccess)
+export type search1Response = (search1ResponseSuccess)
 
-export const getSearchUrl = (params: SearchParams,) => {
+export const getSearch1Url = (params: Search1Params,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -7634,7 +10419,7 @@ export const getSearchUrl = (params: SearchParams,) => {
       });
       return;
     }
-      
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -7645,21 +10430,21 @@ export const getSearchUrl = (params: SearchParams,) => {
   return stringifiedParams.length > 0 ? `/api/search?${stringifiedParams}` : `/api/search`
 }
 
-export const search = async (params: SearchParams, options?: RequestInit): Promise<searchResponse> => {
-  
-  const res = await fetch(getSearchUrl(params),
-  {      
+export const search1 = async (params: Search1Params, options?: RequestInit): Promise<search1Response> => {
+
+  const res = await fetch(getSearch1Url(params),
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: searchResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as searchResponse
+
+  const data: search1Response['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as search1Response
 }
 
 
@@ -7671,7 +10456,7 @@ export type runbooksResponse200 = {
   data: RunbookTemplate[]
   status: 200
 }
-    
+
 export type runbooksResponseSuccess = (runbooksResponse200) & {
   headers: Headers;
 };
@@ -7683,7 +10468,7 @@ export const getRunbooksUrl = (params?: RunbooksParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -7695,18 +10480,18 @@ export const getRunbooksUrl = (params?: RunbooksParams,) => {
 }
 
 export const runbooks = async (params?: RunbooksParams, options?: RequestInit): Promise<runbooksResponse> => {
-  
+
   const res = await fetch(getRunbooksUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: runbooksResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as runbooksResponse
 }
@@ -7720,7 +10505,7 @@ export type runbookResponse200 = {
   data: RunbookTemplate
   status: 200
 }
-    
+
 export type runbookResponseSuccess = (runbookResponse200) & {
   headers: Headers;
 };
@@ -7731,24 +10516,24 @@ export type runbookResponse = (runbookResponseSuccess)
 export const getRunbookUrl = (runbookId: string,) => {
 
 
-  
+
 
   return `/api/runbooks/${runbookId}`
 }
 
 export const runbook = async (runbookId: string, options?: RequestInit): Promise<runbookResponse> => {
-  
+
   const res = await fetch(getRunbookUrl(runbookId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: runbookResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as runbookResponse
 }
@@ -7762,7 +10547,7 @@ export type runbookLibraryResponse200 = {
   data: ManagedRunbook[]
   status: 200
 }
-    
+
 export type runbookLibraryResponseSuccess = (runbookLibraryResponse200) & {
   headers: Headers;
 };
@@ -7773,24 +10558,24 @@ export type runbookLibraryResponse = (runbookLibraryResponseSuccess)
 export const getRunbookLibraryUrl = () => {
 
 
-  
+
 
   return `/api/runbooks/library`
 }
 
 export const runbookLibrary = async ( options?: RequestInit): Promise<runbookLibraryResponse> => {
-  
+
   const res = await fetch(getRunbookLibraryUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: runbookLibraryResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as runbookLibraryResponse
 }
@@ -7804,7 +10589,7 @@ export type runbookVersionsResponse200 = {
   data: RunbookVersion[]
   status: 200
 }
-    
+
 export type runbookVersionsResponseSuccess = (runbookVersionsResponse200) & {
   headers: Headers;
 };
@@ -7815,24 +10600,24 @@ export type runbookVersionsResponse = (runbookVersionsResponseSuccess)
 export const getRunbookVersionsUrl = (runbookId: string,) => {
 
 
-  
+
 
   return `/api/runbooks/custom/${runbookId}/versions`
 }
 
 export const runbookVersions = async (runbookId: string, options?: RequestInit): Promise<runbookVersionsResponse> => {
-  
+
   const res = await fetch(getRunbookVersionsUrl(runbookId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: runbookVersionsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as runbookVersionsResponse
 }
@@ -7846,7 +10631,7 @@ export type policiesResponse200 = {
   data: PolicyDefinition[]
   status: 200
 }
-    
+
 export type policiesResponseSuccess = (policiesResponse200) & {
   headers: Headers;
 };
@@ -7857,24 +10642,24 @@ export type policiesResponse = (policiesResponseSuccess)
 export const getPoliciesUrl = () => {
 
 
-  
+
 
   return `/api/policies`
 }
 
 export const policies = async ( options?: RequestInit): Promise<policiesResponse> => {
-  
+
   const res = await fetch(getPoliciesUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: policiesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as policiesResponse
 }
@@ -7888,7 +10673,7 @@ export type policyEvaluationsResponse200 = {
   data: PolicyEvaluation[]
   status: 200
 }
-    
+
 export type policyEvaluationsResponseSuccess = (policyEvaluationsResponse200) & {
   headers: Headers;
 };
@@ -7900,7 +10685,7 @@ export const getPolicyEvaluationsUrl = (params?: PolicyEvaluationsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -7912,18 +10697,18 @@ export const getPolicyEvaluationsUrl = (params?: PolicyEvaluationsParams,) => {
 }
 
 export const policyEvaluations = async (params?: PolicyEvaluationsParams, options?: RequestInit): Promise<policyEvaluationsResponse> => {
-  
+
   const res = await fetch(getPolicyEvaluationsUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: policyEvaluationsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as policyEvaluationsResponse
 }
@@ -7937,7 +10722,7 @@ export type watchStatusResponse200 = {
   data: WatchRuntimeStatus[]
   status: 200
 }
-    
+
 export type watchStatusResponseSuccess = (watchStatusResponse200) & {
   headers: Headers;
 };
@@ -7948,24 +10733,24 @@ export type watchStatusResponse = (watchStatusResponseSuccess)
 export const getWatchStatusUrl = () => {
 
 
-  
+
 
   return `/api/operations/watch/status`
 }
 
 export const watchStatus = async ( options?: RequestInit): Promise<watchStatusResponse> => {
-  
+
   const res = await fetch(getWatchStatusUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: watchStatusResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as watchStatusResponse
 }
@@ -7979,7 +10764,7 @@ export type watchSignalsResponse200 = {
   data: WatchSignal[]
   status: 200
 }
-    
+
 export type watchSignalsResponseSuccess = (watchSignalsResponse200) & {
   headers: Headers;
 };
@@ -7991,7 +10776,7 @@ export const getWatchSignalsUrl = (params?: WatchSignalsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -8003,18 +10788,18 @@ export const getWatchSignalsUrl = (params?: WatchSignalsParams,) => {
 }
 
 export const watchSignals = async (params?: WatchSignalsParams, options?: RequestInit): Promise<watchSignalsResponse> => {
-  
+
   const res = await fetch(getWatchSignalsUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: watchSignalsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as watchSignalsResponse
 }
@@ -8028,7 +10813,7 @@ export type continuityResponse200 = {
   data: WatchContinuity[]
   status: 200
 }
-    
+
 export type continuityResponseSuccess = (continuityResponse200) & {
   headers: Headers;
 };
@@ -8039,24 +10824,24 @@ export type continuityResponse = (continuityResponseSuccess)
 export const getContinuityUrl = () => {
 
 
-  
+
 
   return `/api/operations/watch/continuity`
 }
 
 export const continuity = async ( options?: RequestInit): Promise<continuityResponse> => {
-  
+
   const res = await fetch(getContinuityUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: continuityResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as continuityResponse
 }
@@ -8070,7 +10855,7 @@ export type validationScenariosResponse200 = {
   data: ValidationScenario[]
   status: 200
 }
-    
+
 export type validationScenariosResponseSuccess = (validationScenariosResponse200) & {
   headers: Headers;
 };
@@ -8081,24 +10866,24 @@ export type validationScenariosResponse = (validationScenariosResponseSuccess)
 export const getValidationScenariosUrl = () => {
 
 
-  
+
 
   return `/api/operations/validation-lab/scenarios`
 }
 
 export const validationScenarios = async ( options?: RequestInit): Promise<validationScenariosResponse> => {
-  
+
   const res = await fetch(getValidationScenariosUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: validationScenariosResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as validationScenariosResponse
 }
@@ -8112,7 +10897,7 @@ export type liveValidationPolicyResponse200 = {
   data: LiveValidationPolicy
   status: 200
 }
-    
+
 export type liveValidationPolicyResponseSuccess = (liveValidationPolicyResponse200) & {
   headers: Headers;
 };
@@ -8123,24 +10908,24 @@ export type liveValidationPolicyResponse = (liveValidationPolicyResponseSuccess)
 export const getLiveValidationPolicyUrl = () => {
 
 
-  
+
 
   return `/api/operations/validation-lab/live/policy`
 }
 
 export const liveValidationPolicy = async ( options?: RequestInit): Promise<liveValidationPolicyResponse> => {
-  
+
   const res = await fetch(getLiveValidationPolicyUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: liveValidationPolicyResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as liveValidationPolicyResponse
 }
@@ -8154,7 +10939,7 @@ export type latestBenchmarkResponse200 = {
   data: AnalysisBenchmark
   status: 200
 }
-    
+
 export type latestBenchmarkResponseSuccess = (latestBenchmarkResponse200) & {
   headers: Headers;
 };
@@ -8165,24 +10950,24 @@ export type latestBenchmarkResponse = (latestBenchmarkResponseSuccess)
 export const getLatestBenchmarkUrl = () => {
 
 
-  
+
 
   return `/api/operations/validation-lab/benchmarks/latest`
 }
 
 export const latestBenchmark = async ( options?: RequestInit): Promise<latestBenchmarkResponse> => {
-  
+
   const res = await fetch(getLatestBenchmarkUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: latestBenchmarkResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as latestBenchmarkResponse
 }
@@ -8196,7 +10981,7 @@ export type triageResponse200 = {
   data: TriageQueue
   status: 200
 }
-    
+
 export type triageResponseSuccess = (triageResponse200) & {
   headers: Headers;
 };
@@ -8208,7 +10993,7 @@ export const getTriageUrl = (params?: TriageParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -8220,18 +11005,18 @@ export const getTriageUrl = (params?: TriageParams,) => {
 }
 
 export const triage = async (params?: TriageParams, options?: RequestInit): Promise<triageResponse> => {
-  
+
   const res = await fetch(getTriageUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: triageResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as triageResponse
 }
@@ -8245,7 +11030,7 @@ export type snapshotResponse200 = {
   data: Snapshot
   status: 200
 }
-    
+
 export type snapshotResponseSuccess = (snapshotResponse200) & {
   headers: Headers;
 };
@@ -8256,24 +11041,24 @@ export type snapshotResponse = (snapshotResponseSuccess)
 export const getSnapshotUrl = () => {
 
 
-  
+
 
   return `/api/operations/telemetry`
 }
 
 export const snapshot = async ( options?: RequestInit): Promise<snapshotResponse> => {
-  
+
   const res = await fetch(getSnapshotUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: snapshotResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as snapshotResponse
 }
@@ -8287,7 +11072,7 @@ export type shiftBriefingResponse200 = {
   data: ShiftBriefing
   status: 200
 }
-    
+
 export type shiftBriefingResponseSuccess = (shiftBriefingResponse200) & {
   headers: Headers;
 };
@@ -8298,24 +11083,24 @@ export type shiftBriefingResponse = (shiftBriefingResponseSuccess)
 export const getShiftBriefingUrl = () => {
 
 
-  
+
 
   return `/api/operations/shift-briefing`
 }
 
 export const shiftBriefing = async ( options?: RequestInit): Promise<shiftBriefingResponse> => {
-  
+
   const res = await fetch(getShiftBriefingUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: shiftBriefingResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as shiftBriefingResponse
 }
@@ -8329,7 +11114,7 @@ export type scorecardResponse200 = {
   data: OperationsScorecard
   status: 200
 }
-    
+
 export type scorecardResponseSuccess = (scorecardResponse200) & {
   headers: Headers;
 };
@@ -8340,24 +11125,24 @@ export type scorecardResponse = (scorecardResponseSuccess)
 export const getScorecardUrl = () => {
 
 
-  
+
 
   return `/api/operations/scorecard`
 }
 
 export const scorecard = async ( options?: RequestInit): Promise<scorecardResponse> => {
-  
+
   const res = await fetch(getScorecardUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: scorecardResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as scorecardResponse
 }
@@ -8371,7 +11156,7 @@ export type getRuntimeReadinessResponse200 = {
   data: RuntimeReadiness
   status: 200
 }
-    
+
 export type getRuntimeReadinessResponseSuccess = (getRuntimeReadinessResponse200) & {
   headers: Headers;
 };
@@ -8382,24 +11167,24 @@ export type getRuntimeReadinessResponse = (getRuntimeReadinessResponseSuccess)
 export const getGetRuntimeReadinessUrl = () => {
 
 
-  
+
 
   return `/api/operations/runtime-readiness`
 }
 
 export const getRuntimeReadiness = async ( options?: RequestInit): Promise<getRuntimeReadinessResponse> => {
-  
+
   const res = await fetch(getGetRuntimeReadinessUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getRuntimeReadinessResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getRuntimeReadinessResponse
 }
@@ -8413,7 +11198,7 @@ export type reliabilityTrendResponse200 = {
   data: ReliabilityTrend
   status: 200
 }
-    
+
 export type reliabilityTrendResponseSuccess = (reliabilityTrendResponse200) & {
   headers: Headers;
 };
@@ -8425,7 +11210,7 @@ export const getReliabilityTrendUrl = (params?: ReliabilityTrendParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -8437,18 +11222,18 @@ export const getReliabilityTrendUrl = (params?: ReliabilityTrendParams,) => {
 }
 
 export const reliabilityTrend = async (params?: ReliabilityTrendParams, options?: RequestInit): Promise<reliabilityTrendResponse> => {
-  
+
   const res = await fetch(getReliabilityTrendUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: reliabilityTrendResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as reliabilityTrendResponse
 }
@@ -8462,7 +11247,7 @@ export type runResponse200 = {
   data: Run
   status: 200
 }
-    
+
 export type runResponseSuccess = (runResponse200) & {
   headers: Headers;
 };
@@ -8473,24 +11258,24 @@ export type runResponse = (runResponseSuccess)
 export const getRunUrl = (runId: string,) => {
 
 
-  
+
 
   return `/api/operations/production-evidence/runs/${runId}`
 }
 
 export const run = async (runId: string, options?: RequestInit): Promise<runResponse> => {
-  
+
   const res = await fetch(getRunUrl(runId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: runResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as runResponse
 }
@@ -8504,7 +11289,7 @@ export type priorityQueueResponse200 = {
   data: PriorityItem[]
   status: 200
 }
-    
+
 export type priorityQueueResponseSuccess = (priorityQueueResponse200) & {
   headers: Headers;
 };
@@ -8515,24 +11300,24 @@ export type priorityQueueResponse = (priorityQueueResponseSuccess)
 export const getPriorityQueueUrl = () => {
 
 
-  
+
 
   return `/api/operations/priority-queue`
 }
 
 export const priorityQueue = async ( options?: RequestInit): Promise<priorityQueueResponse> => {
-  
+
   const res = await fetch(getPriorityQueueUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: priorityQueueResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as priorityQueueResponse
 }
@@ -8546,7 +11331,7 @@ export type overviewResponse200 = {
   data: OperationsOverview
   status: 200
 }
-    
+
 export type overviewResponseSuccess = (overviewResponse200) & {
   headers: Headers;
 };
@@ -8557,24 +11342,24 @@ export type overviewResponse = (overviewResponseSuccess)
 export const getOverviewUrl = () => {
 
 
-  
+
 
   return `/api/operations/overview`
 }
 
 export const overview = async ( options?: RequestInit): Promise<overviewResponse> => {
-  
+
   const res = await fetch(getOverviewUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: overviewResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as overviewResponse
 }
@@ -8588,7 +11373,7 @@ export type remediationLearningResponse200 = {
   data: RemediationLearning
   status: 200
 }
-    
+
 export type remediationLearningResponseSuccess = (remediationLearningResponse200) & {
   headers: Headers;
 };
@@ -8599,24 +11384,24 @@ export type remediationLearningResponse = (remediationLearningResponseSuccess)
 export const getRemediationLearningUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/operations/incidents/${incidentId}/remediation-learning`
 }
 
 export const remediationLearning = async (incidentId: string, options?: RequestInit): Promise<remediationLearningResponse> => {
-  
+
   const res = await fetch(getRemediationLearningUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: remediationLearningResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as remediationLearningResponse
 }
@@ -8630,7 +11415,7 @@ export type fleetQueueResponse200 = {
   data: FleetQueue
   status: 200
 }
-    
+
 export type fleetQueueResponseSuccess = (fleetQueueResponse200) & {
   headers: Headers;
 };
@@ -8641,24 +11426,24 @@ export type fleetQueueResponse = (fleetQueueResponseSuccess)
 export const getFleetQueueUrl = () => {
 
 
-  
+
 
   return `/api/operations/fleet-queue`
 }
 
 export const fleetQueue = async ( options?: RequestInit): Promise<fleetQueueResponse> => {
-  
+
   const res = await fetch(getFleetQueueUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: fleetQueueResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as fleetQueueResponse
 }
@@ -8672,7 +11457,7 @@ export type eventsResponse200 = {
   data: SseEmitter
   status: 200
 }
-    
+
 export type eventsResponseSuccess = (eventsResponse200) & {
   headers: Headers;
 };
@@ -8683,24 +11468,24 @@ export type eventsResponse = (eventsResponseSuccess)
 export const getEventsUrl = () => {
 
 
-  
+
 
   return `/api/operations/events`
 }
 
 export const events = async ( options?: RequestInit): Promise<eventsResponse> => {
-  
+
   const res = await fetch(getEventsUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: eventsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as eventsResponse
 }
@@ -8714,7 +11499,7 @@ export type clusterHealthResponse200 = {
   data: ClusterHealth[]
   status: 200
 }
-    
+
 export type clusterHealthResponseSuccess = (clusterHealthResponse200) & {
   headers: Headers;
 };
@@ -8725,24 +11510,24 @@ export type clusterHealthResponse = (clusterHealthResponseSuccess)
 export const getClusterHealthUrl = () => {
 
 
-  
+
 
   return `/api/operations/cluster-health`
 }
 
 export const clusterHealth = async ( options?: RequestInit): Promise<clusterHealthResponse> => {
-  
+
   const res = await fetch(getClusterHealthUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: clusterHealthResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as clusterHealthResponse
 }
@@ -8756,7 +11541,7 @@ export type snapshot1Response200 = {
   data: Snapshot
   status: 200
 }
-    
+
 export type snapshot1ResponseSuccess = (snapshot1Response200) & {
   headers: Headers;
 };
@@ -8767,24 +11552,24 @@ export type snapshot1Response = (snapshot1ResponseSuccess)
 export const getSnapshot1Url = () => {
 
 
-  
+
 
   return `/api/operations/ai-trust`
 }
 
 export const snapshot1 = async ( options?: RequestInit): Promise<snapshot1Response> => {
-  
+
   const res = await fetch(getSnapshot1Url(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: snapshot1Response['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as snapshot1Response
 }
@@ -8798,7 +11583,7 @@ export type aiQualityResponse200 = {
   data: AiQualitySummary
   status: 200
 }
-    
+
 export type aiQualityResponseSuccess = (aiQualityResponse200) & {
   headers: Headers;
 };
@@ -8809,24 +11594,24 @@ export type aiQualityResponse = (aiQualityResponseSuccess)
 export const getAiQualityUrl = () => {
 
 
-  
+
 
   return `/api/operations/ai-quality`
 }
 
 export const aiQuality = async ( options?: RequestInit): Promise<aiQualityResponse> => {
-  
+
   const res = await fetch(getAiQualityUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: aiQualityResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as aiQualityResponse
 }
@@ -8840,7 +11625,7 @@ export type aiCalibrationResponse200 = {
   data: AiCalibrationSummary
   status: 200
 }
-    
+
 export type aiCalibrationResponseSuccess = (aiCalibrationResponse200) & {
   headers: Headers;
 };
@@ -8851,24 +11636,24 @@ export type aiCalibrationResponse = (aiCalibrationResponseSuccess)
 export const getAiCalibrationUrl = () => {
 
 
-  
+
 
   return `/api/operations/ai-calibration`
 }
 
 export const aiCalibration = async ( options?: RequestInit): Promise<aiCalibrationResponse> => {
-  
+
   const res = await fetch(getAiCalibrationUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: aiCalibrationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as aiCalibrationResponse
 }
@@ -8882,7 +11667,7 @@ export type notificationsResponse200 = {
   data: Notification[]
   status: 200
 }
-    
+
 export type notificationsResponseSuccess = (notificationsResponse200) & {
   headers: Headers;
 };
@@ -8894,7 +11679,7 @@ export const getNotificationsUrl = (params?: NotificationsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -8906,18 +11691,18 @@ export const getNotificationsUrl = (params?: NotificationsParams,) => {
 }
 
 export const notifications = async (params?: NotificationsParams, options?: RequestInit): Promise<notificationsResponse> => {
-  
+
   const res = await fetch(getNotificationsUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: notificationsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as notificationsResponse
 }
@@ -8931,7 +11716,7 @@ export type unreadCountResponse200 = {
   data: UnreadCountResponse
   status: 200
 }
-    
+
 export type unreadCountResponseSuccess = (unreadCountResponse200) & {
   headers: Headers;
 };
@@ -8942,26 +11727,75 @@ export type unreadCountResponse = (unreadCountResponseSuccess)
 export const getUnreadCountUrl = () => {
 
 
-  
+
 
   return `/api/notifications/unread-count`
 }
 
 export const unreadCount = async ( options?: RequestInit): Promise<unreadCountResponse> => {
-  
+
   const res = await fetch(getUnreadCountUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: unreadCountResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as unreadCountResponse
+}
+
+
+
+/**
+ * @summary Resolve capabilities and navigation for the selected tenant scope
+ */
+export type accessResponse200 = {
+  data: AccessResponse
+  status: 200
+}
+
+export type accessResponseSuccess = (accessResponse200) & {
+  headers: Headers;
+};
+;
+
+export type accessResponse = (accessResponseSuccess)
+
+export const getAccessUrl = (params: AccessParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/me/access?${stringifiedParams}` : `/api/me/access`
+}
+
+export const access = async (params: AccessParams, options?: RequestInit): Promise<accessResponse> => {
+
+  const res = await fetch(getAccessUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: accessResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as accessResponse
 }
 
 
@@ -8973,7 +11807,7 @@ export type listJobsResponse200 = {
   data: JobResponse[]
   status: 200
 }
-    
+
 export type listJobsResponseSuccess = (listJobsResponse200) & {
   headers: Headers;
 };
@@ -8984,24 +11818,24 @@ export type listJobsResponse = (listJobsResponseSuccess)
 export const getListJobsUrl = () => {
 
 
-  
+
 
   return `/api/jobs`
 }
 
 export const listJobs = async ( options?: RequestInit): Promise<listJobsResponse> => {
-  
+
   const res = await fetch(getListJobsUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listJobsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listJobsResponse
 }
@@ -9015,7 +11849,7 @@ export type getJobResponse200 = {
   data: JobResponse
   status: 200
 }
-    
+
 export type getJobResponseSuccess = (getJobResponse200) & {
   headers: Headers;
 };
@@ -9026,24 +11860,24 @@ export type getJobResponse = (getJobResponseSuccess)
 export const getGetJobUrl = (jobId: string,) => {
 
 
-  
+
 
   return `/api/jobs/${jobId}`
 }
 
 export const getJob = async (jobId: string, options?: RequestInit): Promise<getJobResponse> => {
-  
+
   const res = await fetch(getGetJobUrl(jobId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getJobResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getJobResponse
 }
@@ -9057,7 +11891,7 @@ export type incidentsResponse200 = {
   data: Incident[]
   status: 200
 }
-    
+
 export type incidentsResponseSuccess = (incidentsResponse200) & {
   headers: Headers;
 };
@@ -9069,7 +11903,7 @@ export const getIncidentsUrl = (params?: IncidentsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9081,18 +11915,18 @@ export const getIncidentsUrl = (params?: IncidentsParams,) => {
 }
 
 export const incidents = async (params?: IncidentsParams, options?: RequestInit): Promise<incidentsResponse> => {
-  
+
   const res = await fetch(getIncidentsUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: incidentsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as incidentsResponse
 }
@@ -9106,7 +11940,7 @@ export type incidentResponse200 = {
   data: IncidentDetail
   status: 200
 }
-    
+
 export type incidentResponseSuccess = (incidentResponse200) & {
   headers: Headers;
 };
@@ -9117,24 +11951,24 @@ export type incidentResponse = (incidentResponseSuccess)
 export const getIncidentUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}`
 }
 
 export const incident = async (incidentId: string, options?: RequestInit): Promise<incidentResponse> => {
-  
+
   const res = await fetch(getIncidentUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: incidentResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as incidentResponse
 }
@@ -9148,7 +11982,7 @@ export type incidentTimelineResponse200 = {
   data: IncidentActivity[]
   status: 200
 }
-    
+
 export type incidentTimelineResponseSuccess = (incidentTimelineResponse200) & {
   headers: Headers;
 };
@@ -9159,24 +11993,24 @@ export type incidentTimelineResponse = (incidentTimelineResponseSuccess)
 export const getIncidentTimelineUrl = (incidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/timeline`
 }
 
 export const incidentTimeline = async (incidentId: string, options?: RequestInit): Promise<incidentTimelineResponse> => {
-  
+
   const res = await fetch(getIncidentTimelineUrl(incidentId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: incidentTimelineResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as incidentTimelineResponse
 }
@@ -9190,7 +12024,7 @@ export type _exportResponse200 = {
   data: StreamingResponseBody
   status: 200
 }
-    
+
 export type _exportResponseSuccess = (_exportResponse200) & {
   headers: Headers;
 };
@@ -9203,7 +12037,7 @@ export const getExportUrl = (incidentId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9216,18 +12050,18 @@ export const getExportUrl = (incidentId: string,
 
 export const _export = async (incidentId: string,
     params?: _ExportParams, options?: RequestInit): Promise<_exportResponse> => {
-  
+
   const res = await fetch(getExportUrl(incidentId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: _exportResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as _exportResponse
 }
@@ -9241,7 +12075,7 @@ export type getClusterResponse200 = {
   data: ClusterResponse
   status: 200
 }
-    
+
 export type getClusterResponseSuccess = (getClusterResponse200) & {
   headers: Headers;
 };
@@ -9252,24 +12086,24 @@ export type getClusterResponse = (getClusterResponseSuccess)
 export const getGetClusterUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}`
 }
 
 export const getCluster = async (clusterId: string, options?: RequestInit): Promise<getClusterResponse> => {
-  
+
   const res = await fetch(getGetClusterUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getClusterResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getClusterResponse
 }
@@ -9283,7 +12117,7 @@ export type deleteClusterResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type deleteClusterResponseSuccess = (deleteClusterResponse204) & {
   headers: Headers;
 };
@@ -9294,24 +12128,24 @@ export type deleteClusterResponse = (deleteClusterResponseSuccess)
 export const getDeleteClusterUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}`
 }
 
 export const deleteCluster = async (clusterId: string, options?: RequestInit): Promise<deleteClusterResponse> => {
-  
+
   const res = await fetch(getDeleteClusterUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'DELETE'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: deleteClusterResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as deleteClusterResponse
 }
@@ -9325,7 +12159,7 @@ export type upgradeReadinessResponse200 = {
   data: UpgradeReadiness
   status: 200
 }
-    
+
 export type upgradeReadinessResponseSuccess = (upgradeReadinessResponse200) & {
   headers: Headers;
 };
@@ -9338,7 +12172,7 @@ export const getUpgradeReadinessUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9351,18 +12185,18 @@ export const getUpgradeReadinessUrl = (clusterId: string,
 
 export const upgradeReadiness = async (clusterId: string,
     params?: UpgradeReadinessParams, options?: RequestInit): Promise<upgradeReadinessResponse> => {
-  
+
   const res = await fetch(getUpgradeReadinessUrl(clusterId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: upgradeReadinessResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as upgradeReadinessResponse
 }
@@ -9376,7 +12210,7 @@ export type getLatestSyncStatusResponse200 = {
   data: ClusterSyncStatusResponse
   status: 200
 }
-    
+
 export type getLatestSyncStatusResponseSuccess = (getLatestSyncStatusResponse200) & {
   headers: Headers;
 };
@@ -9387,24 +12221,24 @@ export type getLatestSyncStatusResponse = (getLatestSyncStatusResponseSuccess)
 export const getGetLatestSyncStatusUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/sync-status`
 }
 
 export const getLatestSyncStatus = async (clusterId: string, options?: RequestInit): Promise<getLatestSyncStatusResponse> => {
-  
+
   const res = await fetch(getGetLatestSyncStatusUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getLatestSyncStatusResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getLatestSyncStatusResponse
 }
@@ -9418,7 +12252,7 @@ export type listResourcesResponse200 = {
   data: KubernetesResourceSnapshotResponse[]
   status: 200
 }
-    
+
 export type listResourcesResponseSuccess = (listResourcesResponse200) & {
   headers: Headers;
 };
@@ -9431,7 +12265,7 @@ export const getListResourcesUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9444,18 +12278,18 @@ export const getListResourcesUrl = (clusterId: string,
 
 export const listResources = async (clusterId: string,
     params?: ListResourcesParams, options?: RequestInit): Promise<listResourcesResponse> => {
-  
+
   const res = await fetch(getListResourcesUrl(clusterId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listResourcesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listResourcesResponse
 }
@@ -9469,7 +12303,7 @@ export type getResourceManifestResponse200 = {
   data: KubernetesResourceManifestResponse
   status: 200
 }
-    
+
 export type getResourceManifestResponseSuccess = (getResourceManifestResponse200) & {
   headers: Headers;
 };
@@ -9484,7 +12318,7 @@ export const getGetResourceManifestUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9499,18 +12333,18 @@ export const getResourceManifest = async (clusterId: string,
     resourceType: string,
     resourceName: string,
     params?: GetResourceManifestParams, options?: RequestInit): Promise<getResourceManifestResponse> => {
-  
+
   const res = await fetch(getGetResourceManifestUrl(clusterId,resourceType,resourceName,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getResourceManifestResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getResourceManifestResponse
 }
@@ -9524,7 +12358,7 @@ export type getRecentLogsResponse200 = {
   data: ClusterResourceLogResponse
   status: 200
 }
-    
+
 export type getRecentLogsResponseSuccess = (getRecentLogsResponse200) & {
   headers: Headers;
 };
@@ -9539,7 +12373,7 @@ export const getGetRecentLogsUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9554,18 +12388,18 @@ export const getRecentLogs = async (clusterId: string,
     resourceType: string,
     resourceName: string,
     params: GetRecentLogsParams, options?: RequestInit): Promise<getRecentLogsResponse> => {
-  
+
   const res = await fetch(getGetRecentLogsUrl(clusterId,resourceType,resourceName,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getRecentLogsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getRecentLogsResponse
 }
@@ -9579,7 +12413,7 @@ export type getTargetsResponse200 = {
   data: ClusterResourceLogTargetsResponse
   status: 200
 }
-    
+
 export type getTargetsResponseSuccess = (getTargetsResponse200) & {
   headers: Headers;
 };
@@ -9594,7 +12428,7 @@ export const getGetTargetsUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9609,18 +12443,18 @@ export const getTargets = async (clusterId: string,
     resourceType: string,
     resourceName: string,
     params: GetTargetsParams, options?: RequestInit): Promise<getTargetsResponse> => {
-  
+
   const res = await fetch(getGetTargetsUrl(clusterId,resourceType,resourceName,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getTargetsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getTargetsResponse
 }
@@ -9634,7 +12468,7 @@ export type streamLogsResponse200 = {
   data: StreamingResponseBody
   status: 200
 }
-    
+
 export type streamLogsResponseSuccess = (streamLogsResponse200) & {
   headers: Headers;
 };
@@ -9649,7 +12483,7 @@ export const getStreamLogsUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9664,18 +12498,18 @@ export const streamLogs = async (clusterId: string,
     resourceType: string,
     resourceName: string,
     params: StreamLogsParams, options?: RequestInit): Promise<streamLogsResponse> => {
-  
+
   const res = await fetch(getStreamLogsUrl(clusterId,resourceType,resourceName,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: streamLogsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as streamLogsResponse
 }
@@ -9689,7 +12523,7 @@ export type resourceContextResponse200 = {
   data: ResourceContext
   status: 200
 }
-    
+
 export type resourceContextResponseSuccess = (resourceContextResponse200) & {
   headers: Headers;
 };
@@ -9704,7 +12538,7 @@ export const getResourceContextUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9719,18 +12553,18 @@ export const resourceContext = async (clusterId: string,
     kind: string,
     name: string,
     params?: ResourceContextParams, options?: RequestInit): Promise<resourceContextResponse> => {
-  
+
   const res = await fetch(getResourceContextUrl(clusterId,kind,name,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: resourceContextResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as resourceContextResponse
 }
@@ -9744,7 +12578,7 @@ export type pageResourcesResponse200 = {
   data: ClusterResourcePageResponse
   status: 200
 }
-    
+
 export type pageResourcesResponseSuccess = (pageResourcesResponse200) & {
   headers: Headers;
 };
@@ -9757,7 +12591,7 @@ export const getPageResourcesUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9770,18 +12604,18 @@ export const getPageResourcesUrl = (clusterId: string,
 
 export const pageResources = async (clusterId: string,
     params?: PageResourcesParams, options?: RequestInit): Promise<pageResourcesResponse> => {
-  
+
   const res = await fetch(getPageResourcesUrl(clusterId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: pageResourcesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as pageResourcesResponse
 }
@@ -9795,7 +12629,7 @@ export type readinessResponse200 = {
   data: ClusterReadinessReport
   status: 200
 }
-    
+
 export type readinessResponseSuccess = (readinessResponse200) & {
   headers: Headers;
 };
@@ -9808,7 +12642,7 @@ export const getReadinessUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9821,18 +12655,18 @@ export const getReadinessUrl = (clusterId: string,
 
 export const readiness = async (clusterId: string,
     params?: ReadinessParams, options?: RequestInit): Promise<readinessResponse> => {
-  
+
   const res = await fetch(getReadinessUrl(clusterId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: readinessResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as readinessResponse
 }
@@ -9846,7 +12680,7 @@ export type listNodesResponse200 = {
   data: KubernetesNodeResponse[]
   status: 200
 }
-    
+
 export type listNodesResponseSuccess = (listNodesResponse200) & {
   headers: Headers;
 };
@@ -9857,24 +12691,24 @@ export type listNodesResponse = (listNodesResponseSuccess)
 export const getListNodesUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/nodes`
 }
 
 export const listNodes = async (clusterId: string, options?: RequestInit): Promise<listNodesResponse> => {
-  
+
   const res = await fetch(getListNodesUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listNodesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listNodesResponse
 }
@@ -9888,7 +12722,7 @@ export type listNamespacesResponse200 = {
   data: KubernetesNamespaceResponse[]
   status: 200
 }
-    
+
 export type listNamespacesResponseSuccess = (listNamespacesResponse200) & {
   headers: Headers;
 };
@@ -9899,24 +12733,24 @@ export type listNamespacesResponse = (listNamespacesResponseSuccess)
 export const getListNamespacesUrl = (clusterId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/namespaces`
 }
 
 export const listNamespaces = async (clusterId: string, options?: RequestInit): Promise<listNamespacesResponse> => {
-  
+
   const res = await fetch(getListNamespacesUrl(clusterId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listNamespacesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listNamespacesResponse
 }
@@ -9930,7 +12764,7 @@ export type listEventsResponse200 = {
   data: KubernetesEventSnapshotResponse[]
   status: 200
 }
-    
+
 export type listEventsResponseSuccess = (listEventsResponse200) & {
   headers: Headers;
 };
@@ -9943,7 +12777,7 @@ export const getListEventsUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -9956,18 +12790,18 @@ export const getListEventsUrl = (clusterId: string,
 
 export const listEvents = async (clusterId: string,
     params?: ListEventsParams, options?: RequestInit): Promise<listEventsResponse> => {
-  
+
   const res = await fetch(getListEventsUrl(clusterId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listEventsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listEventsResponse
 }
@@ -9981,7 +12815,7 @@ export type getClusterCredentialResponse200 = {
   data: ClusterCredentialResponse
   status: 200
 }
-    
+
 export type getClusterCredentialResponseSuccess = (getClusterCredentialResponse200) & {
   headers: Headers;
 };
@@ -9994,7 +12828,7 @@ export const getGetClusterCredentialUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10007,18 +12841,18 @@ export const getGetClusterCredentialUrl = (clusterId: string,
 
 export const getClusterCredential = async (clusterId: string,
     params?: GetClusterCredentialParams, options?: RequestInit): Promise<getClusterCredentialResponse> => {
-  
+
   const res = await fetch(getGetClusterCredentialUrl(clusterId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getClusterCredentialResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getClusterCredentialResponse
 }
@@ -10032,7 +12866,7 @@ export type credentialHealthResponse200 = {
   data: CredentialHealth
   status: 200
 }
-    
+
 export type credentialHealthResponseSuccess = (credentialHealthResponse200) & {
   headers: Headers;
 };
@@ -10045,7 +12879,7 @@ export const getCredentialHealthUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10058,18 +12892,18 @@ export const getCredentialHealthUrl = (clusterId: string,
 
 export const credentialHealth = async (clusterId: string,
     params?: CredentialHealthParams, options?: RequestInit): Promise<credentialHealthResponse> => {
-  
+
   const res = await fetch(getCredentialHealthUrl(clusterId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: credentialHealthResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as credentialHealthResponse
 }
@@ -10083,7 +12917,7 @@ export type executionResponse200 = {
   data: CommandExecutionResponse
   status: 200
 }
-    
+
 export type executionResponseSuccess = (executionResponse200) & {
   headers: Headers;
 };
@@ -10095,25 +12929,25 @@ export const getExecutionUrl = (clusterId: string,
     executionId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/command-executions/${executionId}`
 }
 
 export const execution = async (clusterId: string,
     executionId: string, options?: RequestInit): Promise<executionResponse> => {
-  
+
   const res = await fetch(getExecutionUrl(clusterId,executionId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: executionResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as executionResponse
 }
@@ -10127,7 +12961,7 @@ export type streamResponse200 = {
   data: SseEmitter
   status: 200
 }
-    
+
 export type streamResponseSuccess = (streamResponse200) & {
   headers: Headers;
 };
@@ -10139,25 +12973,25 @@ export const getStreamUrl = (clusterId: string,
     executionId: string,) => {
 
 
-  
+
 
   return `/api/clusters/${clusterId}/command-executions/${executionId}/stream`
 }
 
 export const stream = async (clusterId: string,
     executionId: string, options?: RequestInit): Promise<streamResponse> => {
-  
+
   const res = await fetch(getStreamUrl(clusterId,executionId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: streamResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as streamResponse
 }
@@ -10171,7 +13005,7 @@ export type capabilitiesResponse200 = {
   data: CommandCapabilityResponse
   status: 200
 }
-    
+
 export type capabilitiesResponseSuccess = (capabilitiesResponse200) & {
   headers: Headers;
 };
@@ -10184,7 +13018,7 @@ export const getCapabilitiesUrl = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10197,18 +13031,18 @@ export const getCapabilitiesUrl = (clusterId: string,
 
 export const capabilities = async (clusterId: string,
     params?: CapabilitiesParams, options?: RequestInit): Promise<capabilitiesResponse> => {
-  
+
   const res = await fetch(getCapabilitiesUrl(clusterId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: capabilitiesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as capabilitiesResponse
 }
@@ -10222,7 +13056,7 @@ export type capabilities1Response200 = {
   data: CapabilityMatrix
   status: 200
 }
-    
+
 export type capabilities1ResponseSuccess = (capabilities1Response200) & {
   headers: Headers;
 };
@@ -10235,7 +13069,7 @@ export const getCapabilities1Url = (clusterId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10248,18 +13082,18 @@ export const getCapabilities1Url = (clusterId: string,
 
 export const capabilities1 = async (clusterId: string,
     params?: Capabilities1Params, options?: RequestInit): Promise<capabilities1Response> => {
-  
+
   const res = await fetch(getCapabilities1Url(clusterId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: capabilities1Response['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as capabilities1Response
 }
@@ -10273,7 +13107,7 @@ export type changesResponse200 = {
   data: ResourceChange[]
   status: 200
 }
-    
+
 export type changesResponseSuccess = (changesResponse200) & {
   headers: Headers;
 };
@@ -10285,7 +13119,7 @@ export const getChangesUrl = (params?: ChangesParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10297,18 +13131,18 @@ export const getChangesUrl = (params?: ChangesParams,) => {
 }
 
 export const changes = async (params?: ChangesParams, options?: RequestInit): Promise<changesResponse> => {
-  
+
   const res = await fetch(getChangesUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: changesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as changesResponse
 }
@@ -10322,7 +13156,7 @@ export type changeResponse200 = {
   data: ResourceChange
   status: 200
 }
-    
+
 export type changeResponseSuccess = (changeResponse200) & {
   headers: Headers;
 };
@@ -10333,24 +13167,24 @@ export type changeResponse = (changeResponseSuccess)
 export const getChangeUrl = (changeId: string,) => {
 
 
-  
+
 
   return `/api/changes/${changeId}`
 }
 
 export const change = async (changeId: string, options?: RequestInit): Promise<changeResponse> => {
-  
+
   const res = await fetch(getChangeUrl(changeId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: changeResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as changeResponse
 }
@@ -10364,7 +13198,7 @@ export type meResponse200 = {
   data: AuthSessionResponse
   status: 200
 }
-    
+
 export type meResponseSuccess = (meResponse200) & {
   headers: Headers;
 };
@@ -10376,7 +13210,7 @@ export const getMeUrl = (params: MeParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10388,18 +13222,18 @@ export const getMeUrl = (params: MeParams,) => {
 }
 
 export const me = async (params: MeParams, options?: RequestInit): Promise<meResponse> => {
-  
+
   const res = await fetch(getMeUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: meResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as meResponse
 }
@@ -10413,7 +13247,7 @@ export type auditLogsResponse200 = {
   data: AuditLogResponse[]
   status: 200
 }
-    
+
 export type auditLogsResponseSuccess = (auditLogsResponse200) & {
   headers: Headers;
 };
@@ -10425,7 +13259,7 @@ export const getAuditLogsUrl = (params?: AuditLogsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10437,18 +13271,18 @@ export const getAuditLogsUrl = (params?: AuditLogsParams,) => {
 }
 
 export const auditLogs = async (params?: AuditLogsParams, options?: RequestInit): Promise<auditLogsResponse> => {
-  
+
   const res = await fetch(getAuditLogsUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: auditLogsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as auditLogsResponse
 }
@@ -10462,7 +13296,7 @@ export type listApplicationsResponse200 = {
   data: ApplicationResponse[]
   status: 200
 }
-    
+
 export type listApplicationsResponseSuccess = (listApplicationsResponse200) & {
   headers: Headers;
 };
@@ -10473,24 +13307,24 @@ export type listApplicationsResponse = (listApplicationsResponseSuccess)
 export const getListApplicationsUrl = () => {
 
 
-  
+
 
   return `/api/applications`
 }
 
 export const listApplications = async ( options?: RequestInit): Promise<listApplicationsResponse> => {
-  
+
   const res = await fetch(getListApplicationsUrl(),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listApplicationsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listApplicationsResponse
 }
@@ -10504,7 +13338,7 @@ export type getApplicationResponse200 = {
   data: ApplicationResponse
   status: 200
 }
-    
+
 export type getApplicationResponseSuccess = (getApplicationResponse200) & {
   headers: Headers;
 };
@@ -10515,24 +13349,24 @@ export type getApplicationResponse = (getApplicationResponseSuccess)
 export const getGetApplicationUrl = (applicationId: string,) => {
 
 
-  
+
 
   return `/api/applications/${applicationId}`
 }
 
 export const getApplication = async (applicationId: string, options?: RequestInit): Promise<getApplicationResponse> => {
-  
+
   const res = await fetch(getGetApplicationUrl(applicationId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getApplicationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getApplicationResponse
 }
@@ -10546,7 +13380,7 @@ export type getApplicationStatusResponse200 = {
   data: ApplicationStatusResponse
   status: 200
 }
-    
+
 export type getApplicationStatusResponseSuccess = (getApplicationStatusResponse200) & {
   headers: Headers;
 };
@@ -10557,24 +13391,24 @@ export type getApplicationStatusResponse = (getApplicationStatusResponseSuccess)
 export const getGetApplicationStatusUrl = (applicationId: string,) => {
 
 
-  
+
 
   return `/api/applications/${applicationId}/status`
 }
 
 export const getApplicationStatus = async (applicationId: string, options?: RequestInit): Promise<getApplicationStatusResponse> => {
-  
+
   const res = await fetch(getGetApplicationStatusUrl(applicationId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getApplicationStatusResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getApplicationStatusResponse
 }
@@ -10588,7 +13422,7 @@ export type previewRollbackApplicationResponse200 = {
   data: ApplicationRollbackPreviewResponse
   status: 200
 }
-    
+
 export type previewRollbackApplicationResponseSuccess = (previewRollbackApplicationResponse200) & {
   headers: Headers;
 };
@@ -10601,7 +13435,7 @@ export const getPreviewRollbackApplicationUrl = (applicationId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10614,18 +13448,18 @@ export const getPreviewRollbackApplicationUrl = (applicationId: string,
 
 export const previewRollbackApplication = async (applicationId: string,
     params?: PreviewRollbackApplicationParams, options?: RequestInit): Promise<previewRollbackApplicationResponse> => {
-  
+
   const res = await fetch(getPreviewRollbackApplicationUrl(applicationId,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: previewRollbackApplicationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as previewRollbackApplicationResponse
 }
@@ -10639,7 +13473,7 @@ export type getAnalysisResponse200 = {
   data: AnalysisResponse
   status: 200
 }
-    
+
 export type getAnalysisResponseSuccess = (getAnalysisResponse200) & {
   headers: Headers;
 };
@@ -10650,24 +13484,24 @@ export type getAnalysisResponse = (getAnalysisResponseSuccess)
 export const getGetAnalysisUrl = (analysisId: string,) => {
 
 
-  
+
 
   return `/api/analysis/${analysisId}`
 }
 
 export const getAnalysis = async (analysisId: string, options?: RequestInit): Promise<getAnalysisResponse> => {
-  
+
   const res = await fetch(getGetAnalysisUrl(analysisId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getAnalysisResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getAnalysisResponse
 }
@@ -10681,7 +13515,7 @@ export type deleteAnalysisResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type deleteAnalysisResponseSuccess = (deleteAnalysisResponse204) & {
   headers: Headers;
 };
@@ -10692,24 +13526,24 @@ export type deleteAnalysisResponse = (deleteAnalysisResponseSuccess)
 export const getDeleteAnalysisUrl = (analysisId: string,) => {
 
 
-  
+
 
   return `/api/analysis/${analysisId}`
 }
 
 export const deleteAnalysis = async (analysisId: string, options?: RequestInit): Promise<deleteAnalysisResponse> => {
-  
+
   const res = await fetch(getDeleteAnalysisUrl(analysisId),
-  {      
+  {
     ...options,
     method: 'DELETE'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: deleteAnalysisResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as deleteAnalysisResponse
 }
@@ -10723,7 +13557,7 @@ export type listWorkflowStatesResponse200 = {
   data: AnalysisWorkflowStateResponse[]
   status: 200
 }
-    
+
 export type listWorkflowStatesResponseSuccess = (listWorkflowStatesResponse200) & {
   headers: Headers;
 };
@@ -10734,24 +13568,24 @@ export type listWorkflowStatesResponse = (listWorkflowStatesResponseSuccess)
 export const getListWorkflowStatesUrl = (analysisId: string,) => {
 
 
-  
+
 
   return `/api/analysis/${analysisId}/workflow`
 }
 
 export const listWorkflowStates = async (analysisId: string, options?: RequestInit): Promise<listWorkflowStatesResponse> => {
-  
+
   const res = await fetch(getListWorkflowStatesUrl(analysisId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listWorkflowStatesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listWorkflowStatesResponse
 }
@@ -10765,7 +13599,7 @@ export type getResourceLogsResponse200 = {
   data: PodLogsResponse
   status: 200
 }
-    
+
 export type getResourceLogsResponseSuccess = (getResourceLogsResponse200) & {
   headers: Headers;
 };
@@ -10780,7 +13614,7 @@ export const getGetResourceLogsUrl = (namespace: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10795,18 +13629,18 @@ export const getResourceLogs = async (namespace: string,
     resourceType: string,
     resourceName: string,
     params: GetResourceLogsParams, options?: RequestInit): Promise<getResourceLogsResponse> => {
-  
+
   const res = await fetch(getGetResourceLogsUrl(namespace,resourceType,resourceName,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getResourceLogsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getResourceLogsResponse
 }
@@ -10820,7 +13654,7 @@ export type getPodLogsResponse200 = {
   data: PodLogsResponse
   status: 200
 }
-    
+
 export type getPodLogsResponseSuccess = (getPodLogsResponse200) & {
   headers: Headers;
 };
@@ -10834,7 +13668,7 @@ export const getGetPodLogsUrl = (namespace: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10848,18 +13682,18 @@ export const getGetPodLogsUrl = (namespace: string,
 export const getPodLogs = async (namespace: string,
     podName: string,
     params: GetPodLogsParams, options?: RequestInit): Promise<getPodLogsResponse> => {
-  
+
   const res = await fetch(getGetPodLogsUrl(namespace,podName,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getPodLogsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getPodLogsResponse
 }
@@ -10873,7 +13707,7 @@ export type getNamespaceDiagnosticsResponse200 = {
   data: NamespaceDiagnosticsResponse
   status: 200
 }
-    
+
 export type getNamespaceDiagnosticsResponseSuccess = (getNamespaceDiagnosticsResponse200) & {
   headers: Headers;
 };
@@ -10886,7 +13720,7 @@ export const getGetNamespaceDiagnosticsUrl = (namespace: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10899,18 +13733,18 @@ export const getGetNamespaceDiagnosticsUrl = (namespace: string,
 
 export const getNamespaceDiagnostics = async (namespace: string,
     params: GetNamespaceDiagnosticsParams, options?: RequestInit): Promise<getNamespaceDiagnosticsResponse> => {
-  
+
   const res = await fetch(getGetNamespaceDiagnosticsUrl(namespace,params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getNamespaceDiagnosticsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getNamespaceDiagnosticsResponse
 }
@@ -10924,7 +13758,7 @@ export type getAnalysisByJobIdResponse200 = {
   data: AnalysisResponse
   status: 200
 }
-    
+
 export type getAnalysisByJobIdResponseSuccess = (getAnalysisByJobIdResponse200) & {
   headers: Headers;
 };
@@ -10935,24 +13769,24 @@ export type getAnalysisByJobIdResponse = (getAnalysisByJobIdResponseSuccess)
 export const getGetAnalysisByJobIdUrl = (jobId: string,) => {
 
 
-  
+
 
   return `/api/analysis/jobs/${jobId}/result`
 }
 
 export const getAnalysisByJobId = async (jobId: string, options?: RequestInit): Promise<getAnalysisByJobIdResponse> => {
-  
+
   const res = await fetch(getGetAnalysisByJobIdUrl(jobId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: getAnalysisByJobIdResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getAnalysisByJobIdResponse
 }
@@ -10966,7 +13800,7 @@ export type listHistoryResponse200 = {
   data: AnalysisResponse[]
   status: 200
 }
-    
+
 export type listHistoryResponseSuccess = (listHistoryResponse200) & {
   headers: Headers;
 };
@@ -10978,7 +13812,7 @@ export const getListHistoryUrl = (params?: ListHistoryParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
@@ -10990,18 +13824,18 @@ export const getListHistoryUrl = (params?: ListHistoryParams,) => {
 }
 
 export const listHistory = async (params?: ListHistoryParams, options?: RequestInit): Promise<listHistoryResponse> => {
-  
+
   const res = await fetch(getListHistoryUrl(params),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listHistoryResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listHistoryResponse
 }
@@ -11015,7 +13849,7 @@ export type regressionRunResponse200 = {
   data: RegressionRun
   status: 200
 }
-    
+
 export type regressionRunResponseSuccess = (regressionRunResponse200) & {
   headers: Headers;
 };
@@ -11026,24 +13860,24 @@ export type regressionRunResponse = (regressionRunResponseSuccess)
 export const getRegressionRunUrl = (runId: string,) => {
 
 
-  
+
 
   return `/api/analysis-regression/runs/${runId}`
 }
 
 export const regressionRun = async (runId: string, options?: RequestInit): Promise<regressionRunResponse> => {
-  
+
   const res = await fetch(getRegressionRunUrl(runId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: regressionRunResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as regressionRunResponse
 }
@@ -11057,7 +13891,7 @@ export type listContextReferencesResponse200 = {
   data: AiChatContextReferenceResponse[]
   status: 200
 }
-    
+
 export type listContextReferencesResponseSuccess = (listContextReferencesResponse200) & {
   headers: Headers;
 };
@@ -11068,24 +13902,24 @@ export type listContextReferencesResponse = (listContextReferencesResponseSucces
 export const getListContextReferencesUrl = (messageId: string,) => {
 
 
-  
+
 
   return `/api/ai-chat/messages/${messageId}/context-references`
 }
 
 export const listContextReferences = async (messageId: string, options?: RequestInit): Promise<listContextReferencesResponse> => {
-  
+
   const res = await fetch(getListContextReferencesUrl(messageId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listContextReferencesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listContextReferencesResponse
 }
@@ -11099,7 +13933,7 @@ export type listConversationContextReferencesResponse200 = {
   data: AiChatContextReferenceResponse[]
   status: 200
 }
-    
+
 export type listConversationContextReferencesResponseSuccess = (listConversationContextReferencesResponse200) & {
   headers: Headers;
 };
@@ -11110,26 +13944,70 @@ export type listConversationContextReferencesResponse = (listConversationContext
 export const getListConversationContextReferencesUrl = (conversationId: string,) => {
 
 
-  
+
 
   return `/api/ai-chat/conversations/${conversationId}/context-references`
 }
 
 export const listConversationContextReferences = async (conversationId: string, options?: RequestInit): Promise<listConversationContextReferencesResponse> => {
-  
+
   const res = await fetch(getListConversationContextReferencesUrl(conversationId),
-  {      
+  {
     ...options,
     method: 'GET'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: listConversationContextReferencesResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listConversationContextReferencesResponse
+}
+
+
+
+/**
+ * @summary Remove a Helm chart from the selected tenant library
+ */
+export type removeChartResponse204 = {
+  data: void
+  status: 204
+}
+
+export type removeChartResponseSuccess = (removeChartResponse204) & {
+  headers: Headers;
+};
+;
+
+export type removeChartResponse = (removeChartResponseSuccess)
+
+export const getRemoveChartUrl = (chartId: string,) => {
+
+
+
+
+  return `/api/v2/application-delivery/charts/${chartId}`
+}
+
+export const removeChart = async (chartId: string,
+    removeChartRequest: RemoveChartRequest, options?: RequestInit): Promise<removeChartResponse> => {
+
+  const res = await fetch(getRemoveChartUrl(chartId),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      removeChartRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: removeChartResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as removeChartResponse
 }
 
 
@@ -11141,7 +14019,7 @@ export type deleteBindingResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type deleteBindingResponseSuccess = (deleteBindingResponse204) & {
   headers: Headers;
 };
@@ -11152,24 +14030,24 @@ export type deleteBindingResponse = (deleteBindingResponseSuccess)
 export const getDeleteBindingUrl = (bindingId: string,) => {
 
 
-  
+
 
   return `/api/security/role-bindings/${bindingId}`
 }
 
 export const deleteBinding = async (bindingId: string, options?: RequestInit): Promise<deleteBindingResponse> => {
-  
+
   const res = await fetch(getDeleteBindingUrl(bindingId),
-  {      
+  {
     ...options,
     method: 'DELETE'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: deleteBindingResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as deleteBindingResponse
 }
@@ -11183,7 +14061,7 @@ export type cleanupLiveValidationResponse200 = {
   data: LiveValidationRun
   status: 200
 }
-    
+
 export type cleanupLiveValidationResponseSuccess = (cleanupLiveValidationResponse200) & {
   headers: Headers;
 };
@@ -11194,24 +14072,24 @@ export type cleanupLiveValidationResponse = (cleanupLiveValidationResponseSucces
 export const getCleanupLiveValidationUrl = (runId: string,) => {
 
 
-  
+
 
   return `/api/operations/validation-lab/live/runs/${runId}`
 }
 
 export const cleanupLiveValidation = async (runId: string, options?: RequestInit): Promise<cleanupLiveValidationResponse> => {
-  
+
   const res = await fetch(getCleanupLiveValidationUrl(runId),
-  {      
+  {
     ...options,
     method: 'DELETE'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: cleanupLiveValidationResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as cleanupLiveValidationResponse
 }
@@ -11225,7 +14103,7 @@ export type unlinkResponse204 = {
   data: void
   status: 204
 }
-    
+
 export type unlinkResponseSuccess = (unlinkResponse204) & {
   headers: Headers;
 };
@@ -11237,25 +14115,25 @@ export const getUnlinkUrl = (incidentId: string,
     relatedIncidentId: string,) => {
 
 
-  
+
 
   return `/api/incidents/${incidentId}/links/${relatedIncidentId}`
 }
 
 export const unlink = async (incidentId: string,
     relatedIncidentId: string, options?: RequestInit): Promise<unlinkResponse> => {
-  
+
   const res = await fetch(getUnlinkUrl(incidentId,relatedIncidentId),
-  {      
+  {
     ...options,
     method: 'DELETE'
-    
-    
+
+
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
+
   const data: unlinkResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as unlinkResponse
 }

@@ -32,6 +32,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
     private final int connectTimeoutMs;
     private final int requestTimeoutMs;
 
+    /** Fabric8KubernetesWatchAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public Fabric8KubernetesWatchAdapter(ObjectMapper objectMapper,
                                          @Value("${aiops.kubernetes.connect-timeout-ms:5000}") int connectTimeoutMs,
                                          @Value("${aiops.kubernetes.request-timeout-ms:10000}") int requestTimeoutMs) {
@@ -40,12 +41,14 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
         this.requestTimeoutMs = requestTimeoutMs;
     }
 
+    /** Fabric8KubernetesWatchAdapter의 watch 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public WatchRegistration watch(java.util.UUID clusterId, KubernetesConnectionCredential credential,
                                    WatchListener listener) {
         return watch(clusterId, credential, WatchCursor.empty(), listener);
     }
 
+    /** Fabric8KubernetesWatchAdapter의 watch 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public WatchRegistration watch(java.util.UUID clusterId, KubernetesConnectionCredential credential,
                                    WatchCursor cursor, WatchListener listener) {
@@ -59,6 +62,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
             listener.onCheckpoint(podVersion, eventVersion, initial.collectedAt(), initial.signals().size());
             Watch podWatch = client.pods().inAnyNamespace().withResourceVersion(podVersion)
                     .watch(new Watcher<>() {
+                        /** 익명 구현체의 eventReceived 처리에 필요한 업무 로직을 수행한다. */
                         @Override
                         public void eventReceived(Action action, Pod pod) {
                             listener.onHeartbeat(Instant.now());
@@ -69,6 +73,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
                             listener.onCheckpoint(pod.getMetadata().getResourceVersion(), null, null, 0);
                         }
 
+                        /** 익명 구현체의 onClose 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
                         @Override
                         public void onClose(WatcherException cause) {
                             notifyClosed(closed, listener, cause);
@@ -76,6 +81,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
                     });
             Watch eventWatch = client.v1().events().inAnyNamespace().withResourceVersion(eventVersion)
                     .watch(new Watcher<>() {
+                        /** 익명 구현체의 eventReceived 처리에 필요한 업무 로직을 수행한다. */
                         @Override
                         public void eventReceived(Action action, Event event) {
                             listener.onHeartbeat(Instant.now());
@@ -86,6 +92,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
                             listener.onCheckpoint(null, event.getMetadata().getResourceVersion(), null, 0);
                         }
 
+                        /** 익명 구현체의 onClose 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
                         @Override
                         public void onClose(WatcherException cause) {
                             notifyClosed(closed, listener, cause);
@@ -109,6 +116,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
         }
     }
 
+    /** Fabric8KubernetesWatchAdapter의 poll 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public PollResult poll(java.util.UUID clusterId, KubernetesConnectionCredential credential, WatchCursor cursor) {
         try (KubernetesClient client = createClient(credential)) {
@@ -116,6 +124,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
         }
     }
 
+    /** Fabric8KubernetesWatchAdapter의 poll 처리에 필요한 업무 로직을 수행한다. */
     private PollResult poll(KubernetesClient client) {
         var boundedList = new ListOptionsBuilder().withLimit(500L).build();
         var podList = client.pods().inAnyNamespace().list(boundedList);
@@ -137,6 +146,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
                 Instant.now());
     }
 
+    /** Fabric8KubernetesWatchAdapter의 podSignal 처리에 필요한 업무 로직을 수행한다. */
     private CollectedWatchSignal podSignal(Watcher.Action action, Pod pod, String sourceAction) {
         String phase = pod.getStatus() == null ? null : pod.getStatus().getPhase();
         int restarts = pod.getStatus() == null || pod.getStatus().getContainerStatuses() == null ? 0
@@ -147,6 +157,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
                 "phase=" + text(phase) + ", restarts=" + restarts, Instant.now());
     }
 
+    /** Fabric8KubernetesWatchAdapter의 eventSignal 처리에 필요한 업무 로직을 수행한다. */
     private CollectedWatchSignal eventSignal(Watcher.Action action, Event event, String sourceAction) {
         return new CollectedWatchSignal(event.getMetadata().getNamespace(),
                 text(event.getInvolvedObject().getKind()), text(event.getInvolvedObject().getName()),
@@ -154,18 +165,21 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
                 sanitize(event.getMessage()), Instant.now());
     }
 
+    /** Fabric8KubernetesWatchAdapter의 podNeedsAttention 처리에 필요한 업무 로직을 수행한다. */
     private boolean podNeedsAttention(Pod pod) {
         if (pod == null || pod.getMetadata() == null) return false;
         String phase = pod.getStatus() == null ? null : pod.getStatus().getPhase();
         return phase == null || !java.util.Set.of("Running", "Succeeded").contains(phase) || podReason(pod) != null;
     }
 
+    /** Fabric8KubernetesWatchAdapter의 notifyClosed 처리 결과를 지정된 대상에 전달한다. */
     private void notifyClosed(AtomicBoolean closed, WatchListener listener, WatcherException cause) {
         if (closed.compareAndSet(false, true)) {
             listener.onClosed(cause == null ? "Kubernetes watch closed" : sanitize(cause.getMessage()));
         }
     }
 
+    /** Fabric8KubernetesWatchAdapter의 podReason 처리에 필요한 업무 로직을 수행한다. */
     private String podReason(Pod pod) {
         if (pod.getStatus() == null || pod.getStatus().getContainerStatuses() == null) return null;
         return pod.getStatus().getContainerStatuses().stream()
@@ -185,6 +199,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
                 .findFirst().orElse(null);
     }
 
+    /** Fabric8KubernetesWatchAdapter의 createClient 처리에 필요한 데이터를 생성하거나 저장한다. */
     private KubernetesClient createClient(KubernetesConnectionCredential credential) {
         if (credential.credentialType() == ClusterCredentialType.KUBECONFIG) {
             Config config = Config.fromKubeconfig(credential.payload());
@@ -206,6 +221,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
         }
     }
 
+    /** Fabric8KubernetesWatchAdapter의 sanitize 처리에 필요한 업무 로직을 수행한다. */
     private String sanitize(String value) {
         if (value == null) return null;
         String lower = value.toLowerCase(Locale.ROOT);
@@ -213,6 +229,7 @@ public class Fabric8KubernetesWatchAdapter implements KubernetesWatchPort {
         return value.length() > 1800 ? value.substring(0, 1800) : value;
     }
 
+    /** Fabric8KubernetesWatchAdapter의 text 처리에 필요한 업무 로직을 수행한다. */
     private String text(String value) {
         return value == null || value.isBlank() ? "unknown" : value;
     }

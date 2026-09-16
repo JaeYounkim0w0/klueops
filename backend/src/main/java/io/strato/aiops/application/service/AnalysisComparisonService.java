@@ -16,10 +16,12 @@ public class AnalysisComparisonService {
 
     private final ObjectMapper objectMapper;
 
+    /** AnalysisComparisonService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AnalysisComparisonService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /** AnalysisComparisonService의 withComparison 처리에 필요한 업무 로직을 수행한다. */
     public String withComparison(String resultJson, Optional<AnalysisSession> previous) {
         try {
             JsonNode parsed = objectMapper.readTree(resultJson);
@@ -32,6 +34,7 @@ public class AnalysisComparisonService {
         }
     }
 
+    /** AnalysisComparisonService의 carryCommandEvidence 처리에 필요한 업무 로직을 수행한다. */
     private void carryCommandEvidence(ObjectNode current, AnalysisSession previous) {
         JsonNode previousRoot = parse(previous.resultJson());
         JsonNode previousVerification = previousRoot.path("commandVerification");
@@ -62,6 +65,7 @@ public class AnalysisComparisonService {
         currentLedger.set("items", merged);
     }
 
+    /** AnalysisComparisonService의 containsEvidence 처리에 필요한 업무 로직을 수행한다. */
     private boolean containsEvidence(ArrayNode items, JsonNode candidate) {
         String evidenceId = candidate.path("evidenceId").asText("");
         String commandExecutionId = candidate.path("commandExecutionId").asText("");
@@ -75,6 +79,7 @@ public class AnalysisComparisonService {
         return false;
     }
 
+    /** AnalysisComparisonService의 baseline 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode baseline(JsonNode current) {
         ObjectNode result = objectMapper.createObjectNode();
         result.put("hasPrevious", false);
@@ -94,6 +99,7 @@ public class AnalysisComparisonService {
         return result;
     }
 
+    /** AnalysisComparisonService의 comparison 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode comparison(JsonNode current, AnalysisSession previous) {
         ObjectNode result = objectMapper.createObjectNode();
         result.put("hasPrevious", true);
@@ -133,6 +139,7 @@ public class AnalysisComparisonService {
         return result;
     }
 
+    /** AnalysisComparisonService의 parse 처리 데이터를 필요한 표현으로 변환한다. */
     JsonNode parse(String json) {
         try {
             JsonNode parsed = objectMapper.readTree(json);
@@ -142,6 +149,7 @@ public class AnalysisComparisonService {
         }
     }
 
+    /** AnalysisComparisonService의 issueGroups 처리 조건의 충족 여부를 판단한다. */
     private Map<String, JsonNode> issueGroups(JsonNode root) {
         Map<String, JsonNode> result = new LinkedHashMap<>();
         JsonNode groups = root == null ? null : root.path("issueGroups");
@@ -164,6 +172,7 @@ public class AnalysisComparisonService {
         return result;
     }
 
+    /** AnalysisComparisonService의 summary 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode summary(JsonNode group, String fallbackKey) {
         ObjectNode item = objectMapper.createObjectNode();
         item.put("groupKey", group.path("groupKey").asText(fallbackKey));
@@ -179,15 +188,19 @@ public class AnalysisComparisonService {
         return item;
     }
 
+    /** AnalysisComparisonService의 riskScore 처리에 필요한 업무 로직을 수행한다. */
     private int riskScore(JsonNode root) { return root == null ? 0 : root.path("riskScore").asInt(0); }
+    /** AnalysisComparisonService의 severity 처리에 필요한 업무 로직을 수행한다. */
     private String severity(JsonNode root) { return root == null ? "" : root.path("severity").asText(""); }
 
+    /** AnalysisComparisonService의 trend 처리에 필요한 업무 로직을 수행한다. */
     private String trend(int riskDelta, int newIssues, int resolvedIssues) {
         if (riskDelta >= 10 || newIssues > resolvedIssues) return "DEGRADED";
         if (riskDelta <= -10 || resolvedIssues > newIssues) return "IMPROVED";
         return "UNCHANGED";
     }
 
+    /** AnalysisComparisonService의 comparisonSummary 처리에 필요한 업무 로직을 수행한다. */
     private String comparisonSummary(JsonNode result) {
         String trend = result.path("trend").asText("UNCHANGED");
         int riskDelta = result.path("riskScoreDelta").asInt(0);

@@ -17,10 +17,12 @@ public class DeterministicPerformanceScalingSectionBuilder {
 
     private final ObjectMapper objectMapper;
 
+    /** DeterministicPerformanceScalingSectionBuilder 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public DeterministicPerformanceScalingSectionBuilder(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /** DeterministicPerformanceScalingSectionBuilder의 build 처리에 필요한 결과를 조합해 반환한다. */
     public ObjectNode build(Input input) {
         ObjectNode result = objectMapper.createObjectNode();
         result.put("_sectionName", "performance-scaling");
@@ -92,6 +94,7 @@ public class DeterministicPerformanceScalingSectionBuilder {
         return result;
     }
 
+    /** DeterministicPerformanceScalingSectionBuilder의 appendSignal 처리에 필요한 업무 로직을 수행한다. */
     private void appendSignal(ArrayNode target, Signal signal) {
         ObjectNode item = target.addObject();
         item.put("resourceKind", valueOrBlank(signal.resourceKind()));
@@ -101,6 +104,7 @@ public class DeterministicPerformanceScalingSectionBuilder {
         item.putArray("evidence").add(valueOrBlank(signal.evidence()));
     }
 
+    /** DeterministicPerformanceScalingSectionBuilder의 appendScaleSignal 처리에 필요한 업무 로직을 수행한다. */
     private void appendScaleSignal(ArrayNode target, Signal signal) {
         ObjectNode item = target.addObject();
         item.put("resourceKind", valueOrBlank(signal.resourceKind()));
@@ -110,10 +114,12 @@ public class DeterministicPerformanceScalingSectionBuilder {
         item.putArray("evidence").add(valueOrBlank(signal.evidence()));
     }
 
+    /** DeterministicPerformanceScalingSectionBuilder의 safeList 처리에 필요한 업무 로직을 수행한다. */
     private static <T> List<T> safeList(List<T> values) {
         return values == null ? List.of() : values.stream().filter(java.util.Objects::nonNull).toList();
     }
 
+    /** DeterministicPerformanceScalingSectionBuilder의 valueOrBlank 처리에 필요한 업무 로직을 수행한다. */
     private static String valueOrBlank(String value) {
         return value == null ? "" : value;
     }
@@ -135,6 +141,7 @@ public class DeterministicPerformanceScalingSectionBuilder {
     }
 
     public record Signal(String resourceKind, String resourceName, String signal, String recommendation, String evidence) {
+        /** Signal 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         public Signal(String resourceKind, String resourceName, String signal, String recommendation) {
             this(resourceKind, resourceName, signal, recommendation, "");
         }

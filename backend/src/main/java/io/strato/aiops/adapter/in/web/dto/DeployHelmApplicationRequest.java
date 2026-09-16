@@ -15,6 +15,7 @@ public record DeployHelmApplicationRequest(
         @NotBlank String releaseName,
         @NotBlank String chart
 ) {
+    /** DeployHelmApplicationRequest의 toCommand 처리 데이터를 필요한 표현으로 변환한다. */
     public DeployHelmApplicationCommand toCommand() {
         return new DeployHelmApplicationCommand(clusterId, namespace, name, releaseName, chart);
     }

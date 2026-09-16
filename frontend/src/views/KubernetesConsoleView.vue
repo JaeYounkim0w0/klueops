@@ -131,6 +131,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', fitTerminal);
 });
 
+/** scheduleValidation 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function scheduleValidation() {
   validation.value = null;
   validationError.value = '';
@@ -138,6 +139,7 @@ function scheduleValidation() {
   validationTimer = window.setTimeout(validate, 350);
 }
 
+/** validate 처리 입력과 현재 상태의 유효성을 검증한다. */
 async function validate() {
   if (!command.value.trim()) return;
   try {
@@ -152,6 +154,7 @@ async function validate() {
   }
 }
 
+/** requestRun 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function requestRun() {
   await validate();
   if (!validation.value) return;
@@ -166,6 +169,7 @@ async function requestRun() {
   await run(false);
 }
 
+/** run 처리의 핵심 작업 흐름을 실행한다. */
 async function run(confirmed: boolean) {
   if (validation.value?.interactive) {
     await runTerminal(confirmed);
@@ -203,6 +207,7 @@ async function run(confirmed: boolean) {
   }
 }
 
+/** runTerminal 처리의 핵심 작업 흐름을 실행한다. */
 async function runTerminal(confirmed: boolean) {
   showConfirmation.value = false;
   running.value = true;
@@ -229,6 +234,7 @@ async function runTerminal(confirmed: boolean) {
   }
 }
 
+/** openTerminal 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function openTerminal(path: string) {
   const [{ Terminal }, { FitAddon }] = await Promise.all([
     import('@xterm/xterm'),
@@ -291,6 +297,7 @@ async function openTerminal(path: string) {
   terminal.focus();
 }
 
+/** updateTerminalStatus 처리 대상의 상태를 갱신한다. */
 function updateTerminalStatus(data: Record<string, unknown>) {
   if (!execution.value) return;
   const status = String(data.status || execution.value.status) as CommandExecutionResponse['status'];
@@ -301,22 +308,26 @@ function updateTerminalStatus(data: Record<string, unknown>) {
   }
 }
 
+/** fitTerminal 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function fitTerminal() {
   if (!terminal || !fitAddon || !terminalElement.value) return;
   try { fitAddon.fit(); } catch { /* The terminal may be transitioning between responsive layouts. */ }
 }
 
+/** focusTerminalPrompt 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function focusTerminalPrompt() {
   terminal?.scrollToBottom();
   terminal?.focus();
 }
 
+/** sendTerminalResize 처리 결과를 지정된 대상에 전달한다. */
 function sendTerminalResize(columns: number, rows: number) {
   if (terminalSocket?.readyState === WebSocket.OPEN) {
     terminalSocket.send(JSON.stringify({ type: 'resize', columns, rows }));
   }
 }
 
+/** handleStreamEvent 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
 function handleStreamEvent(event: { type: string; data: unknown }) {
   const data = event.data as Record<string, unknown>;
   if (event.type === 'stdout') stdout.value += String(data.text || '');
@@ -331,6 +342,7 @@ function handleStreamEvent(event: { type: string; data: unknown }) {
   });
 }
 
+/** stop 처리 대상과 관련 상태를 안전하게 정리한다. */
 async function stop() {
   if (!execution.value) return;
   if (terminalStarted.value && terminalSocket) {
@@ -349,11 +361,13 @@ async function stop() {
   }
 }
 
+/** applyTask 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function applyTask(task: { command: string; namespace: string }) {
   command.value = task.command;
   if (task.namespace) selectedNamespace.value = task.namespace;
 }
 
+/** applyCookbookItem 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function applyCookbookItem(item: CommandCookbookItem) {
   command.value = resolveCookbookCommand(item.command, {
     POD_NAME: templateKind.value === 'pod' ? templateName.value : '',
@@ -368,6 +382,7 @@ function applyCookbookItem(item: CommandCookbookItem) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+/** buildTemplate 처리에 필요한 결과를 조합해 반환한다. */
 function buildTemplate(mode: 'get' | 'describe' | 'logs' | 'yaml') {
   const kind = templateKind.value.trim() || 'pod';
   const name = templateName.value.trim();
@@ -380,6 +395,7 @@ function buildTemplate(mode: 'get' | 'describe' | 'logs' | 'yaml') {
   command.value = mode === 'yaml' ? `kubectl get ${target} -o yaml` : `kubectl ${mode} ${target}`;
 }
 
+/** setFollowup 처리 대상의 상태를 갱신한다. */
 function setFollowup(mode: 'events' | 'logs' | 'yaml' | 'rollback') {
   if (mode === 'events') command.value = 'kubectl get events --field-selector type=Warning --sort-by=.lastTimestamp';
   if (mode === 'logs') buildTemplate('logs');
@@ -388,11 +404,13 @@ function setFollowup(mode: 'events' | 'logs' | 'yaml' | 'rollback') {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+/** loadFavorite 처리 결과를 조회해 반환한다. */
 function loadFavorite(item: CommandFavoriteResponse) {
   command.value = item.command;
   selectedNamespace.value = item.namespace || 'default';
 }
 
+/** createFavorite 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function createFavorite() {
   if (!favoriteName.value.trim() || !command.value.trim()) return;
   try {
@@ -411,6 +429,7 @@ async function createFavorite() {
   }
 }
 
+/** removeFavorite 처리 대상과 관련 상태를 안전하게 정리한다. */
 async function removeFavorite(item: CommandFavoriteResponse) {
   try {
     await api.deleteCommandFavorite(clusterId.value, item.id);
@@ -420,6 +439,7 @@ async function removeFavorite(item: CommandFavoriteResponse) {
   }
 }
 
+/** refreshHistory 처리의 핵심 작업 흐름을 실행한다. */
 async function refreshHistory() {
   try {
     history.value = await api.listCommandExecutions(clusterId.value, undefined, 30);
@@ -428,6 +448,7 @@ async function refreshHistory() {
   }
 }
 
+/** loadHistory 처리 결과를 조회해 반환한다. */
 function loadHistory(item: CommandExecutionResponse) {
   execution.value = item;
   command.value = item.command;
@@ -436,10 +457,12 @@ function loadHistory(item: CommandExecutionResponse) {
   stderr.value = item.stderrText || '';
 }
 
+/** copyOutput 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function copyOutput() {
   if (terminalText.value) await navigator.clipboard.writeText(terminalText.value);
 }
 
+/** downloadOutput 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function downloadOutput() {
   const blob = new Blob([terminalText.value], { type: 'text/plain;charset=utf-8' });
   const link = document.createElement('a');
@@ -449,15 +472,18 @@ function downloadOutput() {
   URL.revokeObjectURL(link.href);
 }
 
+/** duration 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function duration(value?: number) {
   if (value == null) return '-';
   return value < 1000 ? `${value}ms` : `${(value / 1000).toFixed(1)}s`;
 }
 
+/** returnToAnalysis 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function returnToAnalysis() {
   void router.push(analysisReturnPath.value);
 }
 
+/** reanalyzeTarget 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function reanalyzeTarget() {
   void router.push({
     name: 'analysis',
@@ -469,11 +495,13 @@ function reanalyzeTarget() {
   });
 }
 
+/** uuidQuery 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function uuidQuery(value: unknown) {
   const text = typeof value === 'string' ? value : '';
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : '';
 }
 
+/** message 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function message(cause: unknown, fallback: string) {
   return cause instanceof ApiError || cause instanceof Error ? cause.message : fallback;
 }
@@ -490,7 +518,7 @@ function message(cause: unknown, fallback: string) {
         <p>{{ t('console.description') }}</p>
       </div>
       <div class="console-header-tools">
-        <div class="console-runtime-status"><span class="status-dot" :class="capability?.runnerAvailable ? 'ready' : 'failed'"></span><div><strong>{{ capability?.runnerAvailable ? t('console.runnerReady') : t('console.runnerUnavailable') }}</strong><small>{{ capability?.kubectlVersion || '-' }}<template v-if="capability"> · {{ capability.executionBoundary === 'ISOLATED_RUNNER' ? t('console.isolatedRunner') : t('console.localRunner') }} · {{ t('console.executionLimits', { commands: capability.maximumUserCommands, terminals: capability.maximumUserTerminals }) }}</template></small></div></div>
+        <div class="console-runtime-status"><span class="console-status-dot" :class="capability?.runnerAvailable ? 'ready' : 'failed'"></span><div><strong>{{ capability?.runnerAvailable ? t('console.runnerReady') : t('console.runnerUnavailable') }}</strong><small>{{ capability?.kubectlVersion || '-' }}<template v-if="capability"> · {{ capability.executionBoundary === 'ISOLATED_RUNNER' ? t('console.isolatedRunner') : t('console.localRunner') }} · {{ t('console.executionLimits', { commands: capability.maximumUserCommands, terminals: capability.maximumUserTerminals }) }}</template></small></div></div>
       </div>
     </header>
 

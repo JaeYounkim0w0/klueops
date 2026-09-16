@@ -60,6 +60,7 @@ class AiChatApiTest {
     @Autowired
     private Environment environment;
 
+    /** AiChatApiTest의 createsConversationAndSendsOllamaBackedMessage 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Test
     void createsConversationAndSendsOllamaBackedMessage() throws Exception {
         String clusterId = registerCluster("ai-chat-cluster-" + UUID.randomUUID());
@@ -116,6 +117,7 @@ class AiChatApiTest {
                 .andExpect(status().isNotFound());
     }
 
+    /** AiChatApiTest의 rejectsBlankMessage 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsBlankMessage() throws Exception {
         String conversationId = createConversation(null);
@@ -131,6 +133,7 @@ class AiChatApiTest {
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     }
 
+    /** AiChatApiTest의 managesOnlyTheOwnersConversationLifecycle 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void managesOnlyTheOwnersConversationLifecycle() throws Exception {
         String conversationId = createConversation(null, "GENERAL", "anonymous");
@@ -167,6 +170,7 @@ class AiChatApiTest {
                 .andExpect(status().isNotFound());
     }
 
+    /** AiChatApiTest의 isolatesConversationOwnershipAtTheApplicationBoundary 처리 조건의 충족 여부를 판단한다. */
     @Test
     void isolatesConversationOwnershipAtTheApplicationBoundary() {
         var conversation = aiChatUseCase.createConversation(
@@ -180,6 +184,7 @@ class AiChatApiTest {
                 .isInstanceOf(java.util.NoSuchElementException.class);
     }
 
+    /** AiChatApiTest의 separatesGeneralChatFromLiveClusterEvidence 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void separatesGeneralChatFromLiveClusterEvidence() throws Exception {
         String generalId = createConversation(null, "GENERAL", "anonymous");
@@ -219,6 +224,44 @@ class AiChatApiTest {
                 .contains("container=api log=connection refused");
     }
 
+    /** AiChatApiTest의 boundsClusterWideSnapshotContextAndDeclaresItsFreshness 처리에 필요한 업무 로직을 수행한다. */
+    @Test
+    void boundsClusterWideSnapshotContextAndDeclaresItsFreshness() throws Exception {
+        String clusterId = registerCluster("bounded-cluster-chat-" + UUID.randomUUID());
+        String createResponse = mockMvc.perform(post("/api/ai-chat/conversations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title":"Cluster-wide consultation",
+                                  "mode":"CLUSTER",
+                                  "clusterId":"%s"
+                                }
+                                """.formatted(clusterId)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String conversationId = JsonPath.read(createResponse, "$.id");
+
+        mockMvc.perform(post("/api/ai-chat/conversations/{conversationId}/messages", conversationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "message":"클러스터 상태를 요약해줘",
+                                  "contextSelection":{"clusterId":"%s","includeRecentEvents":true}
+                                }
+                                """.formatted(clusterId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.assistantMessage.content", containsString("Evidence scope:")));
+
+        org.assertj.core.api.Assertions.assertThat(capturedPrompt.get().sanitizedContext())
+                .contains("Evidence freshness rule")
+                .contains("source=SNAPSHOT_SCOPE")
+                .contains("coverage=BOUNDED")
+                .contains("MANDATORY FINAL ANSWER RULE")
+                .endsWith("a namespace for live evidence.\n")
+                .hasSizeLessThanOrEqualTo(12_000);
+    }
+
+    /** AiChatApiTest의 rejectsClusterScopedResourceInsideNamespaceContext 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsClusterScopedResourceInsideNamespaceContext() throws Exception {
         String clusterId = registerCluster("scoped-chat-cluster-" + UUID.randomUUID());
@@ -257,6 +300,7 @@ class AiChatApiTest {
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     }
 
+    /** AiChatApiTest의 streamsAndPersistsTheCompletedAssistantMessage 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void streamsAndPersistsTheCompletedAssistantMessage() throws Exception {
         String conversationId = createConversation(null, "GENERAL", "anonymous");
@@ -272,6 +316,8 @@ class AiChatApiTest {
         mockMvc.perform(asyncDispatch(pending))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(content().string(containsString("event: status")))
+                .andExpect(content().string(containsString("data: accepted")))
                 .andExpect(content().string(containsString("data: Ollama test response")))
                 .andExpect(content().string(containsString("data: [DONE]")));
 
@@ -281,6 +327,7 @@ class AiChatApiTest {
                 .andExpect(jsonPath("$[1].role").value("ASSISTANT"));
     }
 
+    /** AiChatApiTest의 emitsHeartbeatWhileWaitingForTheFirstAiToken 처리 결과를 지정된 대상에 전달한다. */
     @Test
     void emitsHeartbeatWhileWaitingForTheFirstAiToken() throws Exception {
         String conversationId = createConversation(null, "GENERAL", "anonymous");
@@ -300,6 +347,7 @@ class AiChatApiTest {
                 .andExpect(content().string(containsString("data: [DONE]")));
     }
 
+    /** AiChatApiTest의 persistsTheQuestionAndFailureStateWhenStreamingIsInterrupted 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Test
     void persistsTheQuestionAndFailureStateWhenStreamingIsInterrupted() throws Exception {
         String conversationId = createConversation(null, "GENERAL", "anonymous");
@@ -324,6 +372,7 @@ class AiChatApiTest {
                 .andExpect(jsonPath("$[1].errorCode").value("STREAM_INTERRUPTED"));
     }
 
+    /** AiChatApiTest의 keepsTheMvcStreamTimeoutLongerThanTheAiReadTimeout 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void keepsTheMvcStreamTimeoutLongerThanTheAiReadTimeout() {
         long aiTimeout = Long.parseLong(environment.getProperty("aiops.ai.timeout-ms", "300000"));
@@ -332,10 +381,12 @@ class AiChatApiTest {
         org.assertj.core.api.Assertions.assertThat(streamTimeout).isGreaterThan(aiTimeout);
     }
 
+    /** AiChatApiTest의 createConversation 처리에 필요한 데이터를 생성하거나 저장한다. */
     private String createConversation(String clusterId) throws Exception {
         return createConversation(clusterId, clusterId == null ? "GENERAL" : "CLUSTER", "anonymous");
     }
 
+    /** AiChatApiTest의 createConversation 처리에 필요한 데이터를 생성하거나 저장한다. */
     private String createConversation(String clusterId, String mode, String actor) throws Exception {
         String clusterFragment = clusterId == null ? "" : """
                                   "clusterId": "%s",
@@ -360,6 +411,7 @@ class AiChatApiTest {
         return JsonPath.read(response, "$.id");
     }
 
+    /** AiChatApiTest의 registerCluster 처리에 필요한 데이터를 생성하거나 저장한다. */
     private String registerCluster(String name) throws Exception {
         String response = mockMvc.perform(post("/api/clusters")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -388,10 +440,12 @@ class AiChatApiTest {
     @TestConfiguration
     static class FakeAiChatConfig {
 
+        /** FakeAiChatConfig의 aiChatPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         AiChatPort aiChatPort(AtomicReference<AiChatPrompt> capturedPrompt) {
             return new AiChatPort() {
+                /** 익명 구현체의 complete 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public AiChatCompletion complete(AiChatPrompt prompt) {
                     capturedPrompt.set(prompt);
@@ -404,6 +458,7 @@ class AiChatApiTest {
                     return new AiChatCompletion("Ollama test response", "test-ollama", "STOP", 1, 1);
                 }
 
+                /** 익명 구현체의 stream 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public AiChatCompletion stream(AiChatPrompt prompt, Consumer<String> onDelta) {
                     if ("SLOW_STREAM".equals(prompt.userMessage())) {
@@ -419,27 +474,32 @@ class AiChatApiTest {
             };
         }
 
+        /** FakeAiChatConfig의 capturedPrompt 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         AtomicReference<AiChatPrompt> capturedPrompt() {
             return new AtomicReference<>();
         }
 
+        /** FakeAiChatConfig의 kubernetesResourceManifestPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         KubernetesResourceManifestPort kubernetesResourceManifestPort() {
             return new KubernetesResourceManifestPort() {
+                /** 익명 구현체의 getResourceManifest 처리 결과를 조회해 반환한다. */
                 @Override
                 public KubernetesResourceManifest getResourceManifest(KubernetesConnectionCredential credential,
                                                                         String namespace, String resourceType, String resourceName) {
                     return manifest(namespace, resourceType, resourceName);
                 }
 
+                /** 익명 구현체의 getAiSafeResourceManifest 처리 결과를 조회해 반환한다. */
                 @Override
                 public KubernetesResourceManifest getAiSafeResourceManifest(KubernetesConnectionCredential credential,
                                                                               String namespace, String resourceType, String resourceName) {
                     return manifest(namespace, resourceType, resourceName);
                 }
 
+                /** 익명 구현체의 manifest 처리에 필요한 업무 로직을 수행한다. */
                 private KubernetesResourceManifest manifest(String namespace, String resourceType, String resourceName) {
                     return new KubernetesResourceManifest(namespace, resourceType, resourceName,
                             "apiVersion: v1\nkind: Pod\nmetadata:\n  name: " + resourceName + "\nstatus:\n  phase: Running",
@@ -448,21 +508,25 @@ class AiChatApiTest {
             };
         }
 
+        /** FakeAiChatConfig의 kubernetesNamespaceDiagnosticsPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         KubernetesNamespaceDiagnosticsPort kubernetesNamespaceDiagnosticsPort() {
             return new KubernetesNamespaceDiagnosticsPort() {
+                /** 익명 구현체의 collectNamespaceDiagnostics 처리의 핵심 작업 흐름을 실행한다. */
                 @Override
                 public KubernetesNamespaceDiagnostics collectNamespaceDiagnostics(KubernetesConnectionCredential credential, String namespace) {
                     return new KubernetesNamespaceDiagnostics(List.of(), List.of(), List.of(), Instant.now());
                 }
 
+                /** 익명 구현체의 collectPodLogs 처리의 핵심 작업 흐름을 실행한다. */
                 @Override
                 public KubernetesPodLogs collectPodLogs(KubernetesConnectionCredential credential, String namespace,
                                                         String podName, String containerName, int tailLines, boolean previous) {
                     return collectResourceLogs(credential, namespace, "Pod", podName, containerName, tailLines, previous);
                 }
 
+                /** 익명 구현체의 collectResourceLogs 처리의 핵심 작업 흐름을 실행한다. */
                 @Override
                 public KubernetesPodLogs collectResourceLogs(KubernetesConnectionCredential credential, String namespace,
                                                              String resourceType, String resourceName, String containerName,

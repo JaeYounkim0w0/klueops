@@ -30,6 +30,7 @@ public class ClusterResourceLogService implements GetClusterResourceLogsUseCase 
     private final SecretCryptoPort secretCryptoPort;
     private final KubernetesResourceLogPort kubernetesResourceLogPort;
 
+    /** ClusterResourceLogService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ClusterResourceLogService(ClusterRepositoryPort clusterRepositoryPort,
                                      ClusterCredentialRepositoryPort credentialRepositoryPort,
                                      SecretCryptoPort secretCryptoPort,
@@ -40,6 +41,7 @@ public class ClusterResourceLogService implements GetClusterResourceLogsUseCase 
         this.kubernetesResourceLogPort = kubernetesResourceLogPort;
     }
 
+    /** ClusterResourceLogService의 getTargets 처리 결과를 조회해 반환한다. */
     @Override
     public ClusterResourceLogTargetsResult getTargets(UUID clusterId, String namespace, String resourceType,
                                                       String resourceName) {
@@ -55,6 +57,7 @@ public class ClusterResourceLogService implements GetClusterResourceLogsUseCase 
                 .toList());
     }
 
+    /** ClusterResourceLogService의 getRecentLogs 처리 결과를 조회해 반환한다. */
     @Override
     public ClusterResourceLogResult getRecentLogs(UUID clusterId, String namespace, String resourceType,
                                                   String resourceName, String podName, String containerName,
@@ -68,6 +71,7 @@ public class ClusterResourceLogService implements GetClusterResourceLogsUseCase 
                 result.truncated(), result.collectedAt());
     }
 
+    /** ClusterResourceLogService의 streamLogs 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public ClusterResourceLogStreamResult streamLogs(UUID clusterId, String namespace, String resourceType,
                                                      String resourceName, String podName, String containerName,
@@ -83,6 +87,7 @@ public class ClusterResourceLogService implements GetClusterResourceLogsUseCase 
         return new ClusterResourceLogStreamResult(result.reason(), result.lineCount(), result.durationMs());
     }
 
+    /** ClusterResourceLogService의 connectionCredential 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesConnectionCredential connectionCredential(UUID clusterId) {
         clusterRepositoryPort.findById(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster not found: " + clusterId));
@@ -93,10 +98,12 @@ public class ClusterResourceLogService implements GetClusterResourceLogsUseCase 
         return new KubernetesConnectionCredential(credential.credentialType(), plaintext);
     }
 
+    /** ClusterResourceLogService의 clampTailLines 처리에 필요한 업무 로직을 수행한다. */
     private int clampTailLines(int tailLines) {
         return Math.max(10, Math.min(tailLines, 1000));
     }
 
+    /** ClusterResourceLogService의 required 처리 입력과 현재 상태의 유효성을 검증한다. */
     private String required(String value, String field) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(field + " is required");

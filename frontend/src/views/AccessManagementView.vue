@@ -40,6 +40,7 @@ const canSave = computed(() => Boolean(
   && (form.scopeType !== 'NAMESPACE' || form.namespace.trim()),
 ));
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load(): Promise<void> {
   loading.value = true;
   error.value = '';
@@ -61,6 +62,7 @@ async function load(): Promise<void> {
   }
 }
 
+/** toggleUser 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 async function toggleUser(user: UserRow): Promise<void> {
   error.value = '';
   feedback.value = '';
@@ -76,6 +78,7 @@ async function toggleUser(user: UserRow): Promise<void> {
   }
 }
 
+/** createBinding 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function createBinding(): Promise<void> {
   if (!canSave.value) return;
   saving.value = true;
@@ -104,6 +107,7 @@ async function createBinding(): Promise<void> {
   }
 }
 
+/** deleteBinding 처리 대상과 관련 상태를 안전하게 정리한다. */
 async function deleteBinding(binding: BindingRow): Promise<void> {
   if (!window.confirm(t('auth.bindingDeleteConfirm'))) return;
   error.value = '';
@@ -117,12 +121,14 @@ async function deleteBinding(binding: BindingRow): Promise<void> {
   }
 }
 
+/** principalLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function principalLabel(binding: BindingRow): string {
   if (binding.principalType === 'GROUP') return binding.principalKey;
   const user = users.value.find((item) => item.id === binding.principalKey);
   return user ? `${user.displayName} (${user.username})` : binding.principalKey;
 }
 
+/** scopeLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function scopeLabel(binding: BindingRow): string {
   const tenant = tenants.value.find((item) => item.id === binding.tenantId)?.name ?? binding.tenantId;
   const workspace = workspaces.value.find((item) => item.id === binding.workspaceId)?.name ?? binding.workspaceId;
@@ -130,6 +136,7 @@ function scopeLabel(binding: BindingRow): string {
   return [binding.scopeType, tenant, workspace, cluster, binding.namespace].filter(Boolean).join(' / ');
 }
 
+/** loadBindingWorkspaces 처리 결과를 조회해 반환한다. */
 async function loadBindingWorkspaces(): Promise<void> {
   workspaces.value = form.tenantId ? await api.listWorkspaces(form.tenantId) : [];
   if (!workspaces.value.some((item) => item.id === form.workspaceId)) {
@@ -137,6 +144,7 @@ async function loadBindingWorkspaces(): Promise<void> {
   }
 }
 
+/** message 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function message(cause: unknown, fallback: string): string {
   return cause instanceof ApiError ? cause.message : fallback;
 }

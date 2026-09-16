@@ -18,10 +18,12 @@ const emit = defineEmits<{
   logs: [group: AnalysisResult];
 }>();
 
+/** textValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function textValue(value: unknown, fallback = '') {
   return value === null || value === undefined ? fallback : String(value);
 }
 
+/** numberValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function numberValue(value: unknown, fallback = '0') {
   return value === null || value === undefined || value === '' ? fallback : String(value);
 }

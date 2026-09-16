@@ -36,6 +36,7 @@ class OperatorWorkspaceApiTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    /** OperatorWorkspaceApiTest의 supportsManualIncidentCollaborationAndSearch 처리 조건의 충족 여부를 판단한다. */
     @Test
     void supportsManualIncidentCollaborationAndSearch() throws Exception {
         Cluster cluster = clusters.save(Cluster.register("workspace-" + UUID.randomUUID(), "test",
@@ -73,6 +74,7 @@ class OperatorWorkspaceApiTest {
                 .andExpect(jsonPath("$[0].targetPath").value("/incidents/" + incidentId));
     }
 
+    /** OperatorWorkspaceApiTest의 managesCustomRunbookVersionsAndRejectsUnsafeReadOnlyCommands 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void managesCustomRunbookVersionsAndRejectsUnsafeReadOnlyCommands() throws Exception {
         String created = mockMvc.perform(post("/api/runbooks/custom")
@@ -106,6 +108,7 @@ class OperatorWorkspaceApiTest {
                 .andExpect(status().isNotFound());
     }
 
+    /** OperatorWorkspaceApiTest의 exposesResourceRelationshipsChangesAndLinkedIncidents 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesResourceRelationshipsChangesAndLinkedIncidents() throws Exception {
         Cluster cluster = clusters.save(Cluster.register("context-" + UUID.randomUUID(), "test",
@@ -150,6 +153,7 @@ class OperatorWorkspaceApiTest {
                 .andExpect(jsonPath("$.incidents[0].title").value("Pod waiting for config"));
     }
 
+    /** OperatorWorkspaceApiTest의 runbookBody 처리의 핵심 작업 흐름을 실행한다. */
     private String runbookBody(String command, String note) {
         return """
                 {"signal":"CrashLoopBackOff","category":"APPLICATION_STARTUP","resourceKind":"Pod",

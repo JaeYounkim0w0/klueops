@@ -56,6 +56,7 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
     private final CommandExecutionCoordinator coordinator;
     private final CommandSourceAnalysisValidator sourceAnalysisValidator;
 
+    /** CommandTerminalSessionService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public CommandTerminalSessionService(ClusterRepositoryPort clusters, ClusterCredentialRepositoryPort credentials,
             CommandExecutionRepositoryPort executions, SecretCryptoPort secretCrypto, KubernetesTerminalPort terminalPort,
             AuditLogRepositoryPort audits, KubectlCommandTokenizer tokenizer, TerminalCommandParser parser,
@@ -83,6 +84,7 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         this.sourceAnalysisValidator = sourceAnalysisValidator;
     }
 
+    /** CommandTerminalSessionService의 create 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public TerminalSessionTicket create(StartCommandExecutionCommand command) {
         clusters.findById(command.clusterId()).orElseThrow(() -> new NoSuchElementException("Cluster not found: " + command.clusterId()));
@@ -109,6 +111,7 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         return new TerminalSessionTicket(sessionId, execution.id(), "/ws/command-sessions/" + sessionId, expiresAt);
     }
 
+    /** CommandTerminalSessionService의 connect 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public void connect(UUID sessionId, String actor, TerminalClient client) {
         SessionState state = requireTicket(sessionId);
@@ -139,6 +142,7 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         }
     }
 
+    /** CommandTerminalSessionService의 input 처리에 필요한 업무 로직을 수행한다. */
     @Override public void input(UUID sessionId, String actor, String data) {
         SessionState state = requireActive(sessionId, actor);
         state.lastActivity = clock.instant();
@@ -146,6 +150,7 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         state.terminal.input(data);
     }
 
+    /** CommandTerminalSessionService의 resize 처리에 필요한 업무 로직을 수행한다. */
     @Override public void resize(UUID sessionId, String actor, int columns, int rows) {
         SessionState state = requireActive(sessionId, actor);
         state.lastActivity = clock.instant();
@@ -153,12 +158,14 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         state.terminal.resize(Math.max(20, Math.min(columns, 400)), Math.max(5, Math.min(rows, 200)));
     }
 
+    /** CommandTerminalSessionService의 disconnect 처리에 필요한 업무 로직을 수행한다. */
     @Override public void disconnect(UUID sessionId, String actor) {
         SessionState state = sessions.get(sessionId);
         if (state == null || !Objects.equals(state.socketActor, actor) || state.completed.get()) return;
         complete(state, CommandStatus.CANCELED, -1, "browser terminal disconnected");
     }
 
+    /** CommandTerminalSessionService의 expireSessions 처리에 필요한 업무 로직을 수행한다. */
     @Scheduled(fixedDelay = 30_000)
     void expireSessions() {
         Instant now = clock.instant();
@@ -170,6 +177,7 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         });
     }
 
+    /** CommandTerminalSessionService의 output 처리에 필요한 업무 로직을 수행한다. */
     private void output(SessionState state, String channel, String text) {
         if (state.completed.get()) return;
         String safe = sanitizer.sanitize(text);
@@ -180,6 +188,7 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         if (client != null) client.output(channel, safe);
     }
 
+    /** CommandTerminalSessionService의 complete 처리에 필요한 업무 로직을 수행한다. */
     private void complete(SessionState state, CommandStatus status, int exitCode, String error) {
         if (!state.completed.compareAndSet(false, true)) return;
         try {
@@ -201,6 +210,7 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         }
     }
 
+    /** CommandTerminalSessionService의 closeTerminal 처리 대상과 관련 상태를 안전하게 정리한다. */
     private void closeTerminal(SessionState state) {
         KubernetesTerminalSession terminal = state.terminal;
         state.terminal = null;
@@ -209,12 +219,14 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         }
     }
 
+    /** CommandTerminalSessionService의 requireTicket 처리 입력과 현재 상태의 유효성을 검증한다. */
     private SessionState requireTicket(UUID sessionId) {
         SessionState state = sessions.get(sessionId);
         if (state == null) throw new NoSuchElementException("Terminal session not found: " + sessionId);
         return state;
     }
 
+    /** CommandTerminalSessionService의 requireActive 처리 입력과 현재 상태의 유효성을 검증한다. */
     private SessionState requireActive(UUID sessionId, String actor) {
         SessionState state = requireTicket(sessionId);
         if (!Objects.equals(state.socketActor, actor)) throw new NoSuchElementException("Terminal session not found: " + sessionId);
@@ -222,6 +234,7 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         return state;
     }
 
+    /** CommandTerminalSessionService의 credential 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesConnectionCredential credential(UUID clusterId) {
         EncryptedClusterCredential stored = credentials.findByClusterId(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster credential not found: " + clusterId));
@@ -229,15 +242,18 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         return new KubernetesConnectionCredential(stored.credentialType(), payload);
     }
 
+    /** CommandTerminalSessionService의 json 처리에 필요한 업무 로직을 수행한다. */
     private String json(java.util.List<String> values) {
         try { return objectMapper.writeValueAsString(values); }
         catch (JsonProcessingException exception) { throw new IllegalStateException("Failed to serialize kubectl arguments", exception); }
     }
 
+    /** CommandTerminalSessionService의 normalizeNamespace 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeNamespace(String namespace) {
         return namespace == null || namespace.isBlank() || "__ALL__".equals(namespace) ? "default" : namespace;
     }
 
+    /** CommandTerminalSessionService의 audit 처리에 필요한 업무 로직을 수행한다. */
     private void audit(String action, CommandExecution execution, String actor, String requestId) {
         audits.save(AuditLog.create(action, "COMMAND_EXECUTION", execution.id().toString(), actor, requestId));
     }
@@ -259,12 +275,14 @@ public class CommandTerminalSessionService implements CommandTerminalUseCase {
         private volatile TerminalClient client;
         private volatile String socketActor;
 
+        /** SessionState 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private SessionState(UUID sessionId, CommandExecution execution, TerminalCommandSpec spec, String actor,
                 Instant expiresAt, Instant lastActivity, int outputLimit) {
             this.sessionId = sessionId; this.execution = execution; this.spec = spec; this.actor = actor;
             this.expiresAt = expiresAt; this.lastActivity = lastActivity; this.outputLimit = outputLimit;
         }
 
+        /** SessionState의 append 처리에 필요한 업무 로직을 수행한다. */
         private synchronized void append(String channel, String text) {
             StringBuilder target = "stderr".equals(channel) ? stderr : stdout;
             int current = stdout.length() + stderr.length();

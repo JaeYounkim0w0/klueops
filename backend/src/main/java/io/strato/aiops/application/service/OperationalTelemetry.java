@@ -27,21 +27,25 @@ public class OperationalTelemetry {
     private final MeterRegistry registry;
     private final Map<Key, Accumulator> values = new ConcurrentHashMap<>();
 
+    /** OperationalTelemetry 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationalTelemetry(MeterRegistry registry) {
         this.registry = registry;
     }
 
+    /** OperationalTelemetry의 record 처리에 필요한 업무 로직을 수행한다. */
     public void record(String rawOperation, String rawOutcome, Duration duration) {
         String operation = operation(rawOperation);
         String outcome = outcome(rawOutcome);
         recordKnown(operation, outcome, duration);
     }
 
+    /** OperationalTelemetry의 recordAnalysisSection 처리에 필요한 업무 로직을 수행한다. */
     public void recordAnalysisSection(String rawSection, String rawOutcome, Duration duration) {
         String section = ANALYSIS_SECTIONS.contains(rawSection) ? rawSection : "other-section";
         recordKnown("analysis-" + section, outcome(rawOutcome), duration);
     }
 
+    /** OperationalTelemetry의 recordKnown 처리에 필요한 업무 로직을 수행한다. */
     private void recordKnown(String operation, String outcome, Duration duration) {
         long millis = Math.max(0, duration.toMillis());
         Timer.builder("aiops.operation.duration")
@@ -52,6 +56,7 @@ public class OperationalTelemetry {
         values.computeIfAbsent(new Key(operation, outcome), ignored -> new Accumulator()).add(millis);
     }
 
+    /** OperationalTelemetry의 snapshot 처리에 필요한 업무 로직을 수행한다. */
     public Snapshot snapshot() {
         List<Series> series = values.entrySet().stream()
                 .map(entry -> entry.getValue().series(entry.getKey()))
@@ -64,6 +69,7 @@ public class OperationalTelemetry {
                 requests, failures, series);
     }
 
+    /** OperationalTelemetry의 operation 처리에 필요한 업무 로직을 수행한다. */
     static String operation(String value) {
         String path = value == null ? "" : value.toLowerCase();
         if (path.startsWith("/api/analysis")) return "analysis";
@@ -78,6 +84,7 @@ public class OperationalTelemetry {
         return "other";
     }
 
+    /** OperationalTelemetry의 outcome 처리에 필요한 업무 로직을 수행한다. */
     static String outcome(String value) {
         String normalized = value == null ? "" : value.toLowerCase();
         if (normalized.contains("timeout")) return "timeout";
@@ -98,6 +105,7 @@ public class OperationalTelemetry {
         private final AtomicLong sequence = new AtomicLong();
         private final AtomicLongArray reservoir = new AtomicLongArray(RESERVOIR_SIZE);
 
+        /** Accumulator의 add 처리에 필요한 데이터를 생성하거나 저장한다. */
         void add(long millis) {
             count.increment();
             totalMs.add(millis);
@@ -105,12 +113,14 @@ public class OperationalTelemetry {
             reservoir.set((int) (sequence.getAndIncrement() % RESERVOIR_SIZE), millis);
         }
 
+        /** Accumulator의 series 처리에 필요한 업무 로직을 수행한다. */
         Series series(Key key) {
             long samples = count.sum();
             return new Series(key.operation(), key.outcome(), samples,
                     samples == 0 ? 0 : Math.round(totalMs.sum() * 1.0 / samples), percentile95(samples), maxMs.get());
         }
 
+        /** Accumulator의 percentile95 처리에 필요한 업무 로직을 수행한다. */
         private long percentile95(long samples) {
             int size = (int) Math.min(samples, RESERVOIR_SIZE);
             if (size == 0) return 0;

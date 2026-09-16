@@ -45,6 +45,7 @@ public class SecurityAdministrationController {
     private final Clock clock;
     private final OidcIdentityMapper identityMapper;
 
+    /** SecurityAdministrationController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public SecurityAdministrationController(IdentityAccessService identityAccessService, Clock clock,
                                             OidcIdentityMapper identityMapper) {
         this.identityAccessService = identityAccessService;
@@ -52,6 +53,7 @@ public class SecurityAdministrationController {
         this.identityMapper = identityMapper;
     }
 
+    /** SecurityAdministrationController의 listUsers 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List platform user accounts")
     @GetMapping("/users")
     public List<UserAdminResponse> listUsers(Authentication authentication) {
@@ -59,6 +61,7 @@ public class SecurityAdministrationController {
         return identityAccessService.listUsers().stream().map(UserAdminResponse::from).toList();
     }
 
+    /** SecurityAdministrationController의 updateUser 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Enable or disable a platform user account")
     @PatchMapping("/users/{userId}")
     public UserAdminResponse updateUser(@PathVariable UUID userId, @Valid @RequestBody UpdateUserRequest request,
@@ -67,6 +70,7 @@ public class SecurityAdministrationController {
         return UserAdminResponse.from(identityAccessService.setActive(userId, request.active(), actor.user().id()));
     }
 
+    /** SecurityAdministrationController의 listBindings 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List role bindings")
     @GetMapping("/role-bindings")
     public List<RoleBindingResponse> listBindings(Authentication authentication) {
@@ -74,6 +78,7 @@ public class SecurityAdministrationController {
         return identityAccessService.listBindings().stream().map(RoleBindingResponse::from).toList();
     }
 
+    /** SecurityAdministrationController의 createBinding 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Operation(summary = "Create a scoped role binding")
     @PostMapping("/role-bindings")
     @ResponseStatus(CREATED)
@@ -85,6 +90,7 @@ public class SecurityAdministrationController {
         return RoleBindingResponse.from(identityAccessService.saveBinding(binding));
     }
 
+    /** SecurityAdministrationController의 deleteBinding 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Operation(summary = "Delete a role binding")
     @DeleteMapping("/role-bindings/{bindingId}")
     @ResponseStatus(NO_CONTENT)
@@ -93,6 +99,7 @@ public class SecurityAdministrationController {
         identityAccessService.deleteBinding(bindingId);
     }
 
+    /** SecurityAdministrationController의 requireIdentityManage 처리 입력과 현재 상태의 유효성을 검증한다. */
     private ResolvedAccess requireIdentityManage(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof OidcUser oidcUser)) {
             throw new AccessDeniedException("Identity administration requires an OIDC platform administrator");
@@ -119,6 +126,7 @@ public class SecurityAdministrationController {
             UUID clusterId,
             String namespace
     ) {
+        /** CreateRoleBindingRequest의 toScope 처리 데이터를 필요한 표현으로 변환한다. */
         AccessScope toScope() {
             return new AccessScope(scopeType, tenantId, workspaceId, clusterId, namespace);
         }
@@ -126,6 +134,7 @@ public class SecurityAdministrationController {
 
     public record UserAdminResponse(String id, String username, String displayName, String email, boolean active,
                                     String firstSeenAt, String lastLoginAt) {
+        /** UserAdminResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
         static UserAdminResponse from(UserAccount user) {
             return new UserAdminResponse(user.id().toString(), user.username(), user.displayName(), user.email(),
                     user.active(), user.firstSeenAt().toString(), user.lastLoginAt().toString());
@@ -136,6 +145,7 @@ public class SecurityAdministrationController {
                                       String scopeType, String tenantId, String workspaceId, String clusterId,
                                       String namespace, String createdBy,
                                       String createdAt) {
+        /** RoleBindingResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
         static RoleBindingResponse from(RoleBinding binding) {
             return new RoleBindingResponse(binding.id().toString(), binding.principalType().name(),
                     binding.principalKey(), binding.role().name(), binding.scope().type().name(),

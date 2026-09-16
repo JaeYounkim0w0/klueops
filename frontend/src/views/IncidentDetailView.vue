@@ -55,6 +55,7 @@ const factualEvidence = computed(() => detail.value?.evidence.filter((item) => i
 const inferredEvidence = computed(() => detail.value?.evidence.filter((item) => !item.factual) ?? []);
 const targetNode = computed(() => detail.value?.intelligence.correlation.nodes.find((item) => item.role === 'TARGET'));
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load() {
   loading.value = true;
   error.value = '';
@@ -83,6 +84,7 @@ async function load() {
   }
 }
 
+/** saveCollaboration 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function saveCollaboration() {
   collaborationSaving.value = true;
   error.value = '';
@@ -98,6 +100,7 @@ async function saveCollaboration() {
   finally { collaborationSaving.value = false; }
 }
 
+/** addComment 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function addComment() {
   if (!comment.value.trim()) return;
   collaborationSaving.value = true;
@@ -106,6 +109,7 @@ async function addComment() {
   finally { collaborationSaving.value = false; }
 }
 
+/** addIncidentLink 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function addIncidentLink() {
   if (!relatedIncidentId.value.trim()) return;
   collaborationSaving.value = true;
@@ -117,12 +121,14 @@ async function addIncidentLink() {
   finally { collaborationSaving.value = false; }
 }
 
+/** unlinkIncident 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function unlinkIncident(relatedId: string) {
   await api.unlinkIncident(incidentId.value, relatedId);
   collaboration.value = await api.getIncidentCollaboration(incidentId.value);
   await refreshTimeline();
 }
 
+/** mergeRelatedIncident 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function mergeRelatedIncident() {
   const sourceId = relatedIncidentId.value.trim();
   if (!sourceId || !window.confirm('입력한 Incident를 현재 Incident로 병합할까요? 원본은 RESOLVED 처리되고 감사 이력은 보존됩니다.')) return;
@@ -135,6 +141,7 @@ async function mergeRelatedIncident() {
   finally { collaborationSaving.value = false; }
 }
 
+/** splitSelectedEvidence 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function splitSelectedEvidence() {
   if (!selectedEvidenceIds.value.length || !splitTitle.value.trim()) return;
   collaborationSaving.value = true;
@@ -145,18 +152,22 @@ async function splitSelectedEvidence() {
   finally { collaborationSaving.value = false; }
 }
 
+/** refreshTimeline 처리의 핵심 작업 흐름을 실행한다. */
 async function refreshTimeline() {
   const latest = await api.getIncident(incidentId.value);
   if (detail.value) detail.value = { ...detail.value, timeline: latest.timeline };
 }
 
+/** localDateTime 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function localDateTime(value?: string) {
   if (!value) return '';
   const date = new Date(value);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
+/** isoDateTime 처리 조건의 충족 여부를 판단한다. */
 function isoDateTime(value: string) { return value ? new Date(value).toISOString() : undefined; }
 
+/** startObservation 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function startObservation() {
   observing.value = true;
   error.value = '';
@@ -174,16 +185,19 @@ async function startObservation() {
   }
 }
 
+/** evaluateObservation 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function evaluateObservation(observationId: string) {
   await api.evaluateRemediationObservation(observationId);
   observations.value = await api.listRemediationObservations(incidentId.value);
 }
 
+/** cancelObservation 처리 조건의 충족 여부를 판단한다. */
 async function cancelObservation(observationId: string) {
   await api.cancelRemediationObservation(observationId);
   observations.value = await api.listRemediationObservations(incidentId.value);
 }
 
+/** generatePostmortem 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function generatePostmortem() {
   observing.value = true;
   error.value = '';
@@ -196,6 +210,7 @@ async function generatePostmortem() {
   }
 }
 
+/** updateState 처리 대상의 상태를 갱신한다. */
 async function updateState() {
   if (!incident.value) return;
   saving.value = true;
@@ -211,6 +226,7 @@ async function updateState() {
   }
 }
 
+/** suggestedState 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function suggestedState(current: IncidentState): IncidentState {
   if (current === 'OPEN' || current === 'REOPENED') return 'ACKNOWLEDGED';
   if (current === 'ACKNOWLEDGED') return 'INVESTIGATING';
@@ -219,16 +235,19 @@ function suggestedState(current: IncidentState): IncidentState {
   return 'RESOLVED';
 }
 
+/** bindCommand 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function bindCommand(command: string) {
   return command
     .split('{namespace}').join(incident.value?.namespace || 'default')
     .split('{resourceName}').join(incident.value?.resourceName || 'RESOURCE_NAME');
 }
 
+/** copy 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function copy(value: string) {
   await navigator.clipboard.writeText(value);
 }
 
+/** exportReport 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function exportReport() {
   reportExporting.value = true;
   error.value = '';

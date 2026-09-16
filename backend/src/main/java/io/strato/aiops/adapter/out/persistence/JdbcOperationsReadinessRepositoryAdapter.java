@@ -33,11 +33,13 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
+    /** JdbcOperationsReadinessRepositoryAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public JdbcOperationsReadinessRepositoryAdapter(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 saveLiveValidationRun 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public LiveValidationRun saveLiveValidationRun(LiveValidationRun value) {
         int updated = jdbcTemplate.update("""
@@ -60,6 +62,7 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
         return findLiveValidationRun(value.id()).orElseThrow();
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 findLiveValidationRun 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<LiveValidationRun> findLiveValidationRun(UUID runId) {
         List<LiveValidationRun> values = jdbcTemplate.query(
@@ -67,6 +70,7 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
         return values.isEmpty() ? Optional.empty() : Optional.of(values.get(0));
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 findActiveLiveValidationRuns 처리 결과를 조회해 반환한다. */
     @Override
     public List<LiveValidationRun> findActiveLiveValidationRuns(UUID clusterId) {
         return jdbcTemplate.query("""
@@ -76,6 +80,7 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
                 """, this::liveValidationRun, clusterId);
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 findExpiredLiveValidationRuns 처리 결과를 조회해 반환한다. */
     @Override
     public List<LiveValidationRun> findExpiredLiveValidationRuns(Instant now, int limit) {
         return jdbcTemplate.query("""
@@ -85,6 +90,7 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
                 """, this::liveValidationRun, timestamp(now), Math.max(1, Math.min(limit, 100)));
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 aggregateRemediationOutcomes 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public List<OutcomeAggregate> aggregateRemediationOutcomes(String category, String resourceKind, int limit) {
         StringBuilder sql = new StringBuilder("""
@@ -120,6 +126,7 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
                 rs.getInt("inconclusive"), Math.round(rs.getDouble("average_seconds"))), args.toArray());
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 queryReliabilityTrend 처리 결과를 조회해 반환한다. */
     @Override
     public ReliabilityTrendData queryReliabilityTrend(UUID clusterId, String namespace, Instant from) {
         StringBuilder sql = new StringBuilder("""
@@ -190,6 +197,7 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
                 remediation[0], remediation[1], days, scopeValues);
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 remediationCounts 처리에 필요한 업무 로직을 수행한다. */
     private int[] remediationCounts(UUID clusterId, String namespace, Instant from) {
         StringBuilder sql = new StringBuilder("""
                 select count(*) samples,
@@ -213,6 +221,7 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
         }, args.toArray());
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 averageMinutes 처리에 필요한 업무 로직을 수행한다. */
     private long averageMinutes(List<TrendIncident> incidents, boolean acknowledge) {
         return Math.round(incidents.stream()
                 .filter(item -> acknowledge ? item.acknowledgedAt() != null : item.resolvedAt() != null)
@@ -222,6 +231,7 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
                 .average().orElse(0));
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 liveValidationRun 처리에 필요한 업무 로직을 수행한다. */
     private LiveValidationRun liveValidationRun(ResultSet rs, int row) throws SQLException {
         return new LiveValidationRun(uuid(rs, "id"), uuid(rs, "cluster_id"), rs.getString("cluster_name"),
                 rs.getString("scenario_id"), rs.getString("namespace"), rs.getString("state"),
@@ -231,12 +241,14 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
                 instant(rs, "completed_at"), rs.getString("triggered_by"));
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 trendIncident 처리에 필요한 업무 로직을 수행한다. */
     private TrendIncident trendIncident(ResultSet rs, int row) throws SQLException {
         return new TrendIncident(uuid(rs, "id"), uuid(rs, "cluster_id"), rs.getString("cluster_name"),
                 rs.getString("namespace"), instant(rs, "first_detected_at"), instant(rs, "acknowledged_at"),
                 instant(rs, "resolved_at"), rs.getInt("reopen_count"));
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 json 처리에 필요한 업무 로직을 수행한다. */
     private String json(List<String> values) {
         try {
             return objectMapper.writeValueAsString(values == null ? List.of() : values);
@@ -245,6 +257,7 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
         }
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 strings 처리에 필요한 업무 로직을 수행한다. */
     private List<String> strings(String value) {
         try {
             return value == null ? List.of() : objectMapper.readValue(value, new TypeReference<>() { });
@@ -253,20 +266,24 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
         }
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 uuid 처리에 필요한 업무 로직을 수행한다. */
     private UUID uuid(ResultSet rs, String column) throws SQLException {
         Object value = rs.getObject(column);
         return value instanceof UUID id ? id : UUID.fromString(String.valueOf(value));
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 instant 처리에 필요한 업무 로직을 수행한다. */
     private Instant instant(ResultSet rs, String column) throws SQLException {
         Timestamp value = rs.getTimestamp(column);
         return value == null ? null : value.toInstant();
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 timestamp 처리에 필요한 업무 로직을 수행한다. */
     private Timestamp timestamp(Instant value) {
         return value == null ? null : Timestamp.from(value);
     }
 
+    /** JdbcOperationsReadinessRepositoryAdapter의 text 처리에 필요한 업무 로직을 수행한다. */
     private String text(String value) {
         return value == null ? "" : value;
     }
@@ -284,6 +301,7 @@ public class JdbcOperationsReadinessRepositoryAdapter implements OperationsReadi
         private int resolved;
         private int recurred;
 
+        /** ScopeCounter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private ScopeCounter(UUID clusterId, String clusterName, String namespace) {
             this.clusterId = clusterId;
             this.clusterName = clusterName;

@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class OperationalTelemetryTest {
 
+    /** OperationalTelemetryTest의 recordsOnlyBoundedOperationAndOutcomeTags 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void recordsOnlyBoundedOperationAndOutcomeTags() {
         var registry = new SimpleMeterRegistry();
@@ -24,6 +25,7 @@ class OperationalTelemetryTest {
         });
     }
 
+    /** OperationalTelemetryTest의 recordsBoundedAnalysisSectionsAndP95Latency 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void recordsBoundedAnalysisSectionsAndP95Latency() {
         var telemetry = new OperationalTelemetry(new SimpleMeterRegistry());

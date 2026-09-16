@@ -30,14 +30,17 @@ const emit = defineEmits<{
   'show-feedback': [];
 }>();
 
+/** selectValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function selectValue(event: Event) {
   return (event.target as HTMLSelectElement).value;
 }
 
+/** inputValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function inputValue(event: Event) {
   return (event.target as HTMLInputElement).value;
 }
 
+/** updateMode 처리 대상의 상태를 갱신한다. */
 function updateMode(event: Event) {
   emit('update:mode', selectValue(event) as AnalysisMode);
 }

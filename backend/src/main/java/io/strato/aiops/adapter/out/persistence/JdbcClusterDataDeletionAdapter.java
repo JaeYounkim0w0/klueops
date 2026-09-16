@@ -12,10 +12,12 @@ public class JdbcClusterDataDeletionAdapter implements ClusterDataDeletionPort {
 
     private final JdbcTemplate jdbcTemplate;
 
+    /** JdbcClusterDataDeletionAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public JdbcClusterDataDeletionAdapter(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /** JdbcClusterDataDeletionAdapter의 deleteClusterData 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Override
     public void deleteClusterData(UUID clusterId) {
         List<UUID> asyncJobIds = jdbcTemplate.queryForList("""

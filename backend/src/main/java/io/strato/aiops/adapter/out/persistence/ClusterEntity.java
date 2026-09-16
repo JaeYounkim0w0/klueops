@@ -56,9 +56,11 @@ class ClusterEntity {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    /** ClusterEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected ClusterEntity() {
     }
 
+    /** ClusterEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private ClusterEntity(UUID id, UUID tenantId, UUID workspaceId, String name, String description, ClusterEnvironment environment, ClusterProvider provider,
                           String region, ClusterStatus status, String createdBy, Instant createdAt, Instant updatedAt) {
         this.id = id;
@@ -75,6 +77,7 @@ class ClusterEntity {
         this.updatedAt = updatedAt;
     }
 
+    /** ClusterEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static ClusterEntity fromDomain(Cluster cluster) {
         return new ClusterEntity(
                 cluster.id(),
@@ -92,6 +95,7 @@ class ClusterEntity {
         );
     }
 
+    /** ClusterEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     Cluster toDomain() {
         return new Cluster(id, tenantId, workspaceId, name, description, environment, provider, region, status, createdBy, createdAt, updatedAt);
     }

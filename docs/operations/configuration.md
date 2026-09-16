@@ -98,7 +98,9 @@ OIDC 실행은 동일 PostgreSQL datasource를 사용하며 Spring Session도 JD
 
 운영 환경은 `GET /api/operations/runtime-readiness`로 현재 안전 설정을 확인한다. 기본 local profile은 단일 운영자 파일럿으로 판정된다.
 
-- `AIOPS_CREDENTIAL_REVEAL_ENABLED=false`: kubeconfig 원문 API 조회 차단. 기본값 false.
+- `portal.security.credentialRevealEnabled`: Helm의 자격 증명 원문 조회 정책이다. 기본값과 운영값은 `false`, 로컬 검증값은 `true`이며 `AIOPS_CREDENTIAL_REVEAL_ENABLED`로 Backend에 전달된다.
+- 원문 보기는 `cluster:manage` capability가 있는 사용자만 사용할 수 있다. 확인 대화상자를 거쳐 표시하고 감사 이벤트를 남기며, 화면은 60초 후 자동으로 다시 마스킹한다.
+- `global.productionMode=true`에서 `portal.security.credentialRevealEnabled=true`를 지정하면 Helm 렌더링을 실패시켜 운영 배포의 원문 조회를 차단한다.
 - `AIOPS_LOCAL_MASTER_KEY`: 기본 개발 키를 사용하지 말고 배포 secret으로 제공한다.
 - `AIOPS_JOB_MAXIMUM_RUNTIME_SECONDS=900`: 활성 Job 최대 실행시간.
 - `AIOPS_JOB_RECOVERY_INTERVAL_MS=60000`: stale Job 복구 검사 주기.
@@ -117,6 +119,6 @@ OIDC 실행은 동일 PostgreSQL datasource를 사용하며 Spring Session도 JD
 - `AIOPS_ANALYSIS_SECTION_CORE_SIZE`, `AIOPS_ANALYSIS_SECTION_MAX_SIZE`, `AIOPS_ANALYSIS_SECTION_QUEUE_CAPACITY`: AI section executor.
 - `AIOPS_CLUSTER_SYNC_CORE_SIZE`, `AIOPS_CLUSTER_SYNC_MAX_SIZE`, `AIOPS_CLUSTER_SYNC_QUEUE_CAPACITY`: cluster sync executor.
 
-`AIOPS_VALIDATION_LAB_ALLOW_PRODUCTION=true` 또는 비-local profile의 기본 master key/credential reveal은 readiness `BLOCKED` 사유다.
+`AIOPS_VALIDATION_LAB_ALLOW_PRODUCTION=true` 또는 비-local profile의 기본 master key/credential reveal은 readiness `BLOCKED` 사유다. 운영에서 문제 해결을 위해 자격 증명 원문을 직접 확인하는 대신 저장된 credential을 새 값으로 교체하고 연결 확인과 동기화를 다시 수행한다.
 
 로컬 OIDC 실행에서도 운영 패키지와 동일한 credential master key를 사용한다. `scripts/run-local-oidc.sh`는 명시적인 `AIOPS_LOCAL_MASTER_KEY`가 없으면 `AIOPS_PORTAL_MASTER_KEY_SECRET_NAME`으로 지정한 Kubernetes Secret(기본 `aiops-portal-master-key`)의 `master-key`를 주입한다. PostgreSQL에 암호화 credential이 존재하는 동안 이 Secret을 재생성하거나 교체하지 않는다.

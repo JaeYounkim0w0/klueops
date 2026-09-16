@@ -28,6 +28,7 @@ public class RemoteKubectlRunnerAdapter implements KubectlRunnerPort {
     private final URI baseUri;
     private final String token;
 
+    /** RemoteKubectlRunnerAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public RemoteKubectlRunnerAdapter(ObjectMapper objectMapper,
                                       @Value("${aiops.command-console.runner.url}") URI baseUri,
                                       @Value("${aiops.command-console.runner.token}") String token) {
@@ -36,6 +37,7 @@ public class RemoteKubectlRunnerAdapter implements KubectlRunnerPort {
         this.token = token;
     }
 
+    /** RemoteKubectlRunnerAdapter의 run 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public KubectlRunResult run(KubectlRunRequest request, KubectlOutputListener listener) {
         HttpURLConnection connection = null;
@@ -82,6 +84,7 @@ public class RemoteKubectlRunnerAdapter implements KubectlRunnerPort {
         }
     }
 
+    /** RemoteKubectlRunnerAdapter의 cancel 처리 조건의 충족 여부를 판단한다. */
     @Override
     public boolean cancel(UUID executionId) {
         try {
@@ -94,6 +97,7 @@ public class RemoteKubectlRunnerAdapter implements KubectlRunnerPort {
         }
     }
 
+    /** RemoteKubectlRunnerAdapter의 clientVersion 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public String clientVersion() {
         try {
@@ -107,16 +111,19 @@ public class RemoteKubectlRunnerAdapter implements KubectlRunnerPort {
         }
     }
 
+    /** RemoteKubectlRunnerAdapter의 available 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public boolean available() {
         return !"unavailable".equals(clientVersion());
     }
 
+    /** RemoteKubectlRunnerAdapter의 executionBoundary 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public String executionBoundary() {
         return "ISOLATED_RUNNER";
     }
 
+    /** RemoteKubectlRunnerAdapter의 open 처리에 필요한 업무 로직을 수행한다. */
     private HttpURLConnection open(String path, String method, Duration timeout) throws Exception {
         HttpURLConnection connection = (HttpURLConnection) baseUri.resolve(path).toURL().openConnection();
         connection.setRequestMethod(method);
@@ -127,11 +134,13 @@ public class RemoteKubectlRunnerAdapter implements KubectlRunnerPort {
         return connection;
     }
 
+    /** RemoteKubectlRunnerAdapter의 failure 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesApiException failure(HttpURLConnection connection, int status) throws Exception {
         String detail = new String((status >= 400 ? connection.getErrorStream() : connection.getInputStream()).readAllBytes(), StandardCharsets.UTF_8);
         return new KubernetesApiException("command runner rejected request (" + status + "): " + detail, null);
     }
 
+    /** RemoteKubectlRunnerAdapter의 concise 처리에 필요한 업무 로직을 수행한다. */
     private String concise(Exception exception) {
         return exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
     }

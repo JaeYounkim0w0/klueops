@@ -9,6 +9,7 @@ class AiManifestSanitizerTest {
 
     private final AiManifestSanitizer sanitizer = new AiManifestSanitizer(new ObjectMapper());
 
+    /** AiManifestSanitizerTest의 redactsConfigValuesAnnotationsAndLiteralEnvironmentValues 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void redactsConfigValuesAnnotationsAndLiteralEnvironmentValues() {
         String sanitized = sanitizer.sanitize("""

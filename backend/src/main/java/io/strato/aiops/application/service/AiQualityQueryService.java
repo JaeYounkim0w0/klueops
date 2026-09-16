@@ -28,12 +28,14 @@ public class AiQualityQueryService {
     private final OperationsRepositoryPort operationsRepository;
     private final AnalysisSessionRepositoryPort analysisRepository;
 
+    /** AiQualityQueryService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AiQualityQueryService(OperationsRepositoryPort operationsRepository,
                                  AnalysisSessionRepositoryPort analysisRepository) {
         this.operationsRepository = operationsRepository;
         this.analysisRepository = analysisRepository;
     }
 
+    /** AiQualityQueryService의 getQuality 처리 결과를 조회해 반환한다. */
     public AiQualitySummary getQuality() {
         List<AnalysisFeedback> feedback = operationsRepository.findAnalysisFeedback(SAMPLE_LIMIT);
         List<AnalysisSession> analyses = analysisRepository.findRecent(null, null, null, SAMPLE_LIMIT);
@@ -49,6 +51,7 @@ public class AiQualityQueryService {
                 percentage(correct, correct + partial + incorrect));
     }
 
+    /** AiQualityQueryService의 getCalibration 처리 결과를 조회해 반환한다. */
     public AiCalibrationSummary getCalibration() {
         List<AnalysisFeedback> feedback = operationsRepository.findAnalysisFeedback(SAMPLE_LIMIT);
         Set<UUID> analysisIds = feedback.stream().map(AnalysisFeedback::analysisId).collect(Collectors.toSet());
@@ -83,14 +86,17 @@ public class AiQualityQueryService {
                 profiles, samples);
     }
 
+    /** AiQualityQueryService의 count 처리에 필요한 업무 로직을 수행한다. */
     private static <T> int count(List<T> values, Predicate<T> predicate) {
         return (int) values.stream().filter(predicate).count();
     }
 
+    /** AiQualityQueryService의 percentage 처리에 필요한 업무 로직을 수행한다. */
     private static double percentage(long numerator, long denominator) {
         return denominator <= 0 ? 0.0 : Math.round((numerator * 1000.0) / denominator) / 10.0;
     }
 
+    /** AiQualityQueryService의 hasText 처리 조건의 충족 여부를 판단한다. */
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
     }

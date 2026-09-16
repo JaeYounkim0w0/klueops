@@ -33,6 +33,7 @@ public class CommandOperationVerifier {
     private final ObjectMapper objectMapper;
     private final Duration timeout;
 
+    /** CommandOperationVerifier 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public CommandOperationVerifier(KubectlRunnerPort runner, ObjectMapper objectMapper,
                                     @Value("${aiops.command-console.verification-timeout-seconds:15}") long seconds) {
         this.runner = runner;
@@ -40,6 +41,7 @@ public class CommandOperationVerifier {
         this.timeout = Duration.ofSeconds(Math.max(5, seconds));
     }
 
+    /** CommandOperationVerifier의 captureBefore 처리에 필요한 업무 로직을 수행한다. */
     public ProbeContext captureBefore(CommandValidationResult validation, String manifest,
                                       KubernetesConnectionCredential credential) {
         VerificationPlan plan = plan(validation.arguments(), validation.namespace(), manifest);
@@ -48,6 +50,7 @@ public class CommandOperationVerifier {
         return new ProbeContext(plan, probe, rollback(plan, probe));
     }
 
+    /** CommandOperationVerifier의 verify 처리 입력과 현재 상태의 유효성을 검증한다. */
     public Verification verify(ProbeContext before, KubernetesConnectionCredential credential, int commandExitCode) {
         if (before.plan() == null) return new Verification(CommandVerificationStatus.VERIFICATION_FAILED,
                 before.message(), before.probe().snapshot(), "", null);
@@ -70,10 +73,12 @@ public class CommandOperationVerifier {
                 before.probe().snapshot(), after.snapshot(), before.rollbackCommand());
     }
 
+    /** CommandOperationVerifier의 required 처리 입력과 현재 상태의 유효성을 검증한다. */
     public boolean required(CommandSafety safety) {
         return safety == CommandSafety.CHANGE || safety == CommandSafety.DESTRUCTIVE;
     }
 
+    /** CommandOperationVerifier의 probe 처리에 필요한 업무 로직을 수행한다. */
     private Probe probe(List<String> arguments, String namespace, KubernetesConnectionCredential credential) {
         KubectlRunResult result = runner.run(new KubectlRunRequest(UUID.randomUUID(), credential, namespace, arguments,
                 null, timeout, SNAPSHOT_LIMIT), (channel, text) -> {});
@@ -82,6 +87,7 @@ public class CommandOperationVerifier {
         return new Probe(result.exitCode() == 0, snapshot, hash(snapshot), result.stderr());
     }
 
+    /** CommandOperationVerifier의 plan 처리에 필요한 업무 로직을 수행한다. */
     private VerificationPlan plan(List<String> arguments, String namespace, String manifest) {
         List<String> positional = positional(arguments);
         if (positional.isEmpty()) return null;
@@ -107,17 +113,20 @@ public class CommandOperationVerifier {
         return null;
     }
 
+    /** CommandOperationVerifier의 getPlan 처리 결과를 조회해 반환한다. */
     private VerificationPlan getPlan(String operation, String target, String namespace, boolean expectMissing) {
         return new VerificationPlan(List.of("get", target, "-o", "json", "--ignore-not-found=false"),
                 namespace, target, operation, expectMissing);
     }
 
+    /** CommandOperationVerifier의 combineTarget 처리에 필요한 업무 로직을 수행한다. */
     private String combineTarget(List<String> positional, int index) {
         String resource = positional.get(index);
         if (resource.contains("/") || positional.size() <= index + 1 || positional.get(index + 1).contains("=")) return resource;
         return resource + "/" + positional.get(index + 1);
     }
 
+    /** CommandOperationVerifier의 positional 처리에 필요한 업무 로직을 수행한다. */
     private List<String> positional(List<String> arguments) {
         List<String> values = new ArrayList<>();
         for (int i = 0; i < arguments.size(); i++) {
@@ -131,6 +140,7 @@ public class CommandOperationVerifier {
         return values;
     }
 
+    /** CommandOperationVerifier의 rollback 처리에 필요한 업무 로직을 수행한다. */
     private String rollback(VerificationPlan plan, Probe before) {
         String target = plan.target();
         if ("scale".equals(plan.operation()) && before.successful()) {
@@ -151,10 +161,12 @@ public class CommandOperationVerifier {
         return null;
     }
 
+    /** CommandOperationVerifier의 namespaceSuffix 처리에 필요한 업무 로직을 수행한다. */
     private String namespaceSuffix(String namespace) {
         return namespace == null || namespace.isBlank() ? "" : " -n " + namespace;
     }
 
+    /** CommandOperationVerifier의 sanitize 처리에 필요한 업무 로직을 수행한다. */
     private String sanitize(String raw) {
         if (raw == null || raw.isBlank()) return "";
         try {
@@ -168,6 +180,7 @@ public class CommandOperationVerifier {
         }
     }
 
+    /** CommandOperationVerifier의 scrub 처리에 필요한 업무 로직을 수행한다. */
     private void scrub(JsonNode node) {
         if (node instanceof ObjectNode object) {
             object.remove(List.of("managedFields", "resourceVersion", "uid", "creationTimestamp", "selfLink"));
@@ -183,15 +196,20 @@ public class CommandOperationVerifier {
         } else if (node.isArray()) node.forEach(this::scrub);
     }
 
+    /** CommandOperationVerifier의 hash 처리 조건의 충족 여부를 판단한다. */
     private String hash(String value) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
         catch (Exception exception) { throw new IllegalStateException(exception); }
     }
+    /** CommandOperationVerifier의 concise 처리에 필요한 업무 로직을 수행한다. */
     private String concise(String value) { return value == null || value.isBlank() ? "unknown error" : value.lines().findFirst().orElse("unknown error"); }
 
     public record ProbeContext(VerificationPlan plan, Probe probe, String rollbackCommand, String message) {
+        /** ProbeContext 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         ProbeContext(VerificationPlan plan, Probe probe, String rollback) { this(plan, probe, rollback, ""); }
+        /** ProbeContext의 unsupported 처리에 필요한 업무 로직을 수행한다. */
         static ProbeContext unsupported(String message) { return new ProbeContext(null, new Probe(false, "", hashEmpty(), ""), null, message); }
+        /** ProbeContext의 hashEmpty 처리 조건의 충족 여부를 판단한다. */
         private static String hashEmpty() { return ""; }
     }
     public record Verification(CommandVerificationStatus status, String summary, String beforeSnapshot,

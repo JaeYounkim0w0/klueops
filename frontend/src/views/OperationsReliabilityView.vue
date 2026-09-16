@@ -46,7 +46,7 @@ const gateForm = reactive({
   minimumGroundTruthSamples: 3,
   minimumVerifiedAccuracy: 80
 });
-let unsubscribe = () => {};
+let unsubscribe = /** unsubscribe 처리에 필요한 화면 또는 업무 로직을 수행한다. */ () => {};
 let refreshTimer: number | undefined;
 
 const continuityRows = computed(() => clusters.value.map((cluster) => ({
@@ -55,6 +55,7 @@ const continuityRows = computed(() => clusters.value.map((cluster) => ({
   status: statuses.value.find((item) => item.clusterId === cluster.id)
 })));
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load(silent = false) {
   if (!silent) loading.value = true;
   error.value = '';
@@ -80,11 +81,13 @@ async function load(silent = false) {
   }
 }
 
+/** scheduleRefresh 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function scheduleRefresh() {
   window.clearTimeout(refreshTimer);
   refreshTimer = window.setTimeout(() => void load(true), 350);
 }
 
+/** savePolicy 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function savePolicy() {
   saving.value = true;
   error.value = '';
@@ -117,6 +120,7 @@ async function savePolicy() {
   }
 }
 
+/** togglePolicy 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 async function togglePolicy(policy: SignalNoisePolicyResponse) {
   await api.updateNoisePolicy(policy.id, {
     name: policy.name,
@@ -132,11 +136,13 @@ async function togglePolicy(policy: SignalNoisePolicyResponse) {
   await load(true);
 }
 
+/** removePolicy 처리 대상과 관련 상태를 안전하게 정리한다. */
 async function removePolicy(policy: SignalNoisePolicyResponse) {
   await api.deleteNoisePolicy(policy.id);
   await load(true);
 }
 
+/** runGate 처리의 핵심 작업 흐름을 실행한다. */
 async function runGate() {
   saving.value = true;
   error.value = '';
@@ -153,6 +159,7 @@ async function runGate() {
   }
 }
 
+/** restartCollector 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function restartCollector(clusterId: string) {
   watchBusyId.value = clusterId;
   error.value = '';
@@ -167,6 +174,7 @@ async function restartCollector(clusterId: string) {
   }
 }
 
+/** toggleCollector 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 async function toggleCollector(status?: WatchRuntimeStatusResponse) {
   if (!status) return;
   watchBusyId.value = status.clusterId;
@@ -187,6 +195,7 @@ async function toggleCollector(status?: WatchRuntimeStatusResponse) {
   }
 }
 
+/** collectionModeDescription 처리의 핵심 작업 흐름을 실행한다. */
 function collectionModeDescription(state?: string) {
   if (state === 'POLLING') return 'Watch 연결이 불안정해 안전한 주기 조회로 수집 중입니다.';
   if (state === 'RECOVERING') return '주기 조회가 안정화되어 Watch 복귀를 준비하고 있습니다.';
@@ -195,6 +204,7 @@ function collectionModeDescription(state?: string) {
   return '수집 연결 상태를 확인하고 있습니다.';
 }
 
+/** localIso 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function localIso(value: string) {
   return value ? new Date(value).toISOString() : undefined;
 }

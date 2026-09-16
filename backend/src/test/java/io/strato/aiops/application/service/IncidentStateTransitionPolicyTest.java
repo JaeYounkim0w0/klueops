@@ -10,6 +10,7 @@ class IncidentStateTransitionPolicyTest {
 
     private final IncidentStateTransitionPolicy policy = new IncidentStateTransitionPolicy();
 
+    /** IncidentStateTransitionPolicyTest의 acceptsNoOpAndSupportedOperatorTransitions 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void acceptsNoOpAndSupportedOperatorTransitions() {
         assertThatCode(() -> policy.validate(IncidentState.OPEN, IncidentState.OPEN)).doesNotThrowAnyException();
@@ -17,6 +18,7 @@ class IncidentStateTransitionPolicyTest {
         assertThatCode(() -> policy.validate(IncidentState.RESOLVED, IncidentState.REOPENED)).doesNotThrowAnyException();
     }
 
+    /** IncidentStateTransitionPolicyTest의 rejectsTransitionsThatSkipTheIncidentLifecycle 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsTransitionsThatSkipTheIncidentLifecycle() {
         assertThatThrownBy(() -> policy.validate(IncidentState.MONITORING, IncidentState.ACKNOWLEDGED))

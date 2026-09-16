@@ -35,6 +35,7 @@ class ClusterConnectionTestApiTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /** ClusterConnectionTestApiTest의 testsRegisteredClusterConnection 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void testsRegisteredClusterConnection() throws Exception {
         String clusterId = registerCluster("connection-test-cluster");
@@ -50,6 +51,7 @@ class ClusterConnectionTestApiTest {
                 .andExpect(jsonPath("$.checkedAt", notNullValue()));
     }
 
+    /** ClusterConnectionTestApiTest의 listsNamespacesAndNodesFromKubernetesApi 처리 결과를 조회해 반환한다. */
     @Test
     void listsNamespacesAndNodesFromKubernetesApi() throws Exception {
         String clusterId = registerCluster("runtime-query-cluster");
@@ -66,6 +68,7 @@ class ClusterConnectionTestApiTest {
                 .andExpect(jsonPath("$[0].kubernetesVersion").value("v1.30.0"));
     }
 
+    /** ClusterConnectionTestApiTest의 returnsNotFoundWhenClusterDoesNotExist 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsNotFoundWhenClusterDoesNotExist() throws Exception {
         mockMvc.perform(post("/api/clusters/{clusterId}/connection-test", UUID.randomUUID()))
@@ -73,6 +76,7 @@ class ClusterConnectionTestApiTest {
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }
 
+    /** ClusterConnectionTestApiTest의 registerCluster 처리에 필요한 데이터를 생성하거나 저장한다. */
     private String registerCluster(String name) throws Exception {
         String response = mockMvc.perform(post("/api/clusters")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -101,10 +105,12 @@ class ClusterConnectionTestApiTest {
     @TestConfiguration
     static class TestKubernetesConfig {
 
+        /** TestKubernetesConfig의 kubernetesClusterPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         KubernetesClusterPort kubernetesClusterPort() {
             return new KubernetesClusterPort() {
+                /** 익명 구현체의 testConnection 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public KubernetesConnectionTestResult testConnection(KubernetesConnectionCredential credential) {
                     if (credential.payload().contains("apiVersion: v1")) {
@@ -113,11 +119,13 @@ class ClusterConnectionTestApiTest {
                     return KubernetesConnectionTestResult.failure("Kubernetes API connection failed: invalid test credential");
                 }
 
+                /** 익명 구현체의 listNamespaces 처리 결과를 조회해 반환한다. */
                 @Override
                 public List<KubernetesNamespace> listNamespaces(KubernetesConnectionCredential credential) {
                     return List.of(new KubernetesNamespace("default", "Active"));
                 }
 
+                /** 익명 구현체의 listNodes 처리 결과를 조회해 반환한다. */
                 @Override
                 public List<KubernetesNode> listNodes(KubernetesConnectionCredential credential) {
                     return List.of(new KubernetesNode("worker-1", "Ready", "v1.30.0", "Ubuntu 22.04", "containerd://1.7"));

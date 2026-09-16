@@ -41,6 +41,7 @@ public class IncidentReportExportService {
     private final MeterRegistry meterRegistry;
     private final CommandExecutionRepositoryPort commandExecutions;
 
+    /** IncidentReportExportService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public IncidentReportExportService(OperationsControlPlaneService operationsService,
                                        AuditLogRepositoryPort auditRepository,
                                        ObjectMapper objectMapper,
@@ -55,6 +56,7 @@ public class IncidentReportExportService {
         this.commandExecutions = commandExecutions;
     }
 
+    /** IncidentReportExportService의 export 처리에 필요한 업무 로직을 수행한다. */
     public ExportedReport export(UUID incidentId, String format, String actor, String requestId) {
         IncidentDetail detail = operationsService.getIncident(incidentId);
         String normalized = format == null ? "markdown" : format.trim().toLowerCase();
@@ -89,10 +91,12 @@ public class IncidentReportExportService {
                 digest.sha256(), generatedAt);
     }
 
+    /** IncidentReportExportService의 markdown 처리에 필요한 업무 로직을 수행한다. */
     String markdown(IncidentDetail detail) {
         return markdown(detail, linkedCommands(detail));
     }
 
+    /** IncidentReportExportService의 markdown 처리에 필요한 업무 로직을 수행한다. */
     private String markdown(IncidentDetail detail, List<CommandExecution> commands) {
         var incident = detail.incident();
         StringBuilder report = new StringBuilder();
@@ -133,6 +137,7 @@ public class IncidentReportExportService {
         return report.toString();
     }
 
+    /** IncidentReportExportService의 writeJson 처리에 필요한 업무 로직을 수행한다. */
     private void writeJson(IncidentDetail detail, List<CommandExecution> commands, Instant generatedAt, OutputStream output) throws IOException {
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(new NonClosingOutputStream(output), Map.of(
                     "schemaVersion", "incident-report.v2",
@@ -143,6 +148,7 @@ public class IncidentReportExportService {
             ));
     }
 
+    /** IncidentReportExportService의 writeZip 처리에 필요한 업무 로직을 수행한다. */
     private void writeZip(IncidentDetail detail, List<CommandExecution> commands, Instant generatedAt, OutputStream output) throws IOException {
         ReportWriter markdownWriter = target -> target.write(markdown(detail, commands).getBytes(StandardCharsets.UTF_8));
         ReportWriter jsonWriter = target -> writeJson(detail, commands, generatedAt, target);
@@ -162,6 +168,7 @@ public class IncidentReportExportService {
         }
     }
 
+    /** IncidentReportExportService의 add 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void add(ZipOutputStream zip, String name, ReportWriter writer) throws IOException {
         ZipEntry entry = new ZipEntry(name);
         entry.setTime(0L);
@@ -170,6 +177,7 @@ public class IncidentReportExportService {
         zip.closeEntry();
     }
 
+    /** IncidentReportExportService의 digest 처리에 필요한 업무 로직을 수행한다. */
     private DigestResult digest(ReportWriter writer) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
@@ -182,11 +190,13 @@ public class IncidentReportExportService {
         }
     }
 
+    /** IncidentReportExportService의 value 처리에 필요한 업무 로직을 수행한다. */
     private String value(Object value) {
         return value == null || value.toString().isBlank() ? "-"
                 : secretMasker.maskText(value.toString()).replaceAll("[\\r\\n]+", " ");
     }
 
+    /** IncidentReportExportService의 commandsCsv 처리에 필요한 업무 로직을 수행한다. */
     private String commandsCsv(IncidentDetail detail) {
         String header = "order,title,purpose,command,expectedSignal,safetyLevel,destructive\n";
         return header + detail.intelligence().verificationPlan().stream()
@@ -196,6 +206,7 @@ public class IncidentReportExportService {
                 .collect(Collectors.joining("\n"));
     }
 
+    /** IncidentReportExportService의 commandEvidence 처리에 필요한 업무 로직을 수행한다. */
     private List<Map<String, Object>> commandEvidence(List<CommandExecution> commands) {
         return commands.stream().map(command -> Map.<String, Object>ofEntries(
                 Map.entry("executionId", command.id().toString()),
@@ -210,6 +221,7 @@ public class IncidentReportExportService {
         )).toList();
     }
 
+    /** IncidentReportExportService의 executionsCsv 처리에 필요한 업무 로직을 수행한다. */
     private String executionsCsv(List<CommandExecution> commands) {
         String header = "executionId,createdAt,actor,command,status,exitCode,verificationStatus,beforeSha256,afterSha256\n";
         return header + commands.stream().map(command -> String.join(",", command.id().toString(),
@@ -219,11 +231,13 @@ public class IncidentReportExportService {
                 .collect(Collectors.joining("\n"));
     }
 
+    /** IncidentReportExportService의 linkedCommands 처리에 필요한 업무 로직을 수행한다. */
     private List<CommandExecution> linkedCommands(IncidentDetail detail) {
         UUID analysisId = detail.incident().sourceAnalysisId();
         return analysisId == null ? List.of() : commandExecutions.findBySourceAnalysisId(analysisId, 200);
     }
 
+    /** IncidentReportExportService의 hash 처리 조건의 충족 여부를 판단한다. */
     private String hash(String value) {
         if (value == null || value.isBlank()) return "-";
         try {
@@ -234,17 +248,20 @@ public class IncidentReportExportService {
         }
     }
 
+    /** IncidentReportExportService의 csv 처리에 필요한 업무 로직을 수행한다. */
     private String csv(Object value) {
         String text = secretMasker.maskText(value == null ? "" : value.toString()).replace("\"", "\"\"");
         return "\"" + text + "\"";
     }
 
+    /** IncidentReportExportService의 sanitized 처리에 필요한 업무 로직을 수행한다. */
     private JsonNode sanitized(Object value) {
         JsonNode root = objectMapper.valueToTree(value);
         sanitizeNode(root);
         return root;
     }
 
+    /** IncidentReportExportService의 sanitizeNode 처리에 필요한 업무 로직을 수행한다. */
     private void sanitizeNode(JsonNode node) {
         if (node instanceof ObjectNode object) {
             object.properties().forEach(entry -> {
@@ -259,6 +276,7 @@ public class IncidentReportExportService {
 
     @FunctionalInterface
     public interface ReportWriter {
+        /** ReportWriter의 writeTo 처리 계약을 정의한다. */
         void writeTo(OutputStream output) throws IOException;
     }
 
@@ -268,32 +286,38 @@ public class IncidentReportExportService {
     private static final class CountingOutputStream extends FilterOutputStream {
         private long count;
 
+        /** CountingOutputStream 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private CountingOutputStream(OutputStream output) {
             super(output);
         }
 
+        /** CountingOutputStream의 write 처리에 필요한 업무 로직을 수행한다. */
         @Override
         public void write(int value) throws IOException {
             out.write(value);
             count++;
         }
 
+        /** CountingOutputStream의 write 처리에 필요한 업무 로직을 수행한다. */
         @Override
         public void write(byte[] value, int offset, int length) throws IOException {
             out.write(value, offset, length);
             count += length;
         }
 
+        /** CountingOutputStream의 count 처리에 필요한 업무 로직을 수행한다. */
         private long count() {
             return count;
         }
     }
 
     private static final class NonClosingOutputStream extends FilterOutputStream {
+        /** NonClosingOutputStream 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private NonClosingOutputStream(OutputStream output) {
             super(output);
         }
 
+        /** NonClosingOutputStream의 close 처리 대상과 관련 상태를 안전하게 정리한다. */
         @Override
         public void close() throws IOException {
             flush();
@@ -302,6 +326,7 @@ public class IncidentReportExportService {
 
     public record ExportedReport(String filename, String mediaType, ReportWriter writer, String sha256,
                                  Instant generatedAt) {
+        /** ExportedReport의 writeTo 처리에 필요한 업무 로직을 수행한다. */
         public void writeTo(OutputStream output) throws IOException {
             writer.writeTo(output);
         }

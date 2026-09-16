@@ -11,6 +11,7 @@ import java.util.List;
 @Component
 final class AnalysisResultAssembler {
 
+    /** AnalysisResultAssembler의 mergeNamespaceSections 처리에 필요한 업무 로직을 수행한다. */
     void mergeNamespaceSections(ObjectNode target, List<AnalysisSectionExecutor.Result> sections) {
         mergeSection(target, section(sections, "root-cause"),
                 List.of("findings", "rootCauses"), List.of(), List.of("summary", "severity"), List.of("riskScore"));
@@ -25,6 +26,7 @@ final class AnalysisResultAssembler {
                 List.of("operationsGuide"), List.of(), List.of());
     }
 
+    /** AnalysisResultAssembler의 mergeClusterSections 처리에 필요한 업무 로직을 수행한다. */
     void mergeClusterSections(ObjectNode target, List<AnalysisSectionExecutor.Result> sections) {
         mergeSection(target, section(sections, "cluster-root-cause"),
                 List.of("findings", "rootCauses"), List.of(), List.of("summary", "severity"), List.of("riskScore"));
@@ -35,6 +37,7 @@ final class AnalysisResultAssembler {
                 List.of("operationsGuide"), List.of(), List.of());
     }
 
+    /** AnalysisResultAssembler의 writeSectionTelemetry 처리에 필요한 업무 로직을 수행한다. */
     void writeSectionTelemetry(ObjectNode target, String mode, String scope, long totalLatencyMs,
                                List<AnalysisSectionExecutor.Result> sections, int totalContextChars,
                                String failureReason) {
@@ -76,6 +79,7 @@ final class AnalysisResultAssembler {
         });
     }
 
+    /** AnalysisResultAssembler의 writeIncrementalMetadata 처리에 필요한 업무 로직을 수행한다. */
     void writeIncrementalMetadata(ObjectNode target, boolean enabled,
                                   List<AnalysisSectionExecutor.Result> sections) {
         long reusedSections = sections.stream().filter(AnalysisSectionExecutor.Result::reused).count();
@@ -89,6 +93,7 @@ final class AnalysisResultAssembler {
                 : reusedSections + "개 섹션은 동일 근거 fingerprint를 확인해 이전 검증 결과를 재사용했습니다.");
     }
 
+    /** AnalysisResultAssembler의 writeSingleCallTelemetry 처리에 필요한 업무 로직을 수행한다. */
     void writeSingleCallTelemetry(ObjectNode target, String mode, String scope, long totalLatencyMs,
                                   AnalysisSectionExecutor.Result section, int totalContextChars,
                                   String failureReason) {
@@ -96,6 +101,7 @@ final class AnalysisResultAssembler {
         target.remove("sectionStatus");
     }
 
+    /** AnalysisResultAssembler의 mergeSection 처리에 필요한 업무 로직을 수행한다. */
     private void mergeSection(ObjectNode target, ObjectNode source, List<String> arrays, List<String> objects,
                               List<String> texts, List<String> numbers) {
         arrays.forEach(field -> mergeArray(target, source, field));
@@ -104,6 +110,7 @@ final class AnalysisResultAssembler {
         numbers.forEach(field -> mergeNumber(target, source, field));
     }
 
+    /** AnalysisResultAssembler의 section 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode section(List<AnalysisSectionExecutor.Result> sections, String sectionName) {
         return sections.stream()
                 .filter(section -> sectionName.equals(section.sectionName()))
@@ -112,6 +119,7 @@ final class AnalysisResultAssembler {
                 .orElseGet(JsonNodeFactory.instance::objectNode);
     }
 
+    /** AnalysisResultAssembler의 mergeArray 처리에 필요한 업무 로직을 수행한다. */
     void mergeArray(ObjectNode target, ObjectNode source, String fieldName) {
         JsonNode value = source.get(fieldName);
         if (value != null && value.isArray()) {
@@ -119,6 +127,7 @@ final class AnalysisResultAssembler {
         }
     }
 
+    /** AnalysisResultAssembler의 mergeObject 처리에 필요한 업무 로직을 수행한다. */
     void mergeObject(ObjectNode target, ObjectNode source, String fieldName) {
         JsonNode value = source.get(fieldName);
         if (value != null && value.isObject()) {
@@ -126,6 +135,7 @@ final class AnalysisResultAssembler {
         }
     }
 
+    /** AnalysisResultAssembler의 mergeText 처리에 필요한 업무 로직을 수행한다. */
     void mergeText(ObjectNode target, ObjectNode source, String fieldName) {
         JsonNode value = source.get(fieldName);
         if (value != null && value.isTextual() && !value.asText().isBlank()) {
@@ -133,6 +143,7 @@ final class AnalysisResultAssembler {
         }
     }
 
+    /** AnalysisResultAssembler의 mergeNumber 처리에 필요한 업무 로직을 수행한다. */
     void mergeNumber(ObjectNode target, ObjectNode source, String fieldName) {
         JsonNode value = source.get(fieldName);
         if (value != null && value.isNumber()) {
@@ -140,10 +151,12 @@ final class AnalysisResultAssembler {
         }
     }
 
+    /** AnalysisResultAssembler의 truncate 처리에 필요한 업무 로직을 수행한다. */
     private String truncate(String value, int maxLength) {
         return value.length() <= maxLength ? value : value.substring(0, maxLength) + "...";
     }
 
+    /** AnalysisResultAssembler의 valueOrBlank 처리에 필요한 업무 로직을 수행한다. */
     private String valueOrBlank(String value) {
         return value == null ? "" : value;
     }

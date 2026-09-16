@@ -11,6 +11,7 @@ const requestId = ref('');
 const loading = ref(true);
 const error = ref('');
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load() {
   loading.value = true;
   error.value = '';

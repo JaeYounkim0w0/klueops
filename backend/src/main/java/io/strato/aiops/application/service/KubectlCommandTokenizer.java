@@ -26,6 +26,7 @@ public class KubectlCommandTokenizer {
             "--namespace", "-n", "--request-timeout", "--cache-dir", "--kuberc", "--profile", "--profile-output"
     );
 
+    /** KubectlCommandTokenizer의 validate 처리 입력과 현재 상태의 유효성을 검증한다. */
     public CommandValidationResult validate(String command, String defaultNamespace) {
         List<String> arguments = tokenize(command);
         if (!arguments.isEmpty() && "kubectl".equals(arguments.get(0))) arguments = new ArrayList<>(arguments.subList(1, arguments.size()));
@@ -45,6 +46,7 @@ public class KubectlCommandTokenizer {
                 interactive, targetSummary(verb, arguments, namespace), List.copyOf(warnings));
     }
 
+    /** KubectlCommandTokenizer의 tokenize 처리 데이터를 필요한 표현으로 변환한다. */
     List<String> tokenize(String command) {
         if (command == null || command.isBlank()) throw new IllegalArgumentException("command is required");
         if (command.length() > MAXIMUM_COMMAND_LENGTH) throw new IllegalArgumentException("command exceeds 16384 characters");
@@ -88,6 +90,7 @@ public class KubectlCommandTokenizer {
         return tokens;
     }
 
+    /** KubectlCommandTokenizer의 rejectCredentialOverrides 처리에 필요한 업무 로직을 수행한다. */
     private void rejectCredentialOverrides(List<String> arguments) {
         for (String argument : arguments) {
             String option = argument.contains("=") ? argument.substring(0, argument.indexOf('=')) : argument;
@@ -97,6 +100,7 @@ public class KubectlCommandTokenizer {
         }
     }
 
+    /** KubectlCommandTokenizer의 rejectContextSwitch 처리에 필요한 업무 로직을 수행한다. */
     private void rejectContextSwitch(List<String> arguments) {
         String verb = firstCommand(arguments);
         if ("config".equals(verb)) {
@@ -110,6 +114,7 @@ public class KubectlCommandTokenizer {
         }
     }
 
+    /** KubectlCommandTokenizer의 safety 처리에 필요한 업무 로직을 수행한다. */
     private CommandSafety safety(String verb, List<String> arguments) {
         if (DESTRUCTIVE.contains(verb)) return CommandSafety.DESTRUCTIVE;
         if (INTERACTIVE.contains(verb)) return CommandSafety.PRIVILEGED_INTERACTIVE;
@@ -120,12 +125,14 @@ public class KubectlCommandTokenizer {
         return CommandSafety.CHANGE;
     }
 
+    /** KubectlCommandTokenizer의 isInteractive 처리 조건의 충족 여부를 판단한다. */
     private boolean isInteractive(List<String> arguments) {
         return arguments.stream().anyMatch(value -> value.equals("-i") || value.equals("-t")
                 || value.equals("--stdin") || value.equals("--tty") || value.startsWith("--stdin=")
                 || value.startsWith("--tty=") || value.equals("-it") || value.equals("-ti"));
     }
 
+    /** KubectlCommandTokenizer의 firstCommand 처리에 필요한 업무 로직을 수행한다. */
     private String firstCommand(List<String> arguments) {
         for (int index = 0; index < arguments.size(); index++) {
             String value = arguments.get(index);
@@ -138,6 +145,7 @@ public class KubectlCommandTokenizer {
         return "";
     }
 
+    /** KubectlCommandTokenizer의 namespace 처리에 필요한 업무 로직을 수행한다. */
     private String namespace(List<String> arguments, String defaultNamespace) {
         for (int index = 0; index < arguments.size(); index++) {
             String value = arguments.get(index);
@@ -147,20 +155,24 @@ public class KubectlCommandTokenizer {
         return defaultNamespace;
     }
 
+    /** KubectlCommandTokenizer의 targetSummary 처리에 필요한 업무 로직을 수행한다. */
     private String targetSummary(String verb, List<String> arguments, String namespace) {
         String resource = arguments.stream().dropWhile(value -> !value.equalsIgnoreCase(verb)).skip(1)
                 .filter(value -> !value.startsWith("-")).findFirst().orElse("cluster");
         return verb + " " + resource + (namespace == null || namespace.isBlank() ? " · cluster scope" : " · " + namespace);
     }
 
+    /** KubectlCommandTokenizer의 join 처리에 필요한 업무 로직을 수행한다. */
     private String join(List<String> values) {
         return values.stream().map(this::quoteIfNeeded).reduce((left, right) -> left + " " + right).orElse("");
     }
 
+    /** KubectlCommandTokenizer의 quoteIfNeeded 처리에 필요한 업무 로직을 수행한다. */
     private String quoteIfNeeded(String value) {
         return value.chars().anyMatch(Character::isWhitespace) ? "\"" + value.replace("\"", "\\\"") + "\"" : value;
     }
 
+    /** KubectlCommandTokenizer의 flush 처리에 필요한 업무 로직을 수행한다. */
     private void flush(List<String> tokens, StringBuilder current) {
         if (current.length() == 0) return;
         tokens.add(current.toString());

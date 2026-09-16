@@ -24,6 +24,7 @@ class IdentityAccessConcurrencyTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** IdentityAccessConcurrencyTest의 provisionsOneAccountWhenTheFirstAuthenticatedRequestsArriveConcurrently 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void provisionsOneAccountWhenTheFirstAuthenticatedRequestsArriveConcurrently() throws Exception {
         String subject = "concurrent-first-login";

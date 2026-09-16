@@ -10,6 +10,7 @@ const activeLanguageName = computed(() =>
   locale.value === 'ko-KR' ? t('common.korean') : t('common.english'),
 );
 
+/** selectLocale 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function selectLocale(nextLocale: SupportedLocale): void {
   if (nextLocale === 'ko-KR') {
     setLocale('ko-KR');

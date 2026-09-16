@@ -22,6 +22,7 @@ public class SpringTaskExecutorAnalysisAdapter implements AnalysisExecutorPort {
     private final AnalysisApplicationService analysisApplicationService;
     private final JobSubmissionFailureService jobSubmissionFailureService;
 
+    /** SpringTaskExecutorAnalysisAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public SpringTaskExecutorAnalysisAdapter(
             @Qualifier("analysisJobExecutor") TaskExecutor taskExecutor,
             @Lazy AnalysisApplicationService analysisApplicationService,
@@ -32,6 +33,7 @@ public class SpringTaskExecutorAnalysisAdapter implements AnalysisExecutorPort {
         this.jobSubmissionFailureService = jobSubmissionFailureService;
     }
 
+    /** SpringTaskExecutorAnalysisAdapter의 submitAnalysis 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public void submitAnalysis(UUID asyncJobId) {
         log.info("Submitting AI analysis job {}", asyncJobId);

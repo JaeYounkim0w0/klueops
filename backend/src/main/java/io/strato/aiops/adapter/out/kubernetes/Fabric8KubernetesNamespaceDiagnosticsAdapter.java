@@ -63,6 +63,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
     private final int maxLogPods;
     private final int maxCollectionFailures;
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public Fabric8KubernetesNamespaceDiagnosticsAdapter(
             ObjectMapper objectMapper,
             SecretMasker secretMasker,
@@ -85,11 +86,13 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         this.maxCollectionFailures = Math.max(1, maxCollectionFailures);
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 collectNamespaceDiagnostics 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public KubernetesNamespaceDiagnostics collectNamespaceDiagnostics(KubernetesConnectionCredential credential, String namespace) {
         return collectNamespaceDiagnostics(credential, namespace, true);
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 collectNamespaceDiagnostics 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public KubernetesNamespaceDiagnostics collectNamespaceDiagnostics(
             KubernetesConnectionCredential credential, String namespace, boolean includeLogs) {
@@ -332,6 +335,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 collectPodLogs 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public KubernetesPodLogs collectPodLogs(KubernetesConnectionCredential credential, String namespace, String podName,
                                             String containerName, int tailLines, boolean previous) {
@@ -353,6 +357,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 collectResourceLogs 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public KubernetesPodLogs collectResourceLogs(KubernetesConnectionCredential credential, String namespace, String resourceType,
                                                  String resourceName, String containerName, int tailLines, boolean previous) {
@@ -376,6 +381,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 canI 처리 조건의 충족 여부를 판단한다. */
     @Override
     public KubernetesAccessReviewResult canI(KubernetesConnectionCredential credential, String namespace, String verb,
                                              String group, String resource, String subresource, String resourceName) {
@@ -406,6 +412,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 dryRunRolloutRestartDeployment 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public KubernetesMutationResult dryRunRolloutRestartDeployment(KubernetesConnectionCredential credential, String namespace,
                                                                    String deploymentName) {
@@ -427,6 +434,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 rolloutRestartDeployment 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public KubernetesMutationResult rolloutRestartDeployment(KubernetesConnectionCredential credential, String namespace,
                                                              String deploymentName) {
@@ -466,6 +474,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 dryRunScaleDeployment 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public KubernetesMutationResult dryRunScaleDeployment(KubernetesConnectionCredential credential, String namespace,
                                                           String deploymentName, int replicas) {
@@ -486,6 +495,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 scaleDeployment 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public KubernetesMutationResult scaleDeployment(KubernetesConnectionCredential credential, String namespace,
                                                     String deploymentName, int replicas) {
@@ -512,6 +522,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 listDeploymentRevisions 처리 결과를 조회해 반환한다. */
     @Override
     public List<KubernetesDeploymentRevision> listDeploymentRevisions(KubernetesConnectionCredential credential,
                                                                       String namespace,
@@ -539,6 +550,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 previewRollbackDeployment 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public KubernetesRollbackPlan previewRollbackDeployment(KubernetesConnectionCredential credential, String namespace,
                                                             String deploymentName, Integer targetRevision) {
@@ -571,6 +583,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 rollbackDeployment 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public KubernetesMutationResult rollbackDeployment(KubernetesConnectionCredential credential, String namespace,
                                                        String deploymentName, Integer targetRevision) {
@@ -604,6 +617,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 requireDeployment 처리 입력과 현재 상태의 유효성을 검증한다. */
     private Deployment requireDeployment(KubernetesClient client, String namespace, String deploymentName) {
         Deployment current = client.apps().deployments().inNamespace(namespace).withName(deploymentName).get();
         if (current == null || current.getSpec() == null) {
@@ -612,10 +626,12 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return current;
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 guarded 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesApiException guarded(String message) {
         return new KubernetesApiException(message, new IllegalStateException(message));
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 rollbackPlan 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesRollbackPlan rollbackPlan(String namespace, String deploymentName, String currentRevision,
                                                 String targetRevision, boolean executable, String reason,
                                                 String currentState, String targetState) {
@@ -624,6 +640,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
                 currentState, targetState, Instant.now());
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 targetReplicaSet 처리에 필요한 업무 로직을 수행한다. */
     private ReplicaSet targetReplicaSet(KubernetesClient client, String namespace, Deployment deployment, Integer targetRevision) {
         List<ReplicaSet> replicaSets = deploymentReplicaSets(client, namespace, deployment);
         if (replicaSets.isEmpty()) {
@@ -644,6 +661,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
                         + deployment.getMetadata().getName()));
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 deploymentReplicaSets 처리에 필요한 업무 로직을 수행한다. */
     private List<ReplicaSet> deploymentReplicaSets(KubernetesClient client, String namespace, Deployment deployment) {
         Map<String, String> labels = deployment.getSpec().getSelector() == null
                 || deployment.getSpec().getSelector().getMatchLabels() == null ? Map.of()
@@ -658,6 +676,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
                 .toList();
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 deploymentState 처리에 필요한 업무 로직을 수행한다. */
     private String deploymentState(Deployment deployment) {
         if (deployment == null) {
             return "";
@@ -673,6 +692,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
                 + " replicas=" + replicas + " image=" + valueOrBlank(image);
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 replicaSetState 처리에 필요한 업무 로직을 수행한다. */
     private String replicaSetState(ReplicaSet replicaSet) {
         if (replicaSet == null) {
             return "";
@@ -681,6 +701,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return "revision=" + revision(replicaSet) + " replicas=" + replicas + " image=" + valueOrBlank(replicaSetImage(replicaSet));
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 replicaSetImage 처리에 필요한 업무 로직을 수행한다. */
     private String replicaSetImage(ReplicaSet replicaSet) {
         return replicaSet.getSpec() == null || replicaSet.getSpec().getTemplate() == null
                 || replicaSet.getSpec().getTemplate().getSpec() == null
@@ -688,20 +709,24 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
                 ? "" : valueOrBlank(replicaSet.getSpec().getTemplate().getSpec().getContainers().get(0).getImage());
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 currentRevision 처리에 필요한 업무 로직을 수행한다. */
     private String currentRevision(Deployment deployment) {
         return deployment == null || deployment.getMetadata() == null || deployment.getMetadata().getAnnotations() == null
                 ? "" : valueOrBlank(deployment.getMetadata().getAnnotations().get("deployment.kubernetes.io/revision"));
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 revision 처리에 필요한 업무 로직을 수행한다. */
     private String revision(ReplicaSet replicaSet) {
         return replicaSet == null || replicaSet.getMetadata() == null || replicaSet.getMetadata().getAnnotations() == null
                 ? "" : valueOrBlank(replicaSet.getMetadata().getAnnotations().get("deployment.kubernetes.io/revision"));
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 stringRevision 처리에 필요한 업무 로직을 수행한다. */
     private String stringRevision(Integer revision) {
         return revision == null || revision <= 0 ? "" : String.valueOf(revision);
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 parseRevision 처리 데이터를 필요한 표현으로 변환한다. */
     private Integer parseRevision(String revision) {
         try {
             return Integer.parseInt(valueOrBlank(revision));
@@ -710,6 +735,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 resource 처리에 필요한 업무 로직을 수행한다. */
     private DiagnosticResource resource(String resourceType, HasMetadata resource, Map<String, Object> summary) {
         return new DiagnosticResource(
                 resource.getMetadata() == null ? null : resource.getMetadata().getNamespace(),
@@ -720,6 +746,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         );
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 podSummary 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, Object> podSummary(Pod pod) {
         int restartCount = pod.getStatus() == null || pod.getStatus().getContainerStatuses() == null
                 ? 0
@@ -756,6 +783,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         );
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 containerSpecSummary 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, Object> containerSpecSummary(Container container) {
         return summaryMapper.summary(
                 "name", valueOrBlank(container.getName()),
@@ -779,6 +807,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         );
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 volumeSummary 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, Object> volumeSummary(Volume volume) {
         String type = "other";
         String sourceName = "";
@@ -804,6 +833,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         );
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 volumeMountSummary 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, Object> volumeMountSummary(VolumeMount mount) {
         return summaryMapper.summary(
                 "name", valueOrBlank(mount.getName()),
@@ -812,6 +842,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         );
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 targetPortValue 처리에 필요한 업무 로직을 수행한다. */
     private String targetPortValue(IntOrString targetPort) {
         if (targetPort == null) {
             return "";
@@ -824,6 +855,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return intValue == null ? "" : String.valueOf(intValue);
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 workloadSummary 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, Object> workloadSummary(Deployment deployment) {
         return summaryMapper.summary(
                 "strategy", valueOrBlank(deployment.getSpec() == null || deployment.getSpec().getStrategy() == null
@@ -842,6 +874,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         );
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 workloadSummary 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, Object> workloadSummary(StatefulSet statefulSet) {
         return summaryMapper.summary(
                 "serviceName", valueOrBlank(statefulSet.getSpec() == null ? null : statefulSet.getSpec().getServiceName()),
@@ -859,6 +892,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         );
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 workloadSummary 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, Object> workloadSummary(ReplicaSet replicaSet) {
         return summaryMapper.summary(
                 "selector", replicaSet.getSpec() == null || replicaSet.getSpec().getSelector() == null
@@ -875,6 +909,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         );
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 containerStateSummary 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, Object> containerStateSummary(ContainerStatus status) {
         if (status.getState() == null) {
             return summaryMapper.summary("name", status.getName(), "state", "UNKNOWN", "restartCount", valueOrZero(status.getRestartCount()));
@@ -901,6 +936,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return summaryMapper.summary("name", status.getName(), "state", "RUNNING", "restartCount", valueOrZero(status.getRestartCount()));
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 podsForResource 처리에 필요한 업무 로직을 수행한다. */
     private List<Pod> podsForResource(KubernetesClient client, String namespace, String resourceType, String resourceName) {
         String normalizedType = valueOrBlank(resourceType).toLowerCase();
         return switch (normalizedType) {
@@ -948,6 +984,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         };
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 podsBySelector 처리에 필요한 업무 로직을 수행한다. */
     private List<Pod> podsBySelector(KubernetesClient client, String namespace, LabelSelector selector) {
         if (selector == null || selector.getMatchLabels() == null || selector.getMatchLabels().isEmpty()) {
             return List.of();
@@ -955,6 +992,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return podsByLabels(client, namespace, selector.getMatchLabels());
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 podsByLabels 처리에 필요한 업무 로직을 수행한다. */
     private List<Pod> podsByLabels(KubernetesClient client, String namespace, Map<String, String> labels) {
         if (labels == null || labels.isEmpty()) {
             return List.of();
@@ -962,6 +1000,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return client.pods().inNamespace(namespace).withLabels(labels).list().getItems();
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 sanitizeImage 처리에 필요한 업무 로직을 수행한다. */
     private String sanitizeImage(String image) {
         if (image == null || image.isBlank()) {
             return "";
@@ -969,6 +1008,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return sanitizeText(image, 300);
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 podIsLikelyProblematic 처리에 필요한 업무 로직을 수행한다. */
     private boolean podIsLikelyProblematic(Pod pod) {
         if (pod.getStatus() == null) {
             return true;
@@ -982,6 +1022,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
                         || (status.getState() != null && (status.getState().getWaiting() != null || status.getState().getTerminated() != null)));
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 createClient 처리에 필요한 데이터를 생성하거나 저장한다. */
     private KubernetesClient createClient(KubernetesConnectionCredential credential) {
         if (credential.credentialType() == ClusterCredentialType.KUBECONFIG) {
             Config config = Config.fromKubeconfig(credential.payload());
@@ -1000,11 +1041,13 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return new KubernetesClientBuilder().withConfig(config).build();
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 applyTimeouts 처리에 필요한 업무 로직을 수행한다. */
     private void applyTimeouts(Config config) {
         config.setConnectionTimeout(connectTimeoutMs);
         config.setRequestTimeout(requestTimeoutMs);
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 failureDetail 처리에 필요한 업무 로직을 수행한다. */
     private String failureDetail(RuntimeException exception) {
         Throwable rootCause = rootCause(exception);
         String detail = rootCause.getMessage();
@@ -1018,6 +1061,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return detail;
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 rootCause 처리에 필요한 업무 로직을 수행한다. */
     private Throwable rootCause(Throwable throwable) {
         Throwable current = throwable;
         while (current.getCause() != null && current.getCause() != current) {
@@ -1026,6 +1070,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return current;
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 parseServiceAccountPayload 처리 데이터를 필요한 표현으로 변환한다. */
     private ServiceAccountPayload parseServiceAccountPayload(String payload) {
         try {
             return objectMapper.readValue(payload, ServiceAccountPayload.class);
@@ -1034,6 +1079,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 normalizeCertificateAuthority 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeCertificateAuthority(String caCertificate) {
         if (caCertificate == null || caCertificate.isBlank()) {
             return null;
@@ -1044,6 +1090,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return caCertificate;
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 parseInstant 처리 데이터를 필요한 표현으로 변환한다. */
     private Instant parseInstant(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -1055,6 +1102,7 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         }
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 sanitizeText 처리에 필요한 업무 로직을 수행한다. */
     private String sanitizeText(String value, int maxLength) {
         if (value == null) {
             return null;
@@ -1066,16 +1114,19 @@ public class Fabric8KubernetesNamespaceDiagnosticsAdapter implements KubernetesN
         return sanitized.length() > maxLength ? sanitized.substring(0, maxLength) : sanitized;
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 containsSensitiveToken 처리에 필요한 업무 로직을 수행한다. */
     private boolean containsSensitiveToken(String value) {
         return List.of("password", "passwd", "secret", "token", "apikey", "api_key", "accesskey", "privatekey", "credential")
                 .stream()
                 .anyMatch(token -> value.toLowerCase().contains(token));
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 valueOrZero 처리에 필요한 업무 로직을 수행한다. */
     private int valueOrZero(Integer value) {
         return value == null ? 0 : value;
     }
 
+    /** Fabric8KubernetesNamespaceDiagnosticsAdapter의 valueOrBlank 처리에 필요한 업무 로직을 수행한다. */
     private String valueOrBlank(String value) {
         return value == null ? "" : value;
     }

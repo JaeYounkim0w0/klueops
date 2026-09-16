@@ -14,10 +14,12 @@ public class JpaKubernetesResourceSnapshotRepositoryAdapter implements Kubernete
 
     private final KubernetesResourceSnapshotJpaRepository repository;
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public JpaKubernetesResourceSnapshotRepositoryAdapter(KubernetesResourceSnapshotJpaRepository repository) {
         this.repository = repository;
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 saveAll 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public List<KubernetesResourceSnapshot> saveAll(List<KubernetesResourceSnapshot> snapshots) {
         return repository.saveAll(snapshots.stream()
@@ -28,11 +30,13 @@ public class JpaKubernetesResourceSnapshotRepositoryAdapter implements Kubernete
                 .toList();
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 countBySyncJobId 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public long countBySyncJobId(UUID syncJobId) {
         return repository.countBySyncJobId(syncJobId);
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 findLatest 처리 결과를 조회해 반환한다. */
     @Override
     public List<KubernetesResourceSnapshot> findLatest(UUID clusterId, String namespace, String resourceType, int limit) {
         return latestPage(clusterId, namespace, resourceType, PageRequest.of(0, limit)).stream()
@@ -40,6 +44,7 @@ public class JpaKubernetesResourceSnapshotRepositoryAdapter implements Kubernete
                 .toList();
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 findBySyncJobId 처리 결과를 조회해 반환한다. */
     @Override
     public List<KubernetesResourceSnapshot> findBySyncJobId(UUID syncJobId, String namespace, String resourceType, int limit) {
         return syncPage(syncJobId, namespace, resourceType, PageRequest.of(0, limit)).stream()
@@ -47,6 +52,7 @@ public class JpaKubernetesResourceSnapshotRepositoryAdapter implements Kubernete
                 .toList();
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 findPageBySyncJobId 처리 결과를 조회해 반환한다. */
     @Override
     public ResourcePage findPageBySyncJobId(UUID syncJobId, String namespace, String resourceType, int page, int size) {
         var result = syncPage(syncJobId, namespace, resourceType, PageRequest.of(page, size));
@@ -57,11 +63,13 @@ public class JpaKubernetesResourceSnapshotRepositoryAdapter implements Kubernete
         );
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 countNamespacesBySyncJobId 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public List<Facet> countNamespacesBySyncJobId(UUID syncJobId) {
         return facets(repository.countNamespacesBySyncJobId(syncJobId));
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 countResourceTypesBySyncJobId 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public List<Facet> countResourceTypesBySyncJobId(UUID syncJobId, String namespace) {
         return facets(namespace == null
@@ -69,6 +77,7 @@ public class JpaKubernetesResourceSnapshotRepositoryAdapter implements Kubernete
                 : repository.countResourceTypesBySyncJobIdAndNamespace(syncJobId, namespace));
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 countProblemsBySyncJobId 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public long countProblemsBySyncJobId(UUID syncJobId, String namespace, String resourceType) {
         if (namespace == null && resourceType == null) return repository.countProblemsBySyncJobId(syncJobId);
@@ -77,6 +86,7 @@ public class JpaKubernetesResourceSnapshotRepositoryAdapter implements Kubernete
         return repository.countProblemsBySyncJobIdAndNamespaceAndResourceType(syncJobId, namespace, resourceType);
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 latestPage 처리에 필요한 업무 로직을 수행한다. */
     private Page<KubernetesResourceSnapshotEntity> latestPage(UUID clusterId, String namespace, String resourceType,
                                                                PageRequest page) {
         if (namespace == null && resourceType == null) return repository.findByClusterIdOrderByCollectedAtDesc(clusterId, page);
@@ -85,6 +95,7 @@ public class JpaKubernetesResourceSnapshotRepositoryAdapter implements Kubernete
         return repository.findByClusterIdAndNamespaceAndResourceTypeOrderByCollectedAtDesc(clusterId, namespace, resourceType, page);
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 syncPage 처리의 핵심 작업 흐름을 실행한다. */
     private Page<KubernetesResourceSnapshotEntity> syncPage(UUID syncJobId, String namespace, String resourceType,
                                                              PageRequest page) {
         if (namespace == null && resourceType == null) {
@@ -100,6 +111,7 @@ public class JpaKubernetesResourceSnapshotRepositoryAdapter implements Kubernete
                 syncJobId, namespace, resourceType, page);
     }
 
+    /** JpaKubernetesResourceSnapshotRepositoryAdapter의 facets 처리에 필요한 업무 로직을 수행한다. */
     private List<Facet> facets(List<Object[]> rows) {
         return rows.stream()
                 .map(row -> new Facet(String.valueOf(row[0]), ((Number) row[1]).longValue()))

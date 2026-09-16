@@ -42,9 +42,11 @@ class KubernetesEventSnapshotEntity {
     @Column(nullable = false)
     private Instant collectedAt;
 
+    /** KubernetesEventSnapshotEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected KubernetesEventSnapshotEntity() {
     }
 
+    /** KubernetesEventSnapshotEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private KubernetesEventSnapshotEntity(UUID id, UUID clusterId, UUID syncJobId, String namespace, String involvedKind,
                                           String involvedName, String reason, String type, String message, Instant eventTime,
                                           Integer count, Instant collectedAt) {
@@ -62,6 +64,7 @@ class KubernetesEventSnapshotEntity {
         this.collectedAt = collectedAt;
     }
 
+    /** KubernetesEventSnapshotEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static KubernetesEventSnapshotEntity fromDomain(KubernetesEventSnapshot event) {
         return new KubernetesEventSnapshotEntity(
                 event.id(),
@@ -79,6 +82,7 @@ class KubernetesEventSnapshotEntity {
         );
     }
 
+    /** KubernetesEventSnapshotEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     KubernetesEventSnapshot toDomain() {
         return new KubernetesEventSnapshot(id, clusterId, syncJobId, namespace, involvedKind, involvedName, reason, type, message, eventTime, count, collectedAt);
     }

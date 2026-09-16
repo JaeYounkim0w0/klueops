@@ -67,7 +67,7 @@ const liveTtl = ref(300);
 const liveConfirmation = ref('');
 const viewName = ref('');
 const savedViews = ref<SavedView[]>(loadSavedViews());
-let unsubscribe = () => {};
+let unsubscribe = /** unsubscribe 처리에 필요한 화면 또는 업무 로직을 수행한다. */ () => {};
 let refreshTimer: number | undefined;
 
 const clusterNames = computed(() => [...new Set((queue.value?.items ?? []).map((item) => item.clusterName))].sort());
@@ -95,6 +95,7 @@ const canRunLive = computed(() => Boolean(
   && liveConfirmation.value === livePolicy.value.requiredConfirmation
 ));
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load(silent = false) {
   if (!silent) loading.value = true;
   error.value = '';
@@ -123,6 +124,7 @@ async function load(silent = false) {
   }
 }
 
+/** loadTrend 처리 결과를 조회해 반환한다. */
 async function loadTrend() {
   error.value = '';
   try {
@@ -136,11 +138,13 @@ async function loadTrend() {
   }
 }
 
+/** scheduleRefresh 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function scheduleRefresh() {
   window.clearTimeout(refreshTimer);
   refreshTimer = window.setTimeout(() => void load(true), 500);
 }
 
+/** runValidation 처리의 핵심 작업 흐름을 실행한다. */
 async function runValidation() {
   validating.value = true;
   error.value = '';
@@ -153,6 +157,7 @@ async function runValidation() {
   }
 }
 
+/** runBenchmark 처리의 핵심 작업 흐름을 실행한다. */
 async function runBenchmark() {
   benchmarking.value = true;
   error.value = '';
@@ -165,6 +170,7 @@ async function runBenchmark() {
   }
 }
 
+/** previewLiveValidation 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function previewLiveValidation() {
   if (!liveCluster.value) return;
   previewing.value = true;
@@ -184,6 +190,7 @@ async function previewLiveValidation() {
   }
 }
 
+/** runLiveValidation 처리의 핵심 작업 흐름을 실행한다. */
 async function runLiveValidation() {
   if (!canRunLive.value) return;
   runningLive.value = true;
@@ -203,6 +210,7 @@ async function runLiveValidation() {
   }
 }
 
+/** cleanupLiveValidation 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function cleanupLiveValidation() {
   if (!liveRun.value) return;
   cleaningLive.value = true;
@@ -216,6 +224,7 @@ async function cleanupLiveValidation() {
   }
 }
 
+/** saveCurrentView 처리에 필요한 데이터를 생성하거나 저장한다. */
 function saveCurrentView() {
   const name = viewName.value.trim();
   if (!name) return;
@@ -231,21 +240,25 @@ function saveCurrentView() {
   viewName.value = '';
 }
 
+/** applySavedView 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function applySavedView(view: SavedView) {
   clusterFilter.value = view.cluster;
   severityFilter.value = view.severity;
   searchQuery.value = view.query;
 }
 
+/** removeSavedView 처리 대상과 관련 상태를 안전하게 정리한다. */
 function removeSavedView(id: string) {
   savedViews.value = savedViews.value.filter((item) => item.id !== id);
   persistSavedViews();
 }
 
+/** persistSavedViews 처리에 필요한 데이터를 생성하거나 저장한다. */
 function persistSavedViews() {
   localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(savedViews.value));
 }
 
+/** loadSavedViews 처리 결과를 조회해 반환한다. */
 function loadSavedViews(): SavedView[] {
   try {
     const value = JSON.parse(localStorage.getItem(SAVED_VIEWS_KEY) ?? '[]');
@@ -255,6 +268,7 @@ function loadSavedViews(): SavedView[] {
   }
 }
 
+/** severityClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function severityClass(value: string) {
   return value.toLowerCase();
 }

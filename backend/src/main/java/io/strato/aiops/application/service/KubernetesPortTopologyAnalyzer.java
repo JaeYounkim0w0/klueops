@@ -19,10 +19,12 @@ public class KubernetesPortTopologyAnalyzer {
 
     private final ObjectMapper objectMapper;
 
+    /** KubernetesPortTopologyAnalyzer 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public KubernetesPortTopologyAnalyzer(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /** KubernetesPortTopologyAnalyzer의 analyze 처리의 핵심 작업 흐름을 실행한다. */
     public List<PortMismatchSignal> analyze(KubernetesNamespaceDiagnostics diagnostics, boolean hasPortStartupLog) {
         if (diagnostics == null || diagnostics.resources() == null) {
             return List.of();
@@ -38,6 +40,7 @@ public class KubernetesPortTopologyAnalyzer {
         return signals.stream().limit(MAX_SIGNALS).toList();
     }
 
+    /** KubernetesPortTopologyAnalyzer의 analyzeService 처리의 핵심 작업 흐름을 실행한다. */
     private void analyzeService(KubernetesNamespaceDiagnostics.DiagnosticResource service,
                                 List<KubernetesNamespaceDiagnostics.DiagnosticResource> selectableResources,
                                 boolean hasPortStartupLog,
@@ -92,6 +95,7 @@ public class KubernetesPortTopologyAnalyzer {
         }
     }
 
+    /** KubernetesPortTopologyAnalyzer의 matchesDeclaredPort 처리 조건의 충족 여부를 판단한다. */
     private boolean matchesDeclaredPort(String targetPort, String protocol, List<ContainerPortRef> declaredPorts) {
         boolean targetIsNumber = targetPort.chars().allMatch(Character::isDigit);
         return targetIsNumber
@@ -101,11 +105,13 @@ public class KubernetesPortTopologyAnalyzer {
                 && protocolMatches(protocol, ref.protocol()));
     }
 
+    /** KubernetesPortTopologyAnalyzer의 labels 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, String> labels(KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         JsonNode summary = readObject(resource.summaryJson());
         return stringMap("Pod".equals(resource.resourceType()) ? summary.path("labels") : summary.path("templateLabels"));
     }
 
+    /** KubernetesPortTopologyAnalyzer의 containerPorts 처리에 필요한 업무 로직을 수행한다. */
     private List<ContainerPortRef> containerPorts(KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         JsonNode containers = readObject(resource.summaryJson()).path("containers");
         if (!containers.isArray()) {
@@ -130,6 +136,7 @@ public class KubernetesPortTopologyAnalyzer {
         return refs;
     }
 
+    /** KubernetesPortTopologyAnalyzer의 readObject 처리 결과를 조회해 반환한다. */
     private JsonNode readObject(String json) {
         try {
             JsonNode node = objectMapper.readTree(json == null ? "{}" : json);
@@ -139,6 +146,7 @@ public class KubernetesPortTopologyAnalyzer {
         }
     }
 
+    /** KubernetesPortTopologyAnalyzer의 stringMap 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, String> stringMap(JsonNode node) {
         if (node == null || !node.isObject()) {
             return Map.of();
@@ -148,15 +156,18 @@ public class KubernetesPortTopologyAnalyzer {
         return result;
     }
 
+    /** KubernetesPortTopologyAnalyzer의 labelsMatch 처리에 필요한 업무 로직을 수행한다. */
     private boolean labelsMatch(Map<String, String> selector, Map<String, String> labels) {
         return !selector.isEmpty() && !labels.isEmpty()
                 && selector.entrySet().stream().allMatch(entry -> text(entry.getValue()).equals(text(labels.get(entry.getKey()))));
     }
 
+    /** KubernetesPortTopologyAnalyzer의 protocolMatches 처리에 필요한 업무 로직을 수행한다. */
     private boolean protocolMatches(String serviceProtocol, String containerProtocol) {
         return serviceProtocol.isBlank() || containerProtocol.isBlank() || serviceProtocol.equalsIgnoreCase(containerProtocol);
     }
 
+    /** KubernetesPortTopologyAnalyzer의 selectorString 처리에 필요한 업무 로직을 수행한다. */
     private String selectorString(Map<String, String> selector) {
         return selector.entrySet().stream()
                 .map(entry -> entry.getKey() + "=" + entry.getValue())
@@ -164,6 +175,7 @@ public class KubernetesPortTopologyAnalyzer {
                 .orElse("-");
     }
 
+    /** KubernetesPortTopologyAnalyzer의 text 처리에 필요한 업무 로직을 수행한다. */
     private String text(String value) {
         return value == null ? "" : value;
     }
@@ -175,6 +187,7 @@ public class KubernetesPortTopologyAnalyzer {
 
     private record ContainerPortRef(String resourceKind, String resourceName, String containerName, String name,
                                     Integer port, String protocol) {
+        /** ContainerPortRef의 display 처리에 필요한 업무 로직을 수행한다. */
         private String display() {
             String named = name.isBlank() ? "" : name + ":";
             return resourceKind + "/" + resourceName + "#" + containerName + "=" + named

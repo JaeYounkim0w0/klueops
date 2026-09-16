@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:30081",
+      "url": "http://localhost",
       "description": "Generated server url"
     }
   ],
@@ -57,6 +57,14 @@
       "description": "Cross-resource search, incident collaboration and managed runbooks"
     },
     {
+      "name": "Application Delivery Catalog",
+      "description": "Artifact Hub discovery, tenant chart library and values profiles"
+    },
+    {
+      "name": "Tenant Access",
+      "description": "Tenant-scoped access, membership and OIDC group administration"
+    },
+    {
       "name": "Clusters",
       "description": "Kubernetes cluster management APIs"
     },
@@ -95,9 +103,94 @@
     {
       "name": "AI Trust Center",
       "description": "Consistent AI quality, calibration, benchmark and release evidence snapshot"
+    },
+    {
+      "name": "Application Delivery Deployment",
+      "description": "Immutable preview and Helm release lifecycle"
     }
   ],
   "paths": {
+    "/api/v2/ai-configuration/routing/{purpose}": {
+      "put": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "route",
+        "parameters": [
+          {
+            "name": "purpose",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoutingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/ai-configuration/providers/{profileId}": {
+      "put": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProviderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings/operations": {
       "get": {
         "tags": [
@@ -544,6 +637,718 @@
         }
       }
     },
+    "/api/v2/application-delivery/values-suggestions": {
+      "post": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "Suggest and Helm-validate custom Values for an exact chart version",
+        "operationId": "suggestValues",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValuesSuggestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValuesSuggestionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/values-profiles": {
+      "get": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "operationId": "profiles",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "chartVersionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ValuesProfileResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "Create a reusable custom values profile",
+        "operationId": "createProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateValuesProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValuesProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/values-profiles/{profileId}/revisions": {
+      "get": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "operationId": "revisions",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ValuesRevisionResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "Create an immutable custom values revision",
+        "operationId": "createRevision",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateValuesRevisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValuesRevisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/sources": {
+      "get": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "List tenant Helm and OCI sources",
+        "operationId": "sources",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChartSourceResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "Add a tenant Helm or OCI source",
+        "operationId": "createSource",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChartSourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChartSourceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/deployment-target-options": {
+      "post": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "summary": "Render Service ports and discover HTTP Gateways for a deployment target",
+        "operationId": "targetOptions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TargetOptionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentTargetOptionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/deployment-plans": {
+      "post": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "summary": "Render and inspect an immutable Helm deployment plan",
+        "operationId": "preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/deployment-plans/{planId}/execute": {
+      "post": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "summary": "Execute an unexpired plan after exact text confirmation",
+        "operationId": "deploy",
+        "parameters": [
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentAcceptedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/charts/upload": {
+      "post": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "Upload a Helm chart archive into the tenant library",
+        "operationId": "upload",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sourceName",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "manual-upload"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportedChartResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/charts/import": {
+      "post": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "Import an Artifact Hub Helm chart into the tenant library",
+        "operationId": "importChart",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportChartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportedChartResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/applications/{applicationId}/uninstall": {
+      "post": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "operationId": "uninstall",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentAcceptedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/applications/{applicationId}/rollback": {
+      "post": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "operationId": "rollback",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentAcceptedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/ai-configuration/providers": {
+      "get": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "profiles_1",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/ai-configuration/providers/{profileId}/validate": {
+      "post": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "validate",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/ai-configuration/providers/{profileId}/models/refresh": {
+      "post": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "refreshLocalModels",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalModelResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/ai-configuration/providers/{profileId}/models/pull": {
+      "post": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "pullLocalModel",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelPullRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelPullResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tenants": {
       "get": {
         "tags": [
@@ -665,6 +1470,246 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/oidc-group-mappings": {
+      "get": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "operationId": "mappings",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GroupMappingResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "operationId": "createMapping",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupMappingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMappingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/members": {
+      "get": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "summary": "List tenant memberships",
+        "operationId": "members",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemberResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "summary": "Invite or pre-authorize a tenant member",
+        "operationId": "invite",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteMemberRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/members/{membershipId}/offboard": {
+      "post": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "summary": "Execute an approved tenant member offboarding plan",
+        "operationId": "offboard",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OffboardRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/members/{membershipId}/offboard-plan": {
+      "post": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "summary": "Preview tenant member offboarding",
+        "operationId": "offboardPlan",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffboardPlan"
                 }
               }
             }
@@ -1979,7 +3024,7 @@
           "Kubernetes Console"
         ],
         "summary": "Validate and classify a kubectl command",
-        "operationId": "validate",
+        "operationId": "validate_1",
         "parameters": [
           {
             "name": "clusterId",
@@ -3100,6 +4145,286 @@
         }
       }
     },
+    "/api/v2/application-delivery/sources/{sourceId}": {
+      "delete": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "operationId": "deleteSource",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "operationId": "updateSource",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateChartSourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChartSourceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/oidc-group-mappings/{mappingId}": {
+      "delete": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "operationId": "deleteMapping",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "mappingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "operationId": "updateMapping",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "mappingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGroupMappingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMappingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/members/{membershipId}": {
+      "patch": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "summary": "Suspend or reactivate a tenant membership",
+        "operationId": "updateMember",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMembershipRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/features": {
+      "get": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "operationId": "features",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "operationId": "updateFeature",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFeatureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/security/users/{userId}": {
       "patch": {
         "tags": [
@@ -3490,6 +4815,527 @@
         }
       }
     },
+    "/api/v2/application-delivery/values-revisions/{revisionId}/values": {
+      "get": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "operationId": "values",
+        "parameters": [
+          {
+            "name": "revisionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValuesPayloadResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/charts": {
+      "get": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "List charts in the selected tenant library",
+        "operationId": "charts",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "includeArchived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LibraryChartResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/catalog/search": {
+      "get": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "Search Helm charts in Artifact Hub",
+        "operationId": "search",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogPackageResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/catalog/packages/{repository}/{name}": {
+      "get": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "Get an Artifact Hub Helm chart version",
+        "operationId": "details",
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogPackageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/applications": {
+      "get": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "summary": "List applications owned by one tenant",
+        "operationId": "applications",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/applications/{applicationId}/uninstall-confirmation": {
+      "get": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "operationId": "uninstallConfirmation",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LifecycleConfirmationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/applications/{applicationId}/runtime": {
+      "get": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "operationId": "runtime",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeOverviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/applications/{applicationId}/rollback-confirmation": {
+      "get": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "operationId": "rollbackConfirmation",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LifecycleConfirmationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/applications/{applicationId}/releases": {
+      "get": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "operationId": "releases",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/applications/{applicationId}/operations": {
+      "get": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "operationId": "operations",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OperationResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/ai-configuration/routing": {
+      "get": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "routing",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoutingResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/ai-configuration/providers/{profileId}/models": {
+      "get": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "localModels",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalModelResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tenants/{tenantId}": {
       "get": {
         "tags": [
@@ -3551,7 +5397,7 @@
           "Operator Workspace"
         ],
         "summary": "Search accessible clusters, resources, incidents, analyses and runbooks",
-        "operationId": "search",
+        "operationId": "search_1",
         "parameters": [
           {
             "name": "q",
@@ -4505,6 +6351,47 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/UnreadCountResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/access": {
+      "get": {
+        "tags": [
+          "Tenant Access"
+        ],
+        "summary": "Resolve capabilities and navigation for the selected tenant scope",
+        "operationId": "access",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessResponse"
                 }
               }
             }
@@ -6565,6 +8452,41 @@
         }
       }
     },
+    "/api/v2/application-delivery/charts/{chartId}": {
+      "delete": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "summary": "Remove a Helm chart from the selected tenant library",
+        "operationId": "removeChart",
+        "parameters": [
+          {
+            "name": "chartId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveChartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/security/role-bindings/{bindingId}": {
       "delete": {
         "tags": [
@@ -6659,6 +8581,169 @@
   },
   "components": {
     "schemas": {
+      "RoutingRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "primaryProfileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fallbackProfileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fallbackModel": {
+            "type": "string"
+          },
+          "externalTransferAllowed": {
+            "type": "boolean"
+          },
+          "maximumContextChars": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maximumOutputTokens": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "model",
+          "primaryProfileId",
+          "tenantId"
+        ]
+      },
+      "RoutingResponse": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string"
+          },
+          "primaryProfileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model": {
+            "type": "string"
+          },
+          "fallbackProfileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fallbackModel": {
+            "type": "string"
+          },
+          "externalTransferAllowed": {
+            "type": "boolean"
+          },
+          "maximumContextChars": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maximumOutputTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateProviderRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providerType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string"
+          },
+          "defaultModel": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allowedModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "externalDataTransfer": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "defaultModel",
+          "name",
+          "providerType",
+          "tenantId"
+        ]
+      },
+      "ProviderResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "providerType": {
+            "type": "string"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "credentialConfigured": {
+            "type": "boolean"
+          },
+          "defaultModel": {
+            "type": "string"
+          },
+          "allowedModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "externalDataTransfer": {
+            "type": "boolean"
+          },
+          "validationStatus": {
+            "type": "string"
+          },
+          "lastValidatedAt": {
+            "type": "string"
+          }
+        }
+      },
       "OperationSettingsRequest": {
         "type": "object",
         "properties": {
@@ -7280,6 +9365,782 @@
           }
         }
       },
+      "ValuesSuggestionRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chartVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currentValuesYaml": {
+            "type": "string",
+            "minLength": 1
+          },
+          "instruction": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "chartVersionId",
+          "currentValuesYaml",
+          "instruction",
+          "tenantId"
+        ]
+      },
+      "ValuesSuggestionResponse": {
+        "type": "object",
+        "properties": {
+          "valuesYaml": {
+            "type": "string"
+          },
+          "promptVersion": {
+            "type": "string"
+          },
+          "validationStatus": {
+            "type": "string"
+          },
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "chartName": {
+            "type": "string"
+          },
+          "providerName": {
+            "type": "string"
+          },
+          "chartVersion": {
+            "type": "string"
+          },
+          "applicationVersion": {
+            "type": "string"
+          },
+          "schemaIncluded": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateValuesProfileRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chartVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chartVersionId",
+          "name",
+          "tenantId"
+        ]
+      },
+      "ValuesProfileResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "chartVersionId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateValuesRevisionRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valuesYaml": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "tenantId",
+          "valuesYaml"
+        ]
+      },
+      "ValuesRevisionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "valuesSha256": {
+            "type": "string"
+          },
+          "parentRevision": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateChartSourceRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "ARTIFACT_HUB",
+              "HELM_REPOSITORY",
+              "OCI_REGISTRY",
+              "UPLOAD"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "endpoint": {
+            "type": "string",
+            "minLength": 1
+          },
+          "credential": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "endpoint",
+          "name",
+          "sourceType",
+          "tenantId"
+        ]
+      },
+      "ChartSourceResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "sourceType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "credentialConfigured": {
+            "type": "boolean"
+          },
+          "tlsPolicy": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "TargetOptionsRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clusterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chartVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valuesRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1
+          },
+          "releaseName": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "chartVersionId",
+          "clusterId",
+          "namespace",
+          "releaseName",
+          "tenantId"
+        ]
+      },
+      "DeploymentTargetOptionsResponse": {
+        "type": "object",
+        "properties": {
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RenderedServiceResponse"
+            }
+          },
+          "gateways": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GatewayResponse"
+            }
+          },
+          "gatewayDiscoveryStatus": {
+            "type": "string"
+          },
+          "gatewayDiscoveryMessage": {
+            "type": "string"
+          }
+        }
+      },
+      "GatewayListenerResponse": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hostname": {
+            "type": "string"
+          }
+        }
+      },
+      "GatewayResponse": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "readiness": {
+            "type": "string"
+          },
+          "listeners": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GatewayListenerResponse"
+            }
+          }
+        }
+      },
+      "RenderedServiceResponse": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "portName": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetPort": {
+            "type": "string"
+          },
+        "nodePort": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "appProtocol": {
+          "type": "string"
+        },
+        "httpRouteCompatibility": {
+          "type": "string"
+        },
+        "compatibilityMessage": {
+          "type": "string"
+        }
+      }
+      },
+      "PreviewRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "applicationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clusterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chartVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valuesRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1
+          },
+          "releaseName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createNamespace": {
+            "type": "boolean"
+          },
+          "exposureType": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "exposurePath": {
+            "type": "string"
+          },
+          "backendServiceName": {
+            "type": "string"
+          },
+          "backendServicePort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gatewayName": {
+            "type": "string"
+          },
+          "gatewayNamespace": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chartVersionId",
+          "clusterId",
+          "namespace",
+          "releaseName",
+          "tenantId"
+        ]
+      },
+      "DeploymentPlanResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "applicationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clusterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chartVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valuesRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "releaseName": {
+            "type": "string"
+          },
+          "createNamespace": {
+            "type": "boolean"
+          },
+          "exposureType": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "exposurePath": {
+            "type": "string"
+          },
+          "backendServiceName": {
+            "type": "string"
+          },
+          "backendServicePort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gatewayName": {
+            "type": "string"
+          },
+          "gatewayNamespace": {
+            "type": "string"
+          },
+          "manifestSha256": {
+            "type": "string"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "confirmationText": {
+            "type": "string"
+          },
+          "renderedManifest": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        }
+      },
+      "ExecuteRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "confirmationText": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "confirmationText",
+          "tenantId"
+        ]
+      },
+      "DeploymentAcceptedResponse": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ChartVersionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "chartVersion": {
+            "type": "string"
+          },
+          "appVersion": {
+            "type": "string"
+          },
+          "digestSha256": {
+            "type": "string"
+          },
+          "provenanceStatus": {
+            "type": "string"
+          },
+          "sourceReference": {
+            "type": "string"
+          },
+          "importedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "ImportedChartResponse": {
+        "type": "object",
+        "properties": {
+          "chart": {
+            "$ref": "#/components/schemas/LibraryChartResponse"
+          },
+          "compressedBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "fileCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expandedBytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "LibraryChartResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "packageName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "sourceType": {
+            "type": "string"
+          },
+          "sourceName": {
+            "type": "string"
+          },
+          "providerName": {
+            "type": "string"
+          },
+          "repositoryUrl": {
+            "type": "string"
+          },
+          "trustStatus": {
+            "type": "string"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChartVersionResponse"
+            }
+          }
+        }
+      },
+      "ImportChartRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "repository": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name",
+          "repository",
+          "tenantId",
+          "version"
+        ]
+      },
+      "RollbackRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "confirmationText": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "confirmationText",
+          "tenantId"
+        ]
+      },
+      "ProviderRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providerType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string"
+          },
+          "defaultModel": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allowedModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "externalDataTransfer": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "defaultModel",
+          "name",
+          "providerType",
+          "tenantId"
+        ]
+      },
+      "ValidationResponse": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "checkedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "LocalModelResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelTag": {
+            "type": "string"
+          },
+          "parameterBillions": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "digest": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "ModelPullRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelTag": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "modelTag",
+          "tenantId"
+        ]
+      },
+      "ModelPullResponse": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "CreateTenancyRequest": {
         "type": "object",
         "properties": {
@@ -7368,6 +10229,235 @@
           }
         }
       },
+      "CreateGroupMappingRequest": {
+        "type": "object",
+        "properties": {
+          "issuer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "groupValue": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "PLATFORM_ADMIN",
+              "TENANT_ADMIN",
+              "CLUSTER_ADMIN",
+              "OPERATOR",
+              "VIEWER"
+            ]
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": [
+              "PLATFORM",
+              "TENANT",
+              "WORKSPACE",
+              "CLUSTER",
+              "NAMESPACE"
+            ]
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clusterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "namespace": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "groupValue",
+          "issuer",
+          "role",
+          "scopeType"
+        ]
+      },
+      "GroupMappingResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "groupValue": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "scopeType": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "clusterId": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "InviteMemberRequest": {
+        "type": "object",
+        "properties": {
+          "issuer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subject": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "PLATFORM_ADMIN",
+              "TENANT_ADMIN",
+              "CLUSTER_ADMIN",
+              "OPERATOR",
+              "VIEWER"
+            ]
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": [
+              "PLATFORM",
+              "TENANT",
+              "WORKSPACE",
+              "CLUSTER",
+              "NAMESPACE"
+            ]
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clusterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "namespace": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "issuer",
+          "role",
+          "scopeType"
+        ]
+      },
+      "MemberResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "scopeType": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "clusterId": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "OffboardRequest": {
+        "type": "object",
+        "properties": {
+          "confirmationText": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "confirmationText"
+        ]
+      },
+      "OffboardPlan": {
+        "type": "object",
+        "properties": {
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "username": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "INVITED",
+              "ACTIVE",
+              "SUSPENDED",
+              "OFFBOARDED"
+            ]
+          },
+          "roleBindingsToRemove": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sessionsRevoked": {
+            "type": "boolean"
+          },
+          "confirmationText": {
+            "type": "string"
+          }
+        }
+      },
       "CleanupPreview": {
         "type": "object",
         "properties": {
@@ -7399,19 +10489,19 @@
             "type": "integer",
             "format": "int64"
           },
-          "auditLogs": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "commandExecutions": {
-            "type": "integer",
-            "format": "int64"
-          },
           "watchSignals": {
             "type": "integer",
             "format": "int64"
           },
           "regressionRuns": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "auditLogs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "commandExecutions": {
             "type": "integer",
             "format": "int64"
           },
@@ -7438,6 +10528,7 @@
             "type": "string",
             "enum": [
               "PLATFORM_ADMIN",
+              "TENANT_ADMIN",
               "CLUSTER_ADMIN",
               "OPERATOR",
               "VIEWER"
@@ -8620,6 +11711,8 @@
               "HELM_INSTALL",
               "HELM_UPGRADE",
               "HELM_ROLLBACK",
+              "HELM_UNINSTALL",
+              "AI_MODEL_PULL",
               "AI_ANALYSIS"
             ]
           },
@@ -9621,7 +12714,13 @@
             "type": "string",
             "enum": [
               "DEPLOY_REQUESTED",
+              "DEPLOYING",
+              "UPGRADING",
+              "ROLLING_BACK",
+              "UNINSTALLING",
               "RUNNING",
+              "RUNNING_ENDPOINT_DEGRADED",
+              "UNINSTALLED",
               "DEGRADED",
               "FAILED",
               "UNKNOWN"
@@ -9647,6 +12746,18 @@
           },
           "lastSyncError": {
             "type": "string"
+          },
+          "currentReleaseRevision": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "chartVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valuesRevisionId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -10287,6 +13398,85 @@
         }
       },
       "StreamingResponseBody": {},
+      "UpdateChartSourceRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "endpoint": {
+            "type": "string",
+            "minLength": 1
+          },
+          "credential": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "endpoint",
+          "name",
+          "tenantId"
+        ]
+      },
+      "UpdateGroupMappingRequest": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateMembershipRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "INVITED",
+              "ACTIVE",
+              "SUSPENDED",
+              "OFFBOARDED"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "UpdateFeatureRequest": {
+        "type": "object",
+        "properties": {
+          "featureKey": {
+            "type": "string",
+            "enum": [
+              "CORE_OVERVIEW",
+              "CLUSTER_OPERATIONS",
+              "KUBERNETES_CONSOLE",
+              "AI_OPERATIONS",
+              "APPLICATION_DELIVERY",
+              "AI_PROVIDER_ROUTING",
+              "AI_PROVIDER_PLATFORM",
+              "ACCESS_CONTROL",
+              "AUDIT",
+              "PLATFORM_ADMINISTRATION"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "featureKey"
+        ]
+      },
       "UpdateUserRequest": {
         "type": "object",
         "properties": {
@@ -10475,6 +13665,225 @@
           },
           "archived": {
             "type": "boolean"
+          }
+        }
+      },
+      "ValuesPayloadResponse": {
+        "type": "object",
+        "properties": {
+          "valuesYaml": {
+            "type": "string"
+          }
+        }
+      },
+      "CatalogPackageResponse": {
+        "type": "object",
+        "properties": {
+          "packageId": {
+            "type": "string"
+          },
+          "repository": {
+            "type": "string"
+          },
+          "repositoryDisplayName": {
+            "type": "string"
+          },
+          "repositoryUrl": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "appVersion": {
+            "type": "string"
+          },
+          "contentUrl": {
+            "type": "string"
+          },
+          "official": {
+            "type": "boolean"
+          },
+          "verifiedPublisher": {
+            "type": "boolean"
+          },
+          "availableVersions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "LifecycleConfirmationResponse": {
+        "type": "object",
+        "properties": {
+          "confirmationText": {
+            "type": "string"
+          },
+          "impactSummary": {
+            "type": "string"
+          }
+        }
+      },
+      "Endpoint": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetPort": {
+            "type": "string"
+          },
+          "nodePort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "accessScope": {
+            "type": "string"
+          }
+        }
+      },
+      "RuntimeOverviewResponse": {
+        "type": "object",
+        "properties": {
+          "readyPods": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPods": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restarts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workloads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Workload"
+            }
+          },
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Endpoint"
+            }
+          }
+        }
+      },
+      "Workload": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ready": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "desired": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ReleaseResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "chartVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valuesRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "manifestSha256": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        }
+      },
+      "OperationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "releaseRevision": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "outputSummary": {
+            "type": "string"
+          },
+          "errorMessage": {
+            "type": "string"
+          },
+          "requestedBy": {
+            "type": "string"
+          },
+          "requestedAt": {
+            "type": "string"
+          },
+          "completedAt": {
+            "type": "string"
           }
         }
       },
@@ -11488,6 +14897,38 @@
           "count": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "AccessResponse": {
+        "type": "object",
+        "properties": {
+          "platformRole": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "effectiveCapabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabledFeatures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "navigation": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
           }
         }
       },
@@ -12687,6 +16128,9 @@
           "terminalBoundary": {
             "type": "string"
           },
+          "metricsApiAvailable": {
+            "type": "boolean"
+          },
           "supportedModes": {
             "type": "array",
             "items": {
@@ -12720,9 +16164,6 @@
           "maximumUserStartsPerMinute": {
             "type": "integer",
             "format": "int32"
-          },
-          "metricsApiAvailable": {
-            "type": "boolean"
           }
         }
       },
@@ -12776,10 +16217,10 @@
       "CsrfToken": {
         "type": "object",
         "properties": {
-          "parameterName": {
+          "token": {
             "type": "string"
           },
-          "token": {
+          "parameterName": {
             "type": "string"
           },
           "headerName": {
@@ -12916,7 +16357,13 @@
             "type": "string",
             "enum": [
               "DEPLOY_REQUESTED",
+              "DEPLOYING",
+              "UPGRADING",
+              "ROLLING_BACK",
+              "UNINSTALLING",
               "RUNNING",
+              "RUNNING_ENDPOINT_DEGRADED",
+              "UNINSTALLED",
               "DEGRADED",
               "FAILED",
               "UNKNOWN"
@@ -13370,6 +16817,23 @@
             "type": "boolean"
           }
         }
+      },
+      "RemoveChartRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "confirmationText": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "confirmationText",
+          "tenantId"
+        ]
       }
     }
   }

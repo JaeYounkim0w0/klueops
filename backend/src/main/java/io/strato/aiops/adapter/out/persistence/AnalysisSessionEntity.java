@@ -45,9 +45,11 @@ class AnalysisSessionEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    /** AnalysisSessionEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected AnalysisSessionEntity() {
     }
 
+    /** AnalysisSessionEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private AnalysisSessionEntity(UUID id, UUID asyncJobId, UUID clusterId, UUID applicationId, String namespace,
                                   AnalysisStatus status, String aiProvider, String aiModel, String promptVersion,
                                   String schemaVersion, String locale, String resultSummary, String resultJson, String createdBy,
@@ -69,6 +71,7 @@ class AnalysisSessionEntity {
         this.createdAt = createdAt;
     }
 
+    /** AnalysisSessionEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static AnalysisSessionEntity fromDomain(AnalysisSession analysisSession) {
         return new AnalysisSessionEntity(analysisSession.id(), analysisSession.asyncJobId(), analysisSession.clusterId(),
                 analysisSession.applicationId(), analysisSession.namespace(), analysisSession.status(),
@@ -77,6 +80,7 @@ class AnalysisSessionEntity {
                 analysisSession.resultJson(), analysisSession.createdBy(), analysisSession.createdAt());
     }
 
+    /** AnalysisSessionEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     AnalysisSession toDomain() {
         return new AnalysisSession(id, asyncJobId, clusterId, applicationId, namespace, status, aiProvider, aiModel,
                 promptVersion, schemaVersion, locale, resultSummary, resultJson, createdBy, createdAt);

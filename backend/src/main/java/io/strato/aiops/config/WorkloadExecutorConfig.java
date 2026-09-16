@@ -13,6 +13,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Configuration
 public class WorkloadExecutorConfig {
 
+    /** WorkloadExecutorConfig의 analysisJobExecutor 처리에 필요한 업무 로직을 수행한다. */
     @Bean("analysisJobExecutor")
     public ThreadPoolTaskExecutor analysisJobExecutor(
             @Value("${aiops.executors.analysis-job.core-size:2}") int coreSize,
@@ -22,6 +23,7 @@ public class WorkloadExecutorConfig {
         return executor("analysis-job-", coreSize, maxSize, queueCapacity);
     }
 
+    /** WorkloadExecutorConfig의 clusterSyncExecutor 처리에 필요한 업무 로직을 수행한다. */
     @Bean("clusterSyncExecutor")
     public ThreadPoolTaskExecutor clusterSyncExecutor(
             @Value("${aiops.executors.cluster-sync.core-size:2}") int coreSize,
@@ -31,6 +33,7 @@ public class WorkloadExecutorConfig {
         return executor("cluster-sync-", coreSize, maxSize, queueCapacity);
     }
 
+    /** WorkloadExecutorConfig의 analysisSectionExecutor 처리에 필요한 업무 로직을 수행한다. */
     @Bean("analysisSectionExecutor")
     public Executor analysisSectionExecutor(
             @Value("${aiops.executors.analysis-section.core-size:3}") int coreSize,
@@ -40,6 +43,7 @@ public class WorkloadExecutorConfig {
         return executor("analysis-section-", coreSize, maxSize, queueCapacity);
     }
 
+    /** WorkloadExecutorConfig의 readinessProbeExecutor 처리 결과를 조회해 반환한다. */
     @Bean("readinessProbeExecutor")
     public Executor readinessProbeExecutor(
             @Value("${aiops.executors.readiness-probe.core-size:3}") int coreSize,
@@ -49,6 +53,7 @@ public class WorkloadExecutorConfig {
         return executor("readiness-probe-", coreSize, maxSize, queueCapacity);
     }
 
+    /** WorkloadExecutorConfig의 commandConsoleExecutor 처리에 필요한 업무 로직을 수행한다. */
     @Bean("commandConsoleExecutor")
     public ThreadPoolTaskExecutor commandConsoleExecutor(
             @Value("${aiops.executors.command-console.core-size:4}") int coreSize,
@@ -58,6 +63,29 @@ public class WorkloadExecutorConfig {
         return executor("command-console-", coreSize, maxSize, queueCapacity);
     }
 
+    /** WorkloadExecutorConfig의 applicationDeliveryExecutor 처리에 필요한 업무 로직을 수행한다. */
+    @Bean("applicationDeliveryExecutor")
+    public ThreadPoolTaskExecutor applicationDeliveryExecutor(
+            @Value("${aiops.executors.application-delivery.core-size:2}") int coreSize,
+            @Value("${aiops.executors.application-delivery.max-size:4}") int maxSize,
+            @Value("${aiops.executors.application-delivery.queue-capacity:30}") int queueCapacity
+    ) {
+        // Helm 작업은 외부 I/O 중심이므로 분석 작업과 격리된 제한 큐를 사용한다.
+        return executor("application-delivery-", coreSize, maxSize, queueCapacity);
+    }
+
+    /** WorkloadExecutorConfig의 aiModelExecutor 처리에 필요한 업무 로직을 수행한다. */
+    @Bean("aiModelExecutor")
+    public ThreadPoolTaskExecutor aiModelExecutor(
+            @Value("${aiops.executors.ai-model.core-size:1}") int coreSize,
+            @Value("${aiops.executors.ai-model.max-size:2}") int maxSize,
+            @Value("${aiops.executors.ai-model.queue-capacity:5}") int queueCapacity
+    ) {
+        // 대용량 모델 다운로드가 일반 API와 분석 worker를 고갈시키지 않도록 별도 제한 큐를 둔다.
+        return executor("ai-model-", coreSize, maxSize, queueCapacity);
+    }
+
+    /** WorkloadExecutorConfig의 aiChatHeartbeatScheduler 처리에 필요한 업무 로직을 수행한다. */
     @Bean("aiChatHeartbeatScheduler")
     @Primary
     public ThreadPoolTaskScheduler aiChatHeartbeatScheduler() {
@@ -70,6 +98,7 @@ public class WorkloadExecutorConfig {
         return scheduler;
     }
 
+    /** WorkloadExecutorConfig의 resourceLogScheduler 처리에 필요한 업무 로직을 수행한다. */
     @Bean("resourceLogScheduler")
     public ThreadPoolTaskScheduler resourceLogScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
@@ -81,6 +110,7 @@ public class WorkloadExecutorConfig {
         return scheduler;
     }
 
+    /** WorkloadExecutorConfig의 executor 처리에 필요한 업무 로직을 수행한다. */
     private ThreadPoolTaskExecutor executor(String prefix, int coreSize, int maxSize, int queueCapacity) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setThreadNamePrefix(prefix);

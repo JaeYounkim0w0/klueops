@@ -12,6 +12,7 @@ const error = ref('');
 
 const analysisTotal = computed(() => (overview.value?.successfulAnalyses ?? 0) + (overview.value?.failedAnalyses ?? 0));
 
+/** loadOverview 처리 결과를 조회해 반환한다. */
 async function loadOverview() {
   loading.value = true;
   error.value = '';
@@ -24,6 +25,7 @@ async function loadOverview() {
   }
 }
 
+/** reconcile 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function reconcile() {
   reconciling.value = true;
   error.value = '';
@@ -36,10 +38,12 @@ async function reconcile() {
   }
 }
 
+/** openPriority 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function openPriority(path: string) {
   if (path.startsWith('/')) void router.push(path);
 }
 
+/** postureClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function postureClass(value?: string) {
   return String(value ?? '').toLowerCase();
 }

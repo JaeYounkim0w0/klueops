@@ -24,9 +24,11 @@ class TenantEntity {
     @Column(nullable = false) private Instant createdAt;
     @Column(nullable = false) private Instant updatedAt;
 
+    /** TenantEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected TenantEntity() {
     }
 
+    /** TenantEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private TenantEntity(Tenant tenant) {
         id = tenant.id();
         code = tenant.code();
@@ -38,10 +40,12 @@ class TenantEntity {
         updatedAt = tenant.updatedAt();
     }
 
+    /** TenantEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static TenantEntity fromDomain(Tenant tenant) {
         return new TenantEntity(tenant);
     }
 
+    /** TenantEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     Tenant toDomain() {
         return new Tenant(id, code, name, description, status, createdBy, createdAt, updatedAt);
     }

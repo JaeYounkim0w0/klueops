@@ -35,6 +35,7 @@ public class ClusterResourceLogController {
     private final TaskScheduler scheduler;
     private final long heartbeatMs;
 
+    /** ClusterResourceLogController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ClusterResourceLogController(GetClusterResourceLogsUseCase logUseCase,
                                         ObjectMapper objectMapper,
                                         @Qualifier("resourceLogScheduler") TaskScheduler scheduler,
@@ -45,6 +46,7 @@ public class ClusterResourceLogController {
         this.heartbeatMs = Math.max(1, heartbeatMs);
     }
 
+    /** ClusterResourceLogController의 getTargets 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List Pods and containers related to a Kubernetes resource")
     @GetMapping("/targets")
     public ClusterResourceLogTargetsResponse getTargets(@PathVariable UUID clusterId,
@@ -55,6 +57,7 @@ public class ClusterResourceLogController {
                 logUseCase.getTargets(clusterId, namespace, resourceType, resourceName));
     }
 
+    /** ClusterResourceLogController의 getRecentLogs 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Get the latest N log lines for a resource Pod and container")
     @GetMapping
     public ClusterResourceLogResponse getRecentLogs(@PathVariable UUID clusterId,
@@ -69,6 +72,7 @@ public class ClusterResourceLogController {
                 resourceName, podName, containerName, tailLines, previous));
     }
 
+    /** ClusterResourceLogController의 streamLogs 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Stream live logs for a resource Pod and container")
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> streamLogs(@PathVariable UUID clusterId,

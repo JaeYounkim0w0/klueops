@@ -18,14 +18,17 @@ const emit = defineEmits<{
   toggle: [];
 }>();
 
+/** text 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function text(value: unknown, fallback = '-') {
   return displayText(value, fallback);
 }
 
+/** count 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function count(value: unknown) {
   return typeof value === 'number' ? String(value) : '0';
 }
 
+/** safetyClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function safetyClass(value: unknown) {
   const level = text(value, '').toUpperCase();
   return {
@@ -36,6 +39,7 @@ function safetyClass(value: unknown) {
   };
 }
 
+/** safetyLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function safetyLabel(value: unknown) {
   return ({
     READ_ONLY: '읽기 전용',

@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class TerminalCommandParserTest {
     private final TerminalCommandParser parser = new TerminalCommandParser();
 
+    /** TerminalCommandParserTest의 parsesExecTtyPodContainerAndRemoteCommand 처리 데이터를 필요한 표현으로 변환한다. */
     @Test
     void parsesExecTtyPodContainerAndRemoteCommand() {
         TerminalCommandSpec result = parser.parse(List.of(
@@ -21,6 +22,7 @@ class TerminalCommandParserTest {
         assertThat(result.remoteCommand()).containsExactly("/bin/sh", "-l");
     }
 
+    /** TerminalCommandParserTest의 parsesAttachAndNamespaceOptions 처리 데이터를 필요한 표현으로 변환한다. */
     @Test
     void parsesAttachAndNamespaceOptions() {
         TerminalCommandSpec result = parser.parse(List.of(
@@ -32,6 +34,7 @@ class TerminalCommandParserTest {
         assertThat(result.remoteCommand()).isEmpty();
     }
 
+    /** TerminalCommandParserTest의 rejectsMissingPodOrExecCommand 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsMissingPodOrExecCommand() {
         assertThatThrownBy(() -> parser.parse(List.of("exec", "-it")))

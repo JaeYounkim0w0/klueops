@@ -56,8 +56,11 @@ describe('AI chat operations contract', () => {
     expect(apiSource).toContain("'X-XSRF-TOKEN'");
     expect(apiSource).toContain("if (!completed) throw new AiChatStreamError");
     expect(viewSource).toContain('error instanceof AiChatStreamError');
-    expect(viewSource).toContain('onUnmounted(() => abortController.value?.abort())');
+    expect(viewSource).toContain('onUnmounted(() => { abortController.value?.abort(); stopStreamingClock(); })');
     expect(viewSource).toContain('const conversationId = activeConversationId.value');
+    expect(viewSource).toContain('streamingElapsedSeconds');
+    expect(viewSource).toContain('streamHeartbeatReceived');
+    expect(apiSource).toContain('onHeartbeat?.()');
   });
 
   it('renders persisted interrupted responses without discarding the user question', () => {

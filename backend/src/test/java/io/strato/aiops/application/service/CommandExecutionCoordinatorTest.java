@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CommandExecutionCoordinatorTest {
     private static final Instant NOW = Instant.parse("2026-09-09T00:00:00Z");
 
+    /** CommandExecutionCoordinatorTest의 appliesSeparateCommandAndTerminalConcurrencyLimits 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void appliesSeparateCommandAndTerminalConcurrencyLimits() {
         RecordingAdmission admission = new RecordingAdmission();
@@ -33,6 +34,7 @@ class CommandExecutionCoordinatorTest {
         assertThat(admission.request.expiresAt()).isEqualTo(NOW.plus(Duration.ofMinutes(10)));
     }
 
+    /** CommandExecutionCoordinatorTest의 renewsAndReleasesTheSameExecutionLease 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void renewsAndReleasesTheSameExecutionLease() {
         RecordingAdmission admission = new RecordingAdmission();
@@ -54,12 +56,16 @@ class CommandExecutionCoordinatorTest {
         private Instant renewedUntil;
         private UUID releasedExecutionId;
 
+        /** RecordingAdmission의 acquire 처리에 필요한 업무 로직을 수행한다. */
         @Override public void acquire(AdmissionRequest value) { request = value; }
+        /** RecordingAdmission의 renew 처리에 필요한 업무 로직을 수행한다. */
         @Override public void renew(UUID executionId, Instant expiresAt) {
             renewedExecutionId = executionId;
             renewedUntil = expiresAt;
         }
+        /** RecordingAdmission의 release 처리에 필요한 업무 로직을 수행한다. */
         @Override public void release(UUID executionId) { releasedExecutionId = executionId; }
+        /** RecordingAdmission의 isActive 처리 조건의 충족 여부를 판단한다. */
         @Override public boolean isActive(UUID executionId, Instant now) { return true; }
     }
 }

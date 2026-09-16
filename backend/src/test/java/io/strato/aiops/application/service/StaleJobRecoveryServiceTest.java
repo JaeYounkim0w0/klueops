@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class StaleJobRecoveryServiceTest {
 
+    /** StaleJobRecoveryServiceTest의 marksOnlyStaleActiveJobsAsTimedOut 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void marksOnlyStaleActiveJobsAsTimedOut() {
         Instant now = Instant.parse("2026-07-06T01:00:00Z");
@@ -37,21 +38,25 @@ class StaleJobRecoveryServiceTest {
         private final List<AsyncJob> jobs = new ArrayList<>();
         private Instant cutoff;
 
+        /** InMemoryAsyncJobRepository의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
         @Override
         public AsyncJob save(AsyncJob job) {
             return job;
         }
 
+        /** InMemoryAsyncJobRepository의 findById 처리 결과를 조회해 반환한다. */
         @Override
         public Optional<AsyncJob> findById(UUID jobId) {
             return jobs.stream().filter(job -> job.id().equals(jobId)).findFirst();
         }
 
+        /** InMemoryAsyncJobRepository의 findRecent 처리 결과를 조회해 반환한다. */
         @Override
         public List<AsyncJob> findRecent(int limit) {
             return jobs.stream().limit(limit).toList();
         }
 
+        /** InMemoryAsyncJobRepository의 findActiveCreatedBefore 처리 결과를 조회해 반환한다. */
         @Override
         public List<AsyncJob> findActiveCreatedBefore(Instant cutoff) {
             this.cutoff = cutoff;

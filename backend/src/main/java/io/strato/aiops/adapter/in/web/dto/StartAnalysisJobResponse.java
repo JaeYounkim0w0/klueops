@@ -10,6 +10,7 @@ public record StartAnalysisJobResponse(
         @Schema(description = "Started async job ID") UUID jobId,
         @Schema(description = "Created analysis session ID") UUID analysisId
 ) {
+    /** StartAnalysisJobResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static StartAnalysisJobResponse from(StartAnalysisJobResult result) {
         return new StartAnalysisJobResponse(result.jobId(), result.analysisId());
     }

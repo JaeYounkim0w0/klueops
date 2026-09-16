@@ -16,6 +16,7 @@ import java.util.UUID;
 @Component
 public class RequestIdFilter extends OncePerRequestFilter {
 
+    /** RequestIdFilter의 doFilterInternal 처리에 필요한 업무 로직을 수행한다. */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {

@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class JdbcCommandExecutionAdmissionAdapterTest {
     @Autowired JdbcTemplate jdbc;
 
+    /** JdbcCommandExecutionAdmissionAdapterTest의 enforcesUserConcurrencyAndReleaseAllowsAnotherExecution 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void enforcesUserConcurrencyAndReleaseAllowsAnotherExecution() {
         JdbcCommandExecutionAdmissionAdapter adapter = new JdbcCommandExecutionAdmissionAdapter(jdbc);
@@ -36,6 +37,7 @@ class JdbcCommandExecutionAdmissionAdapterTest {
         assertThat(adapter.isActive(first, now.plusSeconds(2))).isFalse();
     }
 
+    /** JdbcCommandExecutionAdmissionAdapterTest의 expiredLeaseNoLongerConsumesConcurrency 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void expiredLeaseNoLongerConsumesConcurrency() {
         JdbcCommandExecutionAdmissionAdapter adapter = new JdbcCommandExecutionAdmissionAdapter(jdbc);
@@ -54,6 +56,7 @@ class JdbcCommandExecutionAdmissionAdapterTest {
                 Long.class, expired)).isZero();
     }
 
+    /** JdbcCommandExecutionAdmissionAdapterTest의 request 처리에 필요한 업무 로직을 수행한다. */
     private CommandExecutionAdmissionPort.AdmissionRequest request(UUID executionId, UUID clusterId, String actor,
             Instant now, int userConcurrency, int clusterConcurrency, int userRate, int clusterRate) {
         return new CommandExecutionAdmissionPort.AdmissionRequest(executionId, clusterId, actor,

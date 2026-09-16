@@ -41,9 +41,11 @@ class ClusterCredentialEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    /** ClusterCredentialEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected ClusterCredentialEntity() {
     }
 
+    /** ClusterCredentialEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private ClusterCredentialEntity(UUID id, UUID clusterId, ClusterCredentialType credentialType, String encryptedPayload,
                                     String keyId, String algorithm, String nonce, Instant createdAt) {
         this.id = id;
@@ -56,6 +58,7 @@ class ClusterCredentialEntity {
         this.createdAt = createdAt;
     }
 
+    /** ClusterCredentialEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static ClusterCredentialEntity fromDomain(EncryptedClusterCredential credential) {
         return new ClusterCredentialEntity(
                 credential.id(),
@@ -69,6 +72,7 @@ class ClusterCredentialEntity {
         );
     }
 
+    /** ClusterCredentialEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     EncryptedClusterCredential toDomain() {
         return new EncryptedClusterCredential(id, clusterId, credentialType, encryptedPayload, keyId, algorithm, nonce, createdAt);
     }

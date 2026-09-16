@@ -39,6 +39,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
     private final int requestTimeoutMs;
     private final int observationTimeoutMs;
 
+    /** Fabric8KubernetesValidationLabAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public Fabric8KubernetesValidationLabAdapter(
             ObjectMapper objectMapper,
             @Value("${aiops.kubernetes.connect-timeout-ms:5000}") int connectTimeoutMs,
@@ -51,6 +52,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         this.observationTimeoutMs = Math.max(1_000, Math.min(observationTimeoutMs, 30_000));
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 preflight 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public Preflight preflight(KubernetesConnectionCredential credential, String namespace, String scenarioId) {
         List<String> passed = new ArrayList<>();
@@ -81,6 +83,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         return new Preflight(blocked.isEmpty(), List.copyOf(passed), List.copyOf(blocked));
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 requiredResourceAccess 처리 입력과 현재 상태의 유효성을 검증한다. */
     private List<ResourceAccess> requiredResourceAccess(String scenarioId) {
         return switch (scenarioId) {
             case "port-mismatch" -> List.of(
@@ -94,6 +97,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         };
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 apply 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public Execution apply(KubernetesConnectionCredential credential, UUID runId, String namespace, String scenarioId) {
         try (KubernetesClient client = createClient(credential)) {
@@ -119,6 +123,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         }
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 cleanup 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public Cleanup cleanup(KubernetesConnectionCredential credential, UUID runId, String namespace) {
         try (KubernetesClient client = createClient(credential)) {
@@ -140,6 +145,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         }
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 observe 처리에 필요한 업무 로직을 수행한다. */
     private Observation observe(KubernetesClient client, String namespace, String scenarioId, UUID runId) {
         long deadline = System.currentTimeMillis() + observationTimeoutMs;
         Observation latest = new Observation(false, null, "Kubernetes has not exposed the expected signal yet.");
@@ -156,6 +162,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         return latest;
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 inspect 처리에 필요한 업무 로직을 수행한다. */
     private Observation inspect(KubernetesClient client, String namespace, String scenarioId, UUID runId) {
         String label = runId.toString();
         if ("port-mismatch".equals(scenarioId)) {
@@ -200,6 +207,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
                 "The fixture exists, but the bounded observation window ended before the expected signal appeared.");
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 expected 처리에 필요한 업무 로직을 수행한다. */
     private boolean expected(String scenarioId, String reason, String phase) {
         String value = (text(reason) + " " + text(phase)).toUpperCase(Locale.ROOT);
         return switch (scenarioId) {
@@ -213,6 +221,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         };
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 allowed 처리에 필요한 업무 로직을 수행한다. */
     private boolean allowed(KubernetesClient client, String namespace, String verb, String group, String resource) {
         SelfSubjectAccessReview review = new SelfSubjectAccessReviewBuilder()
                 .withNewSpec().withNewResourceAttributes()
@@ -222,6 +231,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         return result != null && result.getStatus() != null && Boolean.TRUE.equals(result.getStatus().getAllowed());
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 podReason 처리에 필요한 업무 로직을 수행한다. */
     private String podReason(Pod pod) {
         if (pod.getStatus() == null || pod.getStatus().getContainerStatuses() == null) return null;
         return pod.getStatus().getContainerStatuses().stream()
@@ -241,6 +251,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
                 .findFirst().orElse(null);
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 manifest 처리에 필요한 업무 로직을 수행한다. */
     String manifest(String scenarioId, UUID runId) {
         String labels = """
                     aiops.platform/managed: "true"
@@ -366,6 +377,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         };
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 pod 처리에 필요한 업무 로직을 수행한다. */
     private String pod(String name, String labels, String containerSpec, String podSpecExtra) {
         return """
                 apiVersion: v1
@@ -383,6 +395,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
                 """.formatted(name, indent(labels, 4), indent(containerSpec, 6), indent(podSpecExtra, 2));
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 indent 처리에 필요한 업무 로직을 수행한다. */
     private String indent(String value, int spaces) {
         if (value == null || value.isBlank()) return "";
         List<String> lines = value.lines().toList();
@@ -393,12 +406,14 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
                 .reduce((a, b) -> a + "\n" + b).orElse("");
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 leadingSpaces 처리에 필요한 업무 로직을 수행한다. */
     private int leadingSpaces(String value) {
         int count = 0;
         while (count < value.length() && value.charAt(count) == ' ') count++;
         return count;
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 createClient 처리에 필요한 데이터를 생성하거나 저장한다. */
     private KubernetesClient createClient(KubernetesConnectionCredential credential) {
         if (credential.credentialType() == ClusterCredentialType.KUBECONFIG) {
             Config config = Config.fromKubeconfig(credential.payload());
@@ -417,6 +432,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         return new KubernetesClientBuilder().withConfig(config).build();
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 parseServiceAccountPayload 처리 데이터를 필요한 표현으로 변환한다. */
     private ServiceAccountPayload parseServiceAccountPayload(String payload) {
         try {
             return objectMapper.readValue(payload, ServiceAccountPayload.class);
@@ -425,6 +441,7 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
         }
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 normalizeCertificateAuthority 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeCertificateAuthority(String value) {
         if (value == null || value.isBlank()) return null;
         return value.contains("BEGIN CERTIFICATE")
@@ -432,22 +449,26 @@ public class Fabric8KubernetesValidationLabAdapter implements KubernetesValidati
                 : value;
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 failureDetail 처리에 필요한 업무 로직을 수행한다. */
     private String failureDetail(Throwable throwable) {
         Throwable current = throwable;
         while (current.getCause() != null && current.getCause() != current) current = current.getCause();
         return sanitize(current.getMessage() == null ? current.getClass().getSimpleName() : current.getMessage());
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 sanitize 처리에 필요한 업무 로직을 수행한다. */
     private String sanitize(String value) {
         if (value == null) return "";
         String compact = value.replaceAll("\\s+", " ").trim();
         return compact.length() <= 500 ? compact : compact.substring(0, 500) + "...";
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 text 처리에 필요한 업무 로직을 수행한다. */
     private String text(String value) {
         return value == null ? "" : value;
     }
 
+    /** Fabric8KubernetesValidationLabAdapter의 text 처리에 필요한 업무 로직을 수행한다. */
     private String text(String primary, String fallback) {
         return primary == null || primary.isBlank() ? text(fallback) : primary;
     }

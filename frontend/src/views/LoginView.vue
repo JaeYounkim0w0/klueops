@@ -18,15 +18,18 @@ const noticeDetail = computed(() => loginFailure.value === 'identity-provider'
   ? t('auth.identityProviderContact')
   : t('auth.sessionCheckRetry'));
 
+/** returnTo 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function returnTo(): string {
   return typeof route.query.returnTo === 'string' ? route.query.returnTo : '/';
 }
 
+/** redirectAuthenticatedSession 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function redirectAuthenticatedSession(): Promise<void> {
   const destination = await auth.authenticatedReturnTo(returnTo());
   if (destination) await router.replace(destination);
 }
 
+/** login 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function login(): Promise<void> {
   loginFailure.value = null;
   checkingSession.value = true;

@@ -21,6 +21,7 @@ public class SpringTaskExecutorClusterSyncAdapter implements ClusterSyncExecutor
     private final ClusterSyncWorker clusterSyncWorker;
     private final JobSubmissionFailureService jobSubmissionFailureService;
 
+    /** SpringTaskExecutorClusterSyncAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public SpringTaskExecutorClusterSyncAdapter(
             @Qualifier("clusterSyncExecutor") TaskExecutor taskExecutor,
             ClusterSyncWorker clusterSyncWorker,
@@ -31,6 +32,7 @@ public class SpringTaskExecutorClusterSyncAdapter implements ClusterSyncExecutor
         this.jobSubmissionFailureService = jobSubmissionFailureService;
     }
 
+    /** SpringTaskExecutorClusterSyncAdapter의 submitClusterSync 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public void submitClusterSync(UUID asyncJobId) {
         log.info("Submitting cluster sync job {}", asyncJobId);

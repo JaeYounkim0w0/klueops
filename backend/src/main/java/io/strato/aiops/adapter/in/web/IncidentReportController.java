@@ -25,10 +25,12 @@ public class IncidentReportController {
 
     private final IncidentReportExportService service;
 
+    /** IncidentReportController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public IncidentReportController(IncidentReportExportService service) {
         this.service = service;
     }
 
+    /** IncidentReportController의 export 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Export an incident report as Markdown, JSON, or ZIP evidence bundle")
     @GetMapping
     public ResponseEntity<StreamingResponseBody> export(@PathVariable UUID incidentId,
@@ -45,6 +47,7 @@ public class IncidentReportController {
                 .body(report::writeTo);
     }
 
+    /** IncidentReportController의 actor 처리에 필요한 업무 로직을 수행한다. */
     private String actor(HttpServletRequest request) {
         return request.getUserPrincipal() == null ? "anonymous" : request.getUserPrincipal().getName();
     }

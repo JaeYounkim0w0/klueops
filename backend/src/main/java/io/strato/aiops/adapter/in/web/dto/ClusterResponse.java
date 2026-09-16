@@ -24,6 +24,7 @@ public record ClusterResponse(
         @Schema(description = "Creation time") Instant createdAt,
         @Schema(description = "Last update time") Instant updatedAt
 ) {
+    /** ClusterResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static ClusterResponse from(Cluster cluster) {
         return new ClusterResponse(
                 cluster.id(),

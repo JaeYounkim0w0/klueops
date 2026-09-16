@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 class OperationsScorecardQueryServiceTest {
 
+    /** OperationsScorecardQueryServiceTest의 calculatesLifecycleMetricsWithOneBatchActivityLookup 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void calculatesLifecycleMetricsWithOneBatchActivityLookup() {
         UUID incidentId = UUID.randomUUID();
@@ -51,21 +52,25 @@ class OperationsScorecardQueryServiceTest {
         assertThat(batchLookups).hasValue(1);
     }
 
+    /** OperationsScorecardQueryServiceTest의 incident 처리에 필요한 업무 로직을 수행한다. */
     private Incident incident(UUID id, Instant detected) {
         return new Incident(id, "fingerprint", UUID.randomUUID(), "cluster", "default", "Pod", "api",
                 "PROBE", "HIGH", IncidentState.RESOLVED, "title", "summary", "inspect", 1, 0, null,
                 detected, detected.plusSeconds(1_800), "operator");
     }
 
+    /** OperationsScorecardQueryServiceTest의 activity 처리에 필요한 업무 로직을 수행한다. */
     private IncidentActivity activity(UUID incidentId, IncidentState state, Instant createdAt) {
         return new IncidentActivity(UUID.randomUUID(), incidentId, "STATE_CHANGED", IncidentState.OPEN, state,
                 null, "operator", createdAt);
     }
 
+    /** OperationsScorecardQueryServiceTest의 unsupported 처리에 필요한 업무 로직을 수행한다. */
     private Object unsupported(String method) {
         throw new UnsupportedOperationException(method);
     }
 
+    /** OperationsScorecardQueryServiceTest의 proxy 처리에 필요한 업무 로직을 수행한다. */
     @SuppressWarnings("unchecked")
     private <T> T proxy(Class<T> type, PortCall call) {
         return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
@@ -73,6 +78,7 @@ class OperationsScorecardQueryServiceTest {
     }
 
     private interface PortCall {
+        /** PortCall의 invoke 처리 계약을 정의한다. */
         Object invoke(String method, Object[] args);
     }
 }

@@ -16,10 +16,12 @@ import java.util.Objects;
 final class Fabric8PodLogCollector {
     private final int maxLogChars;
 
+    /** Fabric8PodLogCollector 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     Fabric8PodLogCollector(@Value("${aiops.analysis.max-log-chars:4000}") int maxLogChars) {
         this.maxLogChars = Math.max(500, maxLogChars);
     }
 
+    /** Fabric8PodLogCollector의 collect 처리의 핵심 작업 흐름을 실행한다. */
     void collect(KubernetesClient client, String namespace, Pod pod, String selectedContainerName,
                  int tailLines, boolean previous, List<DiagnosticPodLog> target) {
         if (pod.getSpec() == null || pod.getSpec().getContainers() == null || pod.getMetadata() == null) return;
@@ -31,6 +33,7 @@ final class Fabric8PodLogCollector {
                 .forEach(container -> collectContainer(client, namespace, pod, podName, container.getName(), tailLines, previous, target));
     }
 
+    /** Fabric8PodLogCollector의 collectContainer 처리의 핵심 작업 흐름을 실행한다. */
     private void collectContainer(KubernetesClient client, String namespace, Pod pod, String podName,
                                   String containerName, int tailLines, boolean previous, List<DiagnosticPodLog> target) {
         ContainerStatus status = containerStatus(pod, containerName);
@@ -58,12 +61,14 @@ final class Fabric8PodLogCollector {
         }
     }
 
+    /** Fabric8PodLogCollector의 containerStatus 처리에 필요한 업무 로직을 수행한다. */
     private ContainerStatus containerStatus(Pod pod, String containerName) {
         if (pod.getStatus() == null || pod.getStatus().getContainerStatuses() == null) return null;
         return pod.getStatus().getContainerStatuses().stream()
                 .filter(status -> Objects.equals(status.getName(), containerName)).findFirst().orElse(null);
     }
 
+    /** Fabric8PodLogCollector의 shouldTryPrevious 처리 조건의 충족 여부를 판단한다. */
     private boolean shouldTryPrevious(ContainerStatus status) {
         if (status == null) return false;
         if (status.getRestartCount() != null && status.getRestartCount() > 0) return true;
@@ -72,6 +77,7 @@ final class Fabric8PodLogCollector {
         return reason.contains("crashloopbackoff") || reason.contains("error");
     }
 
+    /** Fabric8PodLogCollector의 unavailableReason 처리에 필요한 업무 로직을 수행한다. */
     private String unavailableReason(ContainerStatus status) {
         if (status == null || status.getState() == null) return null;
         if (status.getState().getWaiting() != null) {
@@ -86,6 +92,7 @@ final class Fabric8PodLogCollector {
         return null;
     }
 
+    /** Fabric8PodLogCollector의 friendlyFailure 처리에 필요한 업무 로직을 수행한다. */
     private String friendlyFailure(KubernetesClientException exception) {
         String message = text(exception.getMessage());
         String lower = message.toLowerCase(Locale.ROOT);
@@ -95,11 +102,13 @@ final class Fabric8PodLogCollector {
         return "Logs are not available: " + sanitize(message.replaceAll("https?://[^\\s]+", "<kubernetes-api>"), 300);
     }
 
+    /** Fabric8PodLogCollector의 sanitize 처리에 필요한 업무 로직을 수행한다. */
     private String sanitize(String value, int limit) {
         if (value == null) return "";
         String sanitized = value.replaceAll("(?i)(token|password|secret|authorization)(\\s*[:=]\\s*)[^\\s,;]+", "$1$2***");
         return sanitized.length() <= limit ? sanitized : sanitized.substring(0, limit);
     }
 
+    /** Fabric8PodLogCollector의 text 처리에 필요한 업무 로직을 수행한다. */
     private String text(String value) { return value == null ? "" : value.trim(); }
 }

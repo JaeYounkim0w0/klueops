@@ -5,9 +5,11 @@ from pathlib import Path
 import os
 
 from docx import Document
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Pt
+from docx.shared import Inches, Pt
 from docx.text.paragraph import Paragraph
 
 
@@ -17,10 +19,8 @@ COLLECTION_GUIDANCE = (
     "source별 성공, 실패, 건너뜀, 지연을 확인합니다. PARTIAL이면 실패 source를 "
     "확인하고 credential, API 연결 또는 권한을 복구한 뒤 같은 범위를 재분석합니다."
 )
-# Keep a macOS Word-compatible Hangul font explicitly assigned to every run.
-# The bundled headless LibreOffice renderer on this host does not expose Hangul
-# glyphs, so DOCX text/font integrity and page geometry are verified separately.
-GUIDE_FONT = "AppleGothic"
+# 공개 배포 문서와 headless 검증 환경에서 동일하게 사용할 수 있는 한글 글꼴을 지정한다.
+GUIDE_FONT = "Noto Sans CJK KR"
 CONSOLE_HEADING = "Kubernetes 콘솔"
 CONSOLE_VERIFICATION_GUIDANCE = (
     "변경 또는 삭제 명령이 끝나면 운영 결과 검증에서 Kubernetes 상태의 전후 비교 판정과 "
@@ -42,6 +42,184 @@ INCIDENT_EVIDENCE_GUIDANCE = (
     "Incident 보고서를 내보내면 원본 분석과 연결된 명령의 실행자, 시각, 종료 코드, 검증 판정과 "
     "전후 Snapshot 해시가 포함됩니다. credential, 실시간 로그와 Snapshot 원문은 포함되지 않습니다."
 )
+AI_PROVIDER_HEADING = "AI Provider와 Local Models"
+VALUES_AI_GUIDANCE = (
+    "AI로 Values 제안은 선택한 Chart의 이름과 제공사, Chart와 Application 버전, 요청에 관련된 실제 "
+    "values.yaml 및 values.schema.json 골격을 기준으로 요청을 반영합니다. 특정 제품 전용 예시를 사용하지 않으며 "
+    "기본값이 이미 요청을 만족하면 중복 override를 생략합니다. 구조 검사와 같은 Chart의 Helm 렌더링을 통과한 결과만 표시됩니다."
+)
+VALUES_VALIDATION_GUIDANCE = (
+    "새 Values는 범용 예시 key 없이 빈 override에서 시작합니다. 수동으로 작성한 YAML도 Revision 저장 전에 정확한 "
+    "Chart로 렌더링합니다. AI 제안은 최대 세 번 검증하며 manifest 형태나 Chart에 없는 경로를 거부합니다. "
+    "nodePort는 Service type이 NodePort 또는 LoadBalancer일 때 Kubernetes 기본 범위 30000-32767에서 지정하며, "
+    "편집 화면과 렌더링 검증이 잘못된 값을 Revision 저장 전에 차단합니다. 비밀번호 본문 대신 사전에 만든 "
+    "existing Secret 이름을 요청하고, 실패하면 수동 편집을 계속 사용합니다."
+)
+TARGET_SERVICE_GUIDANCE = (
+    "Target 단계의 현재 Values로 렌더링되는 Service에서 Service 이름과 type, Service Port, Target Port, 선택형 "
+    "Node Port를 확인합니다. 이 요약은 노출 방식을 선택하기 전에 실제 Chart 렌더 결과를 검토하는 기준입니다."
+)
+HELM_STORAGE_GUIDANCE = (
+    "Preview는 등록 Cluster credential이 대상 Namespace에서 Helm release Secret을 get/list/create할 수 있는지 먼저 "
+    "확인합니다. Namespace 조회가 되더라도 이 권한이 부족하면 승인 전에 차단하고 거부된 권한을 표시합니다."
+)
+CLUSTER_CONNECTION_GUIDANCE = (
+    "연결 확인 성공은 API 인증과 기본 읽기가 가능하다는 의미이며 전체 동기화 권한을 보장하지 않습니다. "
+    "첫 동기화까지 실행하고 실패하면 오류에 표시된 ServiceAccount와 리소스의 cluster-wide get/list 권한을 확인합니다."
+)
+CLUSTER_RBAC_GUIDANCE = (
+    "전체 동기화에는 Namespace RoleBinding이 아니라 workload, Pod, Service, storage, 정책과 Event 등 수집 대상의 "
+    "read-only ClusterRole이 필요합니다. 운영에서는 동기화 전용 ServiceAccount를 Helm 배포 권한과 분리합니다."
+)
+CLUSTER_CREDENTIAL_GUIDANCE = (
+    "등록 인증 정보는 기본 마스킹됩니다. 원문 보기는 cluster:manage 권한과 로컬 검증 설정이 모두 있을 때만 확인 후 "
+    "사용하며 감사 기록을 남기고 60초 뒤 자동으로 다시 숨깁니다. 운영에서는 원문 보기 대신 credential 교체를 사용합니다."
+)
+CHART_LIBRARY_REMOVAL_GUIDANCE = (
+    "Chart Library의 제거는 source/package exact confirmation 후 Chart를 신규 선택 목록에서 숨깁니다. "
+    "기존 Application, Release와 Values revision은 보존되며 동일 Chart를 다시 가져오면 복원됩니다."
+)
+CHART_PROVIDER_GUIDANCE = (
+    "Chart Library의 제공사는 Chart를 발행·관리하는 주체이며, 소스는 Artifact Hub 또는 직접 업로드 같은 유입 경로입니다. "
+    "직접 업로드에서 신뢰할 수 있는 제공사 정보를 확인할 수 없으면 제공사 미확인으로 표시합니다."
+)
+GLOBAL_SHELL_GUIDANCE = (
+    "상단 컨텍스트 바에서 현재 Tenant와 Workspace를 확인하고 변경합니다. "
+    "목록과 분석 결과는 선택한 운영 범위에 맞춰 다시 조회됩니다."
+)
+IMAGE_ALT_TEXTS = (
+    "감지부터 검증과 해결까지 이어지는 권장 운영 흐름도",
+    "Platform, Tenant, Workspace, Cluster, Namespace, Resource의 관리 범위와 데이터 흐름도",
+)
+NAVIGATION_GROUP_ROWS = (
+    ("개요", "Dashboard"),
+    ("운영 대응", "Triage · Fleet Command · Incidents"),
+    ("인프라", "Clusters"),
+    ("Application Delivery", "Applications"),
+    ("AI 운영", "AI Analysis · AI Chat · Runbooks · AI 신뢰 센터"),
+    ("거버넌스", "Policies · Audit · Operations Reliability"),
+    ("플랫폼 설정", "Data & Runtime · AI Providers · 사용자 및 권한 · Tenant 관리"),
+    ("개인 영역", "사용자 설정"),
+)
+
+
+def update_phase_two_sections(document: Document) -> None:
+    """Phase 2에서 실제 제공하는 Application Delivery와 AI 설정 안내를 반영한다."""
+    replacements = {
+        "목적  관련 Kubernetes 리소스를 애플리케이션 관점으로 묶어 상태와 제한된 운영 조치를 제공합니다.":
+            "목적  Tenant Chart를 Custom Values로 Cluster에 Helm 배포하고 Application 상태와 수명주기를 운영합니다.",
+        "사용 시점  개별 Pod보다 서비스 단위로 상태, 분석, Restart와 Rollback을 확인할 때 사용합니다.":
+            "사용 시점  Artifact Hub Chart를 가져오거나 보유 Chart를 Cluster와 Namespace에 배포하고 상태를 확인할 때 사용합니다.",
+        "AI Analysis에서 식별한 Application의 상태를 확인합니다.":
+            "Chart Library를 기본 시작점으로 사용하고 Chart가 없을 때 Discover 또는 Source/.tgz 가져오기를 선택합니다.",
+        "상태 동기화, 보호된 Restart, Rollback preview와 실행을 제공합니다.":
+            "Values Profile과 대상 Cluster/Namespace를 정한 뒤 Cluster 내부, Chart에서 관리, KlueOps HTTPRoute 중 노출 방식을 선택하고 Preview와 정확한 확인 문구를 거쳐 배포합니다.",
+        "Values Profile, 대상 Cluster/Namespace, 선택형 HTTPRoute를 설정한 뒤 Preview와 정확한 확인 문구를 거쳐 배포합니다.":
+            "Values Profile과 대상 Cluster/Namespace를 정한 뒤 Cluster 내부, Chart에서 관리, KlueOps HTTPRoute 중 노출 방식을 선택하고 Preview와 정확한 확인 문구를 거쳐 배포합니다.",
+        "Application 범위 AI Analysis와 최근 운영 작업으로 연결합니다.":
+            "Applications에서 배포 Chart와 Chart/Application 버전을 확인합니다. 상세에서는 package·제공사/source, workload/Pod, Service·Ingress·HTTPRoute URL, IP/Host와 Service/Target/Node Port, Helm History와 upgrade/rollback/uninstall을 확인합니다.",
+        "Application 상세에서 workload/Pod, Service·접근 경로, Helm History와 upgrade/rollback/uninstall을 확인합니다.":
+            "Applications에서 배포 Chart와 Chart/Application 버전을 확인합니다. 상세에서는 package·제공사/source, workload/Pod, Service·Ingress·HTTPRoute URL, IP/Host와 Service/Target/Node Port, Helm History와 upgrade/rollback/uninstall을 확인합니다.",
+        "Application 상세에서 workload/Pod, Service·Ingress·HTTPRoute URL과 endpoint 상태, Helm History와 upgrade/rollback/uninstall을 확인합니다.":
+            "Applications에서 배포 Chart와 Chart/Application 버전을 확인합니다. 상세에서는 package·제공사/source, workload/Pod, Service·Ingress·HTTPRoute URL, IP/Host와 Service/Target/Node Port, Helm History와 upgrade/rollback/uninstall을 확인합니다.",
+        "AI로 Values 제안은 선택한 Chart의 이름과 제공사, Chart와 Application 버전, 기본 values.yaml 골격과 values.schema.json을 기준으로 요청을 반영합니다. 생성 결과는 같은 Chart로 Helm 렌더링을 통과한 경우만 표시됩니다.":
+            VALUES_AI_GUIDANCE,
+        "AI로 Values 제안은 선택한 Chart의 이름과 제공사, Chart와 Application 버전, 요청에 관련된 실제 values.yaml 및 values.schema.json 골격을 기준으로 요청을 반영합니다. 구조 검사와 같은 Chart의 Helm 렌더링을 통과한 결과만 표시됩니다.":
+            VALUES_AI_GUIDANCE,
+        "새 Values는 범용 예시 key 없이 빈 override에서 시작합니다. 수동으로 작성한 YAML도 Revision 저장 전에 정확한 Chart로 렌더링하며, AI 제안이 두 번의 생성과 검증 안에 성공하지 못하면 수동 편집을 계속 사용합니다.":
+            VALUES_VALIDATION_GUIDANCE,
+        "새 Values는 범용 예시 key 없이 빈 override에서 시작합니다. 수동으로 작성한 YAML도 Revision 저장 전에 정확한 Chart로 렌더링합니다. AI 제안은 최대 세 번 검증하며 manifest 형태나 Chart에 없는 경로를 거부합니다. 비밀번호 본문 대신 사전에 만든 existing Secret 이름을 요청하고, 실패하면 수동 편집을 계속 사용합니다.":
+            VALUES_VALIDATION_GUIDANCE,
+        "처음 사용할 때  현재는 애플리케이션 운영 화면이며 완성된 Docker 또는 Helm 배포 플랫폼이 아닙니다.":
+            "처음 사용할 때  Chart Library에서 검증된 버전을 선택하고 내부 Service 방식으로 작은 테스트 배포부터 시작합니다.",
+        "주의  미구현 배포 API를 상용 배포 기능으로 해석하면 안 됩니다. GitOps 연동은 후속 범위입니다.":
+            "주의  이 기능은 GitOps Controller가 아닙니다. 대상, Values와 Preview를 확인한 명시적 Helm 작업만 실행합니다.",
+        "12 Applications와 Argo CD의 향후 방향": "12 Application Delivery 운영 경계",
+        "Argo CD는 후속 선택 연동으로 둡니다. 현재 AIOps는 Argo CD가 없어도 Kubernetes API, Event, Log와 Snapshot을 이용해 진단할 수 있어야 합니다. 연동된 환경에서는 배포 변경과 장애의 관계를 더 정확히 설명하고 안전한 수동 Sync를 제공할 수 있습니다.":
+            "Application Delivery는 KlueOps가 관리하는 Helm Release를 명시적으로 배포·변경·삭제합니다. Argo CD나 Flux를 설치하거나 Git 상태를 지속 동기화하지 않으며, Tenant가 별도로 운영하는 GitOps Controller와 책임을 섞지 않습니다.",
+        "단계별 연동 순서": "안전한 운영 순서",
+        "1.  읽기 전용으로 Application, Health, Sync, Drift, Git revision과 배포 이력을 수집합니다.":
+            "1.  Tenant Library의 Chart 버전과 Values revision을 고정하고 대상 Cluster와 Namespace를 확인합니다.",
+        "2.  배포 시각과 Incident, Event, Log, Rollout 상태를 시간축으로 연결합니다.":
+            "2.  Preview에서 렌더링 결과, Secret 마스킹, Namespace와 Exposure 계획을 확인합니다.",
+        "3.  Diff와 실행 전 검증을 제공하고 RBAC와 Audit가 적용된 수동 Refresh 및 Sync를 허용합니다.":
+            "3.  정확한 확인 문구로 Helm 작업을 시작하고 Job과 Application History에서 진행·실패 단계를 추적합니다.",
+        "4.  자동 Prune, 강제 Sync, Application 삭제와 Git 또는 Helm values 직접 수정은 별도 승인 전까지 제외합니다.":
+            "4.  작업 후 workload/Pod, Service와 Ingress/HTTPRoute endpoint 상태를 검증하고 필요할 때 preview 후 rollback 또는 uninstall합니다.",
+        "4.  작업 후 workload/Pod, Service와 endpoint를 검증하고 필요할 때 preview 후 rollback 또는 uninstall합니다.":
+            "4.  작업 후 workload/Pod, Service와 Ingress/HTTPRoute endpoint 상태를 검증하고 필요할 때 preview 후 rollback 또는 uninstall합니다.",
+    }
+    for paragraph in document.paragraphs:
+        if paragraph.text in replacements:
+            paragraph.text = replacements[paragraph.text]
+
+    # 이전 가이드 갱신 과정에서 추가된 동일 안내는 한 번만 유지한다.
+    for guidance in (VALUES_AI_GUIDANCE, VALUES_VALIDATION_GUIDANCE):
+        matches = [paragraph for paragraph in document.paragraphs if paragraph.text == guidance]
+        for duplicate in matches[1:]:
+            duplicate._element.getparent().remove(duplicate._element)
+
+    service_port_guidance = (
+        "KlueOps HTTPRoute에서는 현재 Values로 렌더링된 Service와 대상 Cluster의 READY Gateway를 목록에서 선택합니다. "
+        "Service Port는 spec.ports[].port이며 Pod의 targetPort나 Node 외부 노출용 nodePort가 아닙니다."
+    )
+    gateway_prerequisite_guidance = (
+        "Gateway 목록이 비어 있으면 Cluster Admin이 Gateway API CRD, Controller와 HTTP/HTTPS Gateway를 준비하고, "
+        "등록 Cluster credential에 Gateway get/list 읽기 권한을 부여합니다. KlueOps는 이를 자동 설치하지 않으며, "
+        "나중에 준비한 경우 다시 조회하거나 기존 내부 Application의 Upgrade에서 노출을 추가할 수 있습니다."
+    )
+    if not any(paragraph.text == service_port_guidance for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("Values Profile과 대상 Cluster/Namespace를 정한 뒤"))
+        current = insert_after(anchor, service_port_guidance, "List Bullet")
+        insert_after(current, gateway_prerequisite_guidance, "List Bullet")
+
+    if not any(paragraph.text == VALUES_AI_GUIDANCE for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("Values Profile과 대상 Cluster/Namespace를 정한 뒤"))
+        current = insert_after(anchor, VALUES_AI_GUIDANCE, "List Bullet")
+        insert_after(current, VALUES_VALIDATION_GUIDANCE, "List Bullet")
+
+    if not any(paragraph.text == CHART_LIBRARY_REMOVAL_GUIDANCE for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("Chart Library를 기본 시작점으로"))
+        insert_after(anchor, CHART_LIBRARY_REMOVAL_GUIDANCE, "List Bullet")
+
+    if not any(paragraph.text == CHART_PROVIDER_GUIDANCE for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("Chart Library를 기본 시작점으로"))
+        insert_after(anchor, CHART_PROVIDER_GUIDANCE, "List Bullet")
+
+    if not any(paragraph.text == HELM_STORAGE_GUIDANCE for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("Values Profile과 대상 Cluster/Namespace를 정한 뒤"))
+        insert_after(anchor, HELM_STORAGE_GUIDANCE, "List Bullet")
+
+    if not any(paragraph.text == TARGET_SERVICE_GUIDANCE for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("Values Profile과 대상 Cluster/Namespace를 정한 뒤"))
+        insert_after(anchor, TARGET_SERVICE_GUIDANCE, "List Bullet")
+
+    # 더 이상 제품 방향과 맞지 않는 Argo CD 중심 도식과 참고 링크를 제거한다.
+    obsolete_caption = next(
+        (paragraph for paragraph in document.paragraphs if paragraph.text == "그림 4 AIOps와 Argo CD의 권장 책임 경계"),
+        None,
+    )
+    if obsolete_caption is not None:
+        previous_element = obsolete_caption._element.getprevious()
+        if previous_element is not None and previous_element.xpath(".//w:drawing"):
+            previous_element.getparent().remove(previous_element)
+        obsolete_caption._element.getparent().remove(obsolete_caption._element)
+    for paragraph in list(document.paragraphs):
+        if paragraph.text.startswith("Argo CD 참고"):
+            paragraph._element.getparent().remove(paragraph._element)
+
+    if any(paragraph.text == AI_PROVIDER_HEADING for paragraph in document.paragraphs):
+        return
+    anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text == "계정 및 권한")
+    previous = Paragraph(anchor._element.getprevious(), anchor._parent)
+    current = insert_after(previous, AI_PROVIDER_HEADING, "Heading 2")
+    current = insert_after(current, "목적  Local Ollama와 선택형 외부 LLM 연결, 모델과 Tenant 목적별 사용 경로를 관리합니다.", "Normal")
+    current = insert_after(current, "사용 시점  AI Analysis, AI Chat과 Helm Values 제안에 사용할 Provider나 모델을 변경할 때 사용합니다.", "Normal")
+    current = insert_after(current, "Platform Manager는 Provider profile과 credential을 등록하고 연결을 검증합니다.", "List Bullet")
+    current = insert_after(current, "Tenant 관리자는 허용된 profile/model을 목적별로 선택하고 외부 전송 여부를 명시적으로 설정합니다.", "List Bullet")
+    current = insert_after(current, "Local Models에서는 Ollama 설치 모델을 동기화하고 승인 목록의 9B 이하 모델만 추가합니다.", "List Bullet")
+    current = insert_after(current, "API key와 credential은 저장 후 다시 표시하지 않으며 화면과 로그에서 마스킹합니다.", "List Bullet")
+    insert_after(current, "주의  외부 Provider 사용은 Tenant 데이터 반출 결정입니다. 전송 범위와 fallback을 확인한 뒤 활성화합니다.", "Normal")
 
 
 def insert_after(paragraph: Paragraph, text: str, style: str) -> Paragraph:
@@ -51,6 +229,15 @@ def insert_after(paragraph: Paragraph, text: str, style: str) -> Paragraph:
     inserted.style = style
     inserted.add_run(text)
     return inserted
+
+
+def update_cluster_sections(document: Document) -> None:
+    """연결 확인과 전체 동기화 RBAC, 자격 증명 원문 정책을 구분해 안내한다."""
+    anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith("처음 사용할 때  등록 직후 연결 확인"))
+    current = anchor
+    for guidance in (CLUSTER_CONNECTION_GUIDANCE, CLUSTER_RBAC_GUIDANCE, CLUSTER_CREDENTIAL_GUIDANCE):
+        if not any(paragraph.text == guidance for paragraph in document.paragraphs):
+            current = insert_after(current, guidance, "List Bullet")
 
 
 def apply_supported_font(document: Document) -> None:
@@ -79,7 +266,111 @@ def apply_supported_font(document: Document) -> None:
                         set_run_fonts(run._element.get_or_add_rPr())
 
 
+def apply_image_alt_text(document: Document) -> None:
+    """시각 도식을 보지 못하는 사용자도 의미를 알 수 있도록 대체 텍스트를 지정한다."""
+    image_properties = document._element.xpath(".//wp:docPr")
+    for properties, description in zip(image_properties, IMAGE_ALT_TEXTS, strict=False):
+        properties.set("descr", description)
+        properties.set("title", description)
+
+
+def update_navigation_map(document: Document) -> None:
+    """기존 3분류 그림을 권한 친화적인 업무 영역 표로 교체한다."""
+    intro = next(
+        paragraph for paragraph in document.paragraphs
+        if paragraph.text.startswith((
+            "플랫폼 기능은 운영 관리, AI, 설정의 세 영역",
+            "좌측 메뉴는 개요, 운영 대응, 인프라",
+        ))
+    )
+    intro.text = (
+        "좌측 메뉴는 개요, 운영 대응, 인프라, Application Delivery, AI 운영, 거버넌스, "
+        "플랫폼 설정과 개인 영역으로 구성됩니다. 구조는 화면마다 바뀌지 않으며, 로그인 사용자의 "
+        "capability와 Tenant 기능 정책에 따라 접근할 수 없는 그룹은 제목과 메뉴를 함께 숨깁니다."
+    )
+
+    caption = next(paragraph for paragraph in document.paragraphs if paragraph.text.startswith((
+        "그림 1 좌측 메뉴",
+        "그림 1 역할과 기능에 따른 좌측 메뉴 그룹",
+    )))
+    previous_element = caption._element.getprevious()
+    if previous_element is not None and previous_element.xpath(".//w:drawing"):
+        previous_element.getparent().remove(previous_element)
+
+    existing = next((
+        table for table in document.tables
+        if len(table.columns) == 2
+        and table.cell(0, 0).text == "업무 영역"
+        and table.cell(0, 1).text == "포함 메뉴"
+    ), None)
+    if existing is not None:
+        existing._tbl.getparent().remove(existing._tbl)
+
+    # 재실행 시에도 동일한 셀 서식과 메뉴 순서를 보장하도록 표를 다시 구성한다.
+    table = document.add_table(rows=1, cols=2)
+    table.style = "Table Grid"
+    table.autofit = False
+    table.columns[0].width = Inches(1.8)
+    table.columns[1].width = Inches(5.0)
+    borders = OxmlElement("w:tblBorders")
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        border = OxmlElement(f"w:{edge}")
+        border.set(qn("w:val"), "single")
+        border.set(qn("w:sz"), "6")
+        border.set(qn("w:color"), "D9D9D9")
+        borders.append(border)
+    table._tbl.tblPr.append(borders)
+    headers = table.rows[0].cells
+    headers[0].text = "업무 영역"
+    headers[1].text = "포함 메뉴"
+    for cell in headers:
+        shading = OxmlElement("w:shd")
+        shading.set(qn("w:fill"), "173653")
+        cell._tc.get_or_add_tcPr().append(shading)
+        cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+        for paragraph in cell.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            for run in paragraph.runs:
+                run.bold = True
+                run.font.size = Pt(9)
+                run.font.name = GUIDE_FONT
+                run._element.get_or_add_rPr().rFonts.set(qn("w:eastAsia"), GUIDE_FONT)
+                color = OxmlElement("w:color")
+                color.set(qn("w:val"), "FFFFFF")
+                run._element.get_or_add_rPr().append(color)
+    for index, (group, menus) in enumerate(NAVIGATION_GROUP_ROWS, start=1):
+        cells = table.add_row().cells
+        cells[0].text = group
+        cells[1].text = menus
+        for cell_index, cell in enumerate(cells):
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            if index % 2 == 0:
+                shading = OxmlElement("w:shd")
+                shading.set(qn("w:fill"), "F3F7FB")
+                cell._tc.get_or_add_tcPr().append(shading)
+            for paragraph in cell.paragraphs:
+                paragraph.paragraph_format.space_before = Pt(0)
+                paragraph.paragraph_format.space_after = Pt(0)
+                paragraph.paragraph_format.line_spacing = 1
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER if cell_index == 0 else WD_ALIGN_PARAGRAPH.LEFT
+                for run in paragraph.runs:
+                    run.bold = cell_index == 0
+                    run.font.size = Pt(8.5)
+    for row in table.rows:
+        for cell in row.cells:
+            margins = OxmlElement("w:tcMar")
+            for side, width in (("top", "70"), ("start", "100"), ("bottom", "70"), ("end", "100")):
+                margin = OxmlElement(f"w:{side}")
+                margin.set(qn("w:w"), width)
+                margin.set(qn("w:type"), "dxa")
+                margins.append(margin)
+            cell._tc.get_or_add_tcPr().append(margins)
+    caption._element.addprevious(table._tbl)
+    caption.text = "그림 1 역할과 기능에 따른 좌측 메뉴 그룹"
+
+
 def normalize_section_page_breaks(document: Document) -> None:
+    """섹션 제목을 새 페이지의 안전 여백 안에 배치한다."""
     paragraphs = document.paragraphs
     for index, paragraph in enumerate(paragraphs[:-1]):
         next_paragraph = paragraphs[index + 1]
@@ -97,6 +388,8 @@ def normalize_section_page_breaks(document: Document) -> None:
         for page_break in page_breaks:
             page_break.getparent().remove(page_break)
         next_paragraph.paragraph_format.page_break_before = True
+        # LibreOffice 변환 시 연속된 제목이 페이지 상단 밖으로 밀리지 않도록 최소 여백을 둔다.
+        next_paragraph.paragraph_format.space_before = Pt(12)
         if not paragraph.text.strip():
             paragraph._element.getparent().remove(paragraph._element)
 
@@ -106,10 +399,43 @@ def normalize_section_page_breaks(document: Document) -> None:
         if paragraph.paragraph_format.page_break_before and not previous.text.strip():
             previous._element.getparent().remove(previous._element)
 
+    for paragraph in document.paragraphs:
+        if paragraph.paragraph_format.page_break_before:
+            paragraph.paragraph_format.space_before = Pt(12)
+
+    # 연속 제목이나 큰 표 뒤 섹션은 LibreOffice PDF 변환에서 첫 제목이 상단에 잘릴 수 있다.
+    safe_top_headings = {"11 설정 메뉴 2와 권한", "14 메뉴 선택 빠른 참조"}
+    for settings_heading in [
+        paragraph for paragraph in document.paragraphs
+        if paragraph.text in safe_top_headings
+    ]:
+        paragraphs = document.paragraphs
+        heading_index = next(
+            index for index, paragraph in enumerate(paragraphs)
+            if paragraph._element is settings_heading._element
+        )
+        if heading_index > 0:
+            previous = paragraphs[heading_index - 1]
+            if previous.text == "\u00a0":
+                previous._element.getparent().remove(previous._element)
+        settings_heading.paragraph_format.page_break_before = False
+        spacer = settings_heading.insert_paragraph_before("\u00a0")
+        spacer.paragraph_format.page_break_before = True
+        spacer.paragraph_format.space_before = Pt(0)
+        spacer.paragraph_format.space_after = Pt(6)
+        for run in spacer.runs:
+            run.font.size = Pt(8)
+
 
 def compact_short_tables(document: Document) -> None:
-    for table_index in (1, 3):
-        table = document.tables[table_index]
+    compact_headers = {
+        ("영역", "역할", "운영 팁"),
+        ("메뉴 그룹", "필요 Capability", "대표 사용자"),
+    }
+    for table in document.tables:
+        headers = tuple(cell.text for cell in table.rows[0].cells)
+        if headers not in compact_headers:
+            continue
         for row_index, row in enumerate(table.rows):
             row_properties = row._tr.get_or_add_trPr()
             if row_properties.find(qn("w:cantSplit")) is None:
@@ -133,11 +459,12 @@ def compact_console_section(document: Document) -> None:
             break
         if not in_console_section:
             continue
-        paragraph.paragraph_format.space_before = Pt(0)
+        paragraph.paragraph_format.space_before = Pt(3) if paragraph.text.startswith(("처음 사용할 때", "주의")) else Pt(0)
         paragraph.paragraph_format.space_after = Pt(1)
         paragraph.paragraph_format.line_spacing = 1
         for run in paragraph.runs:
-            run.font.size = Pt(9)
+            # 콘솔 안내는 항목이 많아 다음 장에 두 줄만 남지 않도록 조금 더 조밀하게 배치한다.
+            run.font.size = Pt(8)
 
 
 def main() -> None:
@@ -145,8 +472,23 @@ def main() -> None:
     for paragraph in document.paragraphs:
         if paragraph.text == "좌측 메뉴의 목적과 권장 운영 흐름":
             paragraph.text = "플랫폼 기능과 권장 운영 흐름"
-        elif paragraph.text.startswith("좌측 메뉴는 운영 관리, AI, 설정의 세 영역"):
-            paragraph.text = paragraph.text.replace("좌측 메뉴는", "플랫폼 기능은", 1)
+        elif paragraph.text == "짙은 좌측 내비게이션은 운영 관리, AI와 설정 기능을 구분하며 현재 메뉴를 파란 표시선으로 보여줍니다.":
+            paragraph.text = (
+                "짙은 좌측 내비게이션은 기능을 업무 영역별로 구분하며 현재 메뉴를 파란 표시선으로 보여줍니다. "
+                "권한이 없는 그룹은 제목과 메뉴를 함께 표시하지 않습니다."
+            )
+        elif paragraph.text.startswith("제품 방향  현재 제품은 Kubernetes 운영 AIOps에 집중합니다"):
+            paragraph.text = (
+                "제품 방향  KlueOps는 Kubernetes 운영 AIOps와 Tenant별 Helm Application Delivery를 제공합니다. "
+                "Argo CD나 Flux를 설치하거나 Git 상태를 지속 동기화하지 않으며, 별도 GitOps Controller의 책임과 섞지 않습니다."
+            )
+
+    if not any(paragraph.text == GLOBAL_SHELL_GUIDANCE for paragraph in document.paragraphs):
+        anchor = next(paragraph for paragraph in document.paragraphs if paragraph.text == "공통 화면 요소")
+        current = insert_after(anchor, GLOBAL_SHELL_GUIDANCE, "List Bullet")
+        current = insert_after(current, "짙은 좌측 내비게이션은 기능을 업무 영역별로 구분하며 현재 메뉴를 파란 표시선으로 보여줍니다. 권한이 없는 그룹은 제목과 메뉴를 함께 표시하지 않습니다.", "List Bullet")
+        current = insert_after(current, "상단 검색과 운영 알림은 어느 메뉴에서도 사용할 수 있으며, 알림을 열면 관련 화면으로 이동할 수 있습니다.", "List Bullet")
+        insert_after(current, "좁은 화면에서는 메뉴 버튼으로 내비게이션을 열고, 배경을 선택하거나 메뉴를 고르면 자동으로 닫힙니다.", "List Bullet")
 
     if not any(COLLECTION_GUIDANCE == paragraph.text for paragraph in document.paragraphs):
         anchor = next(
@@ -209,7 +551,12 @@ def main() -> None:
         )
         insert_after(anchor, INCIDENT_EVIDENCE_GUIDANCE, "List Bullet")
 
+    update_phase_two_sections(document)
+    update_cluster_sections(document)
+    update_navigation_map(document)
+
     apply_supported_font(document)
+    apply_image_alt_text(document)
     normalize_section_page_breaks(document)
     compact_short_tables(document)
     compact_console_section(document)

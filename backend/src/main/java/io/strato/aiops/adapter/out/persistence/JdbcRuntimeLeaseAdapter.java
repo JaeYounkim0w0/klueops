@@ -18,6 +18,7 @@ public class JdbcRuntimeLeaseAdapter implements RuntimeLeasePort {
     private final TransactionTemplate transactionTemplate;
     private final String ownerId;
 
+    /** JdbcRuntimeLeaseAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public JdbcRuntimeLeaseAdapter(JdbcTemplate jdbcTemplate,
                                    TransactionTemplate transactionTemplate,
                                    @Value("${aiops.runtime.instance-id:${HOSTNAME:local}}") String instanceId) {
@@ -26,6 +27,7 @@ public class JdbcRuntimeLeaseAdapter implements RuntimeLeasePort {
         this.ownerId = instanceId + ":" + UUID.randomUUID();
     }
 
+    /** JdbcRuntimeLeaseAdapter의 acquireOrRenew 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public boolean acquireOrRenew(String leaseKey, Duration ttl) {
         if (leaseKey == null || leaseKey.isBlank()) throw new IllegalArgumentException("leaseKey must not be blank");
@@ -48,6 +50,7 @@ public class JdbcRuntimeLeaseAdapter implements RuntimeLeasePort {
         return Boolean.TRUE.equals(acquired);
     }
 
+    /** JdbcRuntimeLeaseAdapter의 release 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public void release(String leaseKey) {
         jdbcTemplate.update("DELETE FROM runtime_leases WHERE lease_key = ? AND owner_id = ?", leaseKey, ownerId);

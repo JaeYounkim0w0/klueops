@@ -4,6 +4,7 @@ import java.util.List;
 
 public record CapabilityMatrixSummary(String status, int allowed, int denied, int unknown, int score) {
 
+    /** CapabilityMatrixSummary의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static CapabilityMatrixSummary from(List<String> states) {
         int allowed = (int) states.stream().filter("ALLOWED"::equals).count();
         int denied = (int) states.stream().filter("DENIED"::equals).count();

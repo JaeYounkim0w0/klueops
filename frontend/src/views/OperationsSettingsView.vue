@@ -16,6 +16,7 @@ const regressionRunning = ref(false);
 const restartingWatchId = ref('');
 const expandedRegressionId = ref('');
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load() {
   loading.value = true;
   try {
@@ -30,6 +31,7 @@ async function load() {
   finally { loading.value = false; }
 }
 
+/** save 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function save() {
   if (!settings.value) return;
   saving.value = true; error.value = ''; message.value = '';
@@ -38,12 +40,14 @@ async function save() {
   finally { saving.value = false; }
 }
 
+/** previewCleanup 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function previewCleanup() {
   error.value = ''; message.value = '';
   try { preview.value = await api.previewOperationCleanup(); }
   catch (cause) { error.value = cause instanceof ApiError ? cause.message : '정리 대상을 계산하지 못했습니다.'; }
 }
 
+/** executeCleanup 처리의 핵심 작업 흐름을 실행한다. */
 async function executeCleanup() {
   if (!preview.value) return;
   cleaning.value = true; error.value = ''; message.value = '';
@@ -52,6 +56,7 @@ async function executeCleanup() {
   finally { cleaning.value = false; }
 }
 
+/** restartWatch 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function restartWatch(clusterId: string) {
   restartingWatchId.value = clusterId; error.value = ''; message.value = '';
   try {
@@ -62,6 +67,7 @@ async function restartWatch(clusterId: string) {
   finally { restartingWatchId.value = ''; }
 }
 
+/** toggleWatch 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 async function toggleWatch(watch: WatchRuntimeStatusResponse) {
   restartingWatchId.value = watch.clusterId; error.value = ''; message.value = '';
   try {
@@ -72,6 +78,7 @@ async function toggleWatch(watch: WatchRuntimeStatusResponse) {
   finally { restartingWatchId.value = ''; }
 }
 
+/** runRegression 처리의 핵심 작업 흐름을 실행한다. */
 async function runRegression() {
   regressionRunning.value = true; error.value = ''; message.value = '';
   try {

@@ -27,11 +27,13 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public JdbcAnalysisAssuranceRepositoryAdapter(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 saveWatchSignal 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public void saveWatchSignal(WatchSignal signal) {
         jdbcTemplate.update("""
@@ -42,6 +44,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
                 signal.action(), signal.reason(), signal.status(), signal.summary(), timestamp(signal.observedAt()));
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 findWatchSignals 처리 결과를 조회해 반환한다. */
     @Override
     public List<WatchSignal> findWatchSignals(UUID clusterId, String namespace, int limit) {
         StringBuilder sql = new StringBuilder("""
@@ -66,6 +69,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
                 instant(rs.getTimestamp("observed_at"))), args.toArray());
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 saveWatchSignalGroup 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     @Transactional
     public WatchSignalGroup saveWatchSignalGroup(WatchSignalGroup group) {
@@ -90,6 +94,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
         return findWatchSignalGroup(group.id()).orElseThrow();
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 findWatchSignalGroup 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<WatchSignalGroup> findWatchSignalGroup(UUID groupId) {
         return jdbcTemplate.query("""
@@ -98,6 +103,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
                 """, signalGroupMapper(), groupId).stream().findFirst();
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 findWatchSignalGroupByFingerprint 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<WatchSignalGroup> findWatchSignalGroupByFingerprint(String fingerprint) {
         return jdbcTemplate.query("""
@@ -106,6 +112,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
                 """, signalGroupMapper(), fingerprint).stream().findFirst();
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 findWatchSignalGroups 처리 결과를 조회해 반환한다. */
     @Override
     public List<WatchSignalGroup> findWatchSignalGroups(UUID clusterId, String namespace, String state, int limit) {
         StringBuilder sql = new StringBuilder("""
@@ -133,6 +140,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
         return jdbcTemplate.query(sql.toString(), signalGroupMapper(), args.toArray());
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 saveRegressionRun 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     @Transactional
     public RegressionRun saveRegressionRun(RegressionRun run) {
@@ -153,6 +161,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
         return findRegressionRun(run.id()).orElseThrow();
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 findRegressionRun 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<RegressionRun> findRegressionRun(UUID runId) {
         List<RegressionRun> runs = jdbcTemplate.query("select * from analysis_regression_runs where id=?",
@@ -166,6 +175,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
                 run.baselineVersion(), run.triggeredBy(), run.startedAt(), run.completedAt(), findCases(run.id())));
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 findRegressionRuns 처리 결과를 조회해 반환한다. */
     @Override
     public List<RegressionRun> findRegressionRuns(int limit) {
         List<RegressionRun> runs = jdbcTemplate.query(
@@ -198,11 +208,13 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
                 .toList();
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 findCases 처리 결과를 조회해 반환한다. */
     private List<RegressionCaseResult> findCases(UUID runId) {
         return jdbcTemplate.query("select * from analysis_regression_case_results where run_id=? order by case_id",
                 (rs, row) -> regressionCase(rs), runId);
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 regressionCase 처리에 필요한 업무 로직을 수행한다. */
     private RegressionCaseResult regressionCase(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new RegressionCaseResult(uuid(rs.getObject("id")), uuid(rs.getObject("run_id")),
                 rs.getString("case_id"), rs.getString("title"), rs.getString("category"),
@@ -210,6 +222,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
                 strings(rs.getString("failures_json")), rs.getLong("duration_ms"));
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 signalGroupMapper 처리에 필요한 업무 로직을 수행한다. */
     private org.springframework.jdbc.core.RowMapper<WatchSignalGroup> signalGroupMapper() {
         return (rs, row) -> new WatchSignalGroup(
                 uuid(rs.getObject("id")), rs.getString("fingerprint"), uuid(rs.getObject("cluster_id")),
@@ -222,6 +235,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
                 rs.getString("updated_by"), instant(rs.getTimestamp("updated_at")));
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 json 처리에 필요한 업무 로직을 수행한다. */
     private String json(List<String> values) {
         try {
             return objectMapper.writeValueAsString(values);
@@ -230,6 +244,7 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
         }
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 strings 처리에 필요한 업무 로직을 수행한다. */
     private List<String> strings(String json) {
         try {
             return objectMapper.readValue(json, new TypeReference<>() { });
@@ -238,14 +253,17 @@ public class JdbcAnalysisAssuranceRepositoryAdapter implements AnalysisAssurance
         }
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 uuid 처리에 필요한 업무 로직을 수행한다. */
     private UUID uuid(Object value) {
         return value instanceof UUID id ? id : UUID.fromString(String.valueOf(value));
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 timestamp 처리에 필요한 업무 로직을 수행한다. */
     private Timestamp timestamp(Instant value) {
         return value == null ? null : Timestamp.from(value);
     }
 
+    /** JdbcAnalysisAssuranceRepositoryAdapter의 instant 처리에 필요한 업무 로직을 수행한다. */
     private Instant instant(Timestamp value) {
         return value == null ? null : value.toInstant();
     }

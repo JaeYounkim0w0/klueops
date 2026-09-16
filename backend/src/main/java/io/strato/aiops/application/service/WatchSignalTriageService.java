@@ -37,6 +37,7 @@ public class WatchSignalTriageService {
     private final AuditLogRepositoryPort auditRepository;
     private final OperationsEventStream eventStream;
 
+    /** WatchSignalTriageService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public WatchSignalTriageService(AnalysisAssuranceRepositoryPort assuranceRepository,
                                     OperationsEvolutionRepositoryPort evolutionRepository,
                                     ClusterRepositoryPort clusterRepository,
@@ -53,6 +54,7 @@ public class WatchSignalTriageService {
         this.eventStream = eventStream;
     }
 
+    /** WatchSignalTriageService의 ingestWatchSignal 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public void ingestWatchSignal(WatchSignal signal) {
         SignalClassification classification = classify(signal);
@@ -105,6 +107,7 @@ public class WatchSignalTriageService {
         eventStream.publish("triage", saved);
     }
 
+    /** WatchSignalTriageService의 getQueue 처리 결과를 조회해 반환한다. */
     public TriageQueue getQueue(UUID clusterId, String namespace, String state, int limit) {
         List<WatchSignalGroup> groups = assuranceRepository.findWatchSignalGroups(clusterId, namespace, state, limit);
         List<TriageItem> items = groups.stream().map(group -> new TriageItem(group.id().toString(), "WATCH_SIGNAL",
@@ -119,6 +122,7 @@ public class WatchSignalTriageService {
                 count(groups, item -> "SUPPRESSED".equals(item.state())), items);
     }
 
+    /** WatchSignalTriageService의 updateState 처리 대상의 상태를 갱신한다. */
     @Transactional
     public WatchSignalGroup updateState(UUID groupId, String requestedState, String actor, String requestId) {
         String state = requireState(requestedState);
@@ -135,6 +139,7 @@ public class WatchSignalTriageService {
         return saved;
     }
 
+    /** WatchSignalTriageService의 classify 처리에 필요한 업무 로직을 수행한다. */
     static SignalClassification classify(WatchSignal signal) {
         String reason = defaultText(signal.reason(), signal.action());
         String token = normalizeToken(reason);
@@ -151,6 +156,7 @@ public class WatchSignalTriageService {
         return new SignalClassification(eventCategory(token), severity, reason);
     }
 
+    /** WatchSignalTriageService의 requireState 처리 입력과 현재 상태의 유효성을 검증한다. */
     private static String requireState(String value) {
         String normalized = normalizeUpper(value);
         if (!Set.of("OPEN", "ACKNOWLEDGED", "SUPPRESSED").contains(normalized)) {
@@ -159,21 +165,25 @@ public class WatchSignalTriageService {
         return normalized;
     }
 
+    /** WatchSignalTriageService의 triageScore 처리에 필요한 업무 로직을 수행한다. */
     private static int triageScore(WatchSignalGroup group) {
         return Math.min(100, severityScore(group.severity()) + Math.min(25, group.occurrenceCount() * 3)
                 + ("INCIDENT_CREATED".equals(group.state()) ? 10 : 0));
     }
 
+    /** WatchSignalTriageService의 triageConfidence 처리에 필요한 업무 로직을 수행한다. */
     private static int triageConfidence(WatchSignalGroup group) {
         return Math.min(98, 55 + Math.min(35, group.occurrenceCount() * 5)
                 + (group.incidentId() == null ? 0 : 8));
     }
 
+    /** WatchSignalTriageService의 triageImpact 처리에 필요한 업무 로직을 수행한다. */
     private static int triageImpact(WatchSignalGroup group) {
         return Math.min(100, severityScore(group.severity())
                 + ("Pod".equalsIgnoreCase(group.resourceKind()) ? 15 : 5));
     }
 
+    /** WatchSignalTriageService의 eventCategory 처리에 필요한 업무 로직을 수행한다. */
     private static String eventCategory(String reason) {
         return switch (reason) {
             case "FAILEDMOUNT", "FAILEDBINDING" -> "STORAGE_CONFIG";
@@ -186,6 +196,7 @@ public class WatchSignalTriageService {
         };
     }
 
+    /** WatchSignalTriageService의 severityScore 처리에 필요한 업무 로직을 수행한다. */
     private static int severityScore(String severity) {
         return switch (normalizeUpper(severity)) {
             case "CRITICAL" -> 70;
@@ -196,22 +207,27 @@ public class WatchSignalTriageService {
         };
     }
 
+    /** WatchSignalTriageService의 normalizeToken 처리 데이터를 필요한 표현으로 변환한다. */
     private static String normalizeToken(String value) {
         return value == null ? "" : value.replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
     }
 
+    /** WatchSignalTriageService의 normalizeUpper 처리 데이터를 필요한 표현으로 변환한다. */
     private static String normalizeUpper(String value) {
         return value == null || value.isBlank() ? null : value.trim().toUpperCase(Locale.ROOT);
     }
 
+    /** WatchSignalTriageService의 defaultText 처리에 필요한 업무 로직을 수행한다. */
     private static String defaultText(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }
 
+    /** WatchSignalTriageService의 sha256 처리에 필요한 업무 로직을 수행한다. */
     private static String sha256(String value) {
         return OperationsNotificationPublisher.sha256(value);
     }
 
+    /** WatchSignalTriageService의 count 처리에 필요한 업무 로직을 수행한다. */
     private static <T> int count(List<T> values, java.util.function.Predicate<T> predicate) {
         return Math.toIntExact(values.stream().filter(predicate).count());
     }

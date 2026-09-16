@@ -12,6 +12,7 @@ public class TerminalCommandParser {
             "-c", "--container", "-n", "--namespace", "--pod-running-timeout"
     );
 
+    /** TerminalCommandParser의 parse 처리 데이터를 필요한 표현으로 변환한다. */
     TerminalCommandSpec parse(List<String> arguments) {
         int verbIndex = findVerb(arguments);
         String verb = arguments.get(verbIndex);
@@ -55,6 +56,7 @@ public class TerminalCommandParser {
         return new TerminalCommandSpec(verb, pod, container, List.copyOf(remote));
     }
 
+    /** TerminalCommandParser의 findVerb 처리 결과를 조회해 반환한다. */
     private int findVerb(List<String> arguments) {
         for (int index = 0; index < arguments.size(); index++) {
             String value = arguments.get(index);

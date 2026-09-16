@@ -11,6 +11,7 @@ public record KubernetesNodeResponse(
         String osImage,
         String containerRuntimeVersion
 ) {
+    /** KubernetesNodeResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static KubernetesNodeResponse from(KubernetesNodeSummary node) {
         return new KubernetesNodeResponse(
                 node.name(),

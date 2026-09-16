@@ -19,6 +19,7 @@ public record AnalysisCommandPreviewResponse(
         String guardMessage,
         String dryRunSummary
 ) {
+    /** AnalysisCommandPreviewResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static AnalysisCommandPreviewResponse from(AnalysisCommandPreviewResult result) {
         return new AnalysisCommandPreviewResponse(result.command(), result.safety(), result.executable(),
                 result.reason(), result.normalizedNamespace(), result.requiresConfirmation(), result.confirmationText(),

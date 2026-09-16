@@ -33,11 +33,13 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public JdbcOperatorWorkspaceRepositoryAdapter(JdbcTemplate jdbc, ObjectMapper objectMapper) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 search 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public List<SearchResult> search(String query, int limit) {
         String pattern = "%" + query.toLowerCase().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
@@ -99,6 +101,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 .toList();
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 findLatestResource 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<KubernetesResourceSnapshot> findLatestResource(UUID clusterId, String namespace, String kind, String name) {
         return first(jdbc.query("""
@@ -109,6 +112,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 """, this::resourceSnapshot, clusterId, namespace, kind, name));
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 findResourceHistory 처리 결과를 조회해 반환한다. */
     @Override
     public List<KubernetesResourceSnapshot> findResourceHistory(UUID clusterId, String namespace, String kind, String name, int limit) {
         return jdbc.query("""
@@ -119,6 +123,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 """, this::resourceSnapshot, clusterId, namespace, kind, name, Math.max(1, Math.min(limit, 20)));
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 findLatestNamespaceResources 처리 결과를 조회해 반환한다. */
     @Override
     public List<KubernetesResourceSnapshot> findLatestNamespaceResources(UUID clusterId, String namespace, int limit) {
         return jdbc.query("""
@@ -128,6 +133,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 """, this::resourceSnapshot, clusterId, namespace, limit);
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 saveCollaboration 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     @Transactional
     public IncidentCollaboration saveCollaboration(IncidentCollaboration value) {
@@ -146,6 +152,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
         return findCollaboration(value.incidentId());
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 findCollaboration 처리 결과를 조회해 반환한다. */
     @Override
     public IncidentCollaboration findCollaboration(UUID incidentId) {
         List<IncidentCollaboration> rows = jdbc.query("select * from incident_collaboration where incident_id=?",
@@ -160,6 +167,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 base.resolveDueAt(), base.updatedBy(), base.updatedAt(), findIncidentLinks(incidentId));
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 findIncidentLinks 처리 결과를 조회해 반환한다. */
     @Override
     public List<IncidentLink> findIncidentLinks(UUID incidentId) {
         return jdbc.query("""
@@ -170,6 +178,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                         rs.getString("created_by"), instant(rs, "created_at")), incidentId);
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 saveIncidentLink 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public void saveIncidentLink(IncidentLink link) {
         jdbc.update("""
@@ -179,12 +188,14 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 """, link.incidentId(), link.relatedIncidentId(), link.relationType(), link.createdBy(), timestamp(link.createdAt()));
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 deleteIncidentLink 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Override
     public void deleteIncidentLink(UUID incidentId, UUID relatedIncidentId) {
         jdbc.update("delete from incident_links where (incident_id=? and related_incident_id=?) or (incident_id=? and related_incident_id=?)",
                 incidentId, relatedIncidentId, relatedIncidentId, incidentId);
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 findRunbookLibrary 처리 결과를 조회해 반환한다. */
     @Override
     public List<ManagedRunbook> findRunbookLibrary() {
         List<ManagedRunbook> result = new ArrayList<>(jdbc.query("""
@@ -202,6 +213,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
         return result;
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 findManagedRunbook 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<ManagedRunbook> findManagedRunbook(String id) {
         Optional<ManagedRunbook> custom = first(jdbc.query("""
@@ -218,6 +230,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 """, this::managedRunbook, id));
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 saveCustomRunbook 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     @Transactional
     public ManagedRunbook saveCustomRunbook(ManagedRunbook value, String changeNote, String changedBy) {
@@ -247,6 +260,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
         return findManagedRunbook(value.id()).orElseThrow();
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 findRunbookVersions 처리 결과를 조회해 반환한다. */
     @Override
     public List<RunbookVersion> findRunbookVersions(String runbookId) {
         return jdbc.query("""
@@ -257,6 +271,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                         instant(rs, "created_at")), runbookId);
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 findRunbookVersion 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<ManagedRunbook> findRunbookVersion(String runbookId, int version) {
         List<String> rows = jdbc.query("select snapshot_json from custom_runbook_versions where runbook_id=? and version=?",
@@ -269,11 +284,13 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
         }
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 deleteCustomRunbook 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Override
     public void deleteCustomRunbook(String runbookId) {
         jdbc.update("delete from custom_runbooks where id=?", runbookId);
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 findIncidentsForResource 처리 결과를 조회해 반환한다. */
     @Override
     public List<Incident> findIncidentsForResource(UUID clusterId, String namespace, String kind, String name, int limit) {
         return jdbc.query("""
@@ -284,6 +301,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 """, this::incident, clusterId, namespace, kind, name, limit);
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 searchResult 처리에 필요한 업무 로직을 수행한다. */
     private SearchResult searchResult(ResultSet rs, int rowNum) throws SQLException {
         return new SearchResult(rs.getString("id"), rs.getString("type"), rs.getString("title"),
                 rs.getString("description"), uuid(rs, "cluster_id"), rs.getString("cluster_name"),
@@ -291,6 +309,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 rs.getString("status"), rs.getString("target_path"), instant(rs, "updated_at"));
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 resourceSnapshot 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesResourceSnapshot resourceSnapshot(ResultSet rs, int rowNum) throws SQLException {
         return new KubernetesResourceSnapshot(uuid(rs, "id"), uuid(rs, "cluster_id"), uuid(rs, "sync_job_id"),
                 rs.getString("namespace"), rs.getString("resource_type"), rs.getString("resource_name"),
@@ -298,6 +317,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 rs.getString("raw_json"), rs.getBoolean("truncated"), instant(rs, "collected_at"));
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 managedRunbook 처리에 필요한 업무 로직을 수행한다. */
     private ManagedRunbook managedRunbook(ResultSet rs, int rowNum) throws SQLException {
         return new ManagedRunbook(rs.getString("id"), rs.getString("source_type"), rs.getString("signal"),
                 rs.getString("category"), rs.getString("resource_kind"), rs.getString("title"),
@@ -307,6 +327,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 rs.getBoolean("enabled"), rs.getString("owner"), instant(rs, "created_at"), instant(rs, "updated_at"));
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 incident 처리에 필요한 업무 로직을 수행한다. */
     private Incident incident(ResultSet rs, int rowNum) throws SQLException {
         return new Incident(uuid(rs, "id"), rs.getString("fingerprint"), uuid(rs, "cluster_id"),
                 rs.getString("cluster_name"), rs.getString("namespace"), rs.getString("resource_kind"),
@@ -317,6 +338,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
                 rs.getString("updated_by"));
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 json 처리에 필요한 업무 로직을 수행한다. */
     private String json(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -325,6 +347,7 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
         }
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 strings 처리에 필요한 업무 로직을 수행한다. */
     private List<String> strings(String value) {
         try {
             return value == null ? List.of() : objectMapper.readValue(value, STRING_LIST);
@@ -333,24 +356,29 @@ public class JdbcOperatorWorkspaceRepositoryAdapter implements OperatorWorkspace
         }
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 uuid 처리에 필요한 업무 로직을 수행한다. */
     private static UUID uuid(ResultSet rs, String name) throws SQLException {
         Object value = rs.getObject(name);
         return value == null ? null : value instanceof UUID uuid ? uuid : UUID.fromString(value.toString());
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 instant 처리에 필요한 업무 로직을 수행한다. */
     private static Instant instant(ResultSet rs, String name) throws SQLException {
         Timestamp value = rs.getTimestamp(name);
         return value == null ? null : value.toInstant();
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 timestamp 처리에 필요한 업무 로직을 수행한다. */
     private static Timestamp timestamp(Instant value) {
         return value == null ? null : Timestamp.from(value);
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 first 처리에 필요한 업무 로직을 수행한다. */
     private static <T> Optional<T> first(List<T> values) {
         return values.isEmpty() ? Optional.empty() : Optional.of(values.get(0));
     }
 
+    /** JdbcOperatorWorkspaceRepositoryAdapter의 compareNullable 처리에 필요한 업무 로직을 수행한다. */
     private static int compareNullable(Instant left, Instant right) {
         if (left == null && right == null) return 0;
         if (left == null) return -1;

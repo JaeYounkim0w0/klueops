@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class RuntimeDatabaseContractTest {
 
+    /** RuntimeDatabaseContractTest의 defaultRuntimeUsesPostgresqlAndH2IsNotARuntimeDependency 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void defaultRuntimeUsesPostgresqlAndH2IsNotARuntimeDependency() throws Exception {
         String application = Files.readString(Path.of("src/main/resources/application.yml"));

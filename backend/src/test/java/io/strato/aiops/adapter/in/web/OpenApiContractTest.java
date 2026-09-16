@@ -28,6 +28,7 @@ class OpenApiContractTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /** OpenApiContractTest의 publishesCriticalOperationsWithResponseSchemas 처리 결과를 지정된 대상에 전달한다. */
     @Test
     void publishesCriticalOperationsWithResponseSchemas() throws Exception {
         String specification = mockMvc.perform(get("/v3/api-docs"))

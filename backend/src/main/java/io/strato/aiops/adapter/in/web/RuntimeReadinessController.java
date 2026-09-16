@@ -14,10 +14,12 @@ public class RuntimeReadinessController {
 
     private final ProductionReadinessService productionReadinessService;
 
+    /** RuntimeReadinessController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public RuntimeReadinessController(ProductionReadinessService productionReadinessService) {
         this.productionReadinessService = productionReadinessService;
     }
 
+    /** RuntimeReadinessController의 getRuntimeReadiness 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Assess runtime production readiness")
     @GetMapping("/runtime-readiness")
     public ProductionReadinessService.RuntimeReadiness getRuntimeReadiness() {

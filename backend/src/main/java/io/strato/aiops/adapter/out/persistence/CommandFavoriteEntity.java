@@ -34,9 +34,11 @@ class CommandFavoriteEntity {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    /** CommandFavoriteEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected CommandFavoriteEntity() {
     }
 
+    /** CommandFavoriteEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static CommandFavoriteEntity fromDomain(CommandFavorite value) {
         CommandFavoriteEntity entity = new CommandFavoriteEntity();
         entity.id = value.id();
@@ -53,6 +55,7 @@ class CommandFavoriteEntity {
         return entity;
     }
 
+    /** CommandFavoriteEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     CommandFavorite toDomain() {
         return new CommandFavorite(id, clusterId, ownerUserId, name, description, command, namespace, shared,
                 sortOrder, createdAt, updatedAt);

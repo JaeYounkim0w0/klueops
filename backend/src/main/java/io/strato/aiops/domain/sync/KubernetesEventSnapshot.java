@@ -18,6 +18,7 @@ public record KubernetesEventSnapshot(
         Integer count,
         Instant collectedAt
 ) {
+    /** KubernetesEventSnapshot 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public KubernetesEventSnapshot {
         Objects.requireNonNull(id, "id must not be null");
         Objects.requireNonNull(clusterId, "clusterId must not be null");
@@ -25,6 +26,7 @@ public record KubernetesEventSnapshot(
         Objects.requireNonNull(collectedAt, "collectedAt must not be null");
     }
 
+    /** KubernetesEventSnapshot의 collected 처리의 핵심 작업 흐름을 실행한다. */
     public static KubernetesEventSnapshot collected(UUID clusterId, UUID syncJobId, CollectedEvent event) {
         return new KubernetesEventSnapshot(
                 UUID.randomUUID(),

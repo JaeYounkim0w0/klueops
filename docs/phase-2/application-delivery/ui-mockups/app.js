@@ -189,7 +189,13 @@ function actionFor(button) {
     "?": () => simpleInfo("Application Delivery 도움말", "Discover → Library → Values → Target/Exposure → Preview → Application 순서로 진행합니다. 실행 중 progress는 Job Center, 완료·실패 이력은 Application History에서 확인합니다."),
     "↗ URL로 직접 가져오기": directImportModal,
     "＋ Source 등록": sourceModal,
-    "Artifact Hub 검색": () => toast("Artifact Hub에서 ‘nginx’ 검색 결과 1,284건을 불러왔습니다."),
+    "Artifact Hub 검색": () => {
+      const query = document.querySelector('[aria-label="Helm Chart 검색"]')?.value.trim();
+      if (!query) return toast("검색어를 입력하세요.");
+      document.querySelector("[data-discover-empty]")?.setAttribute("hidden", "");
+      document.querySelectorAll("[data-discover-results]").forEach((element) => element.removeAttribute("hidden"));
+      toast(`Artifact Hub에서 ‘${query}’ 검색 결과를 불러왔습니다.`);
+    },
     "Tenant Library로 가져오기": () => openModal({ title: "Chart를 가져올까요?", body: `<div class="review-list"><p><span>Chart</span><strong>bitnami/nginx 18.2.4</strong></p><p><span>Source</span><strong>Artifact Hub → 원본 Helm repository</strong></p><p><span>Digest</span><strong>Import 후 고정 및 검증</strong></p><p><span>Tenant</span><strong>Platform Engineering</strong></p></div><div class="info-box">가져오기는 Cluster를 변경하지 않습니다. 완료 후 Chart Library에서 사용할 수 있습니다.</div>`, confirm: "가져오기", onConfirm: () => jobResult("Chart import") }),
     "↑ .tgz 업로드": () => openModal({ title: "Helm Chart 업로드", body: `<label class="drop-zone"><input type="file" accept=".tgz" /><strong>.tgz 파일을 선택하거나 끌어놓으세요</strong><span>최대 20 MiB · 압축 해제 크기와 경로 traversal을 검사합니다.</span></label><div class="info-box">업로드 후 Chart.yaml, digest, values/schema와 provenance를 검사합니다.</div>`, confirm: "검사 후 업로드", onConfirm: () => jobResult("Chart upload") }),
     "초기화": () => openModal({ title: "Values 변경을 초기화할까요?", body: `<div class="warning-box"><strong>저장하지 않은 14개 변경이 사라집니다.</strong><p>마지막 저장 revision인 prod-ha-v2로 되돌립니다.</p></div>`, confirm: "변경 초기화", danger: true, onConfirm: () => toast("Values를 마지막 저장 상태로 되돌렸습니다.") }),

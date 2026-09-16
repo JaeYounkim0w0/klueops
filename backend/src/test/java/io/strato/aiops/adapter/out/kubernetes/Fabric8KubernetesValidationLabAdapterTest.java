@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class Fabric8KubernetesValidationLabAdapterTest {
 
+    /** Fabric8KubernetesValidationLabAdapterTest의 everyFixtureIsValidKubernetesYamlAndCarriesOwnershipLabels 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void everyFixtureIsValidKubernetesYamlAndCarriesOwnershipLabels() {
         Fabric8KubernetesValidationLabAdapter adapter = new Fabric8KubernetesValidationLabAdapter(

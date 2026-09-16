@@ -30,6 +30,7 @@ const trustState = computed(() => {
   return serverTrustState.value;
 });
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load(silent = false) {
   if (silent) refreshing.value = true;
   else loading.value = true;
@@ -52,6 +53,7 @@ async function load(silent = false) {
   }
 }
 
+/** stateClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function stateClass(state?: string) {
   if (state === 'TRUSTED' || state === 'PASSED') return 'low';
   if (state === 'BLOCKED' || state === 'FAILED') return 'critical';

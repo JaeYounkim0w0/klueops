@@ -52,6 +52,7 @@ import java.util.UUID;
 public class OperationsReadinessService {
     private RuntimeLeasePort runtimeLeasePort = RuntimeLeasePort.localOnly();
 
+    /** OperationsReadinessService의 setRuntimeLeasePort 처리 대상의 상태를 갱신한다. */
     @org.springframework.beans.factory.annotation.Autowired
     void setRuntimeLeasePort(RuntimeLeasePort runtimeLeasePort) {
         this.runtimeLeasePort = runtimeLeasePort;
@@ -92,6 +93,7 @@ public class OperationsReadinessService {
     private final int maximumValidationTtlSeconds;
     private final String requiredConfirmation;
 
+    /** OperationsReadinessService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationsReadinessService(OperationsControlPlaneService operationsService,
                                       KubernetesWatchCoordinator watchCoordinator,
                                       AnalysisRegressionService regressionService,
@@ -125,6 +127,7 @@ public class OperationsReadinessService {
         this.requiredConfirmation = requiredConfirmation;
     }
 
+    /** OperationsReadinessService의 fleetQueue 처리에 필요한 업무 로직을 수행한다. */
     public FleetQueue fleetQueue() {
         OperationsOverview overview = operationsService.getOverview();
         List<FleetQueueItem> items = new ArrayList<>();
@@ -163,6 +166,7 @@ public class OperationsReadinessService {
                 sorted);
     }
 
+    /** OperationsReadinessService의 shiftBriefing 처리에 필요한 업무 로직을 수행한다. */
     public ShiftBriefing shiftBriefing() {
         OperationsOverview overview = operationsService.getOverview();
         FleetQueue queue = fleetQueue();
@@ -183,10 +187,12 @@ public class OperationsReadinessService {
                 queue.degradedCollectors(), immediate, watches);
     }
 
+    /** OperationsReadinessService의 scenarios 처리에 필요한 업무 로직을 수행한다. */
     public List<ValidationScenario> scenarios() {
         return SCENARIOS;
     }
 
+    /** OperationsReadinessService의 runValidation 처리의 핵심 작업 흐름을 실행한다. */
     public ValidationLabRun runValidation(String actor) {
         RegressionRun run = regressionService.run(actor);
         List<ValidationCase> cases = run.cases().stream().map(item -> new ValidationCase(
@@ -196,6 +202,7 @@ public class OperationsReadinessService {
                 "VIRTUAL_SAFE", run.completedAt(), cases);
     }
 
+    /** OperationsReadinessService의 liveValidationPolicy 처리에 필요한 업무 로직을 수행한다. */
     public LiveValidationPolicy liveValidationPolicy() {
         return new LiveValidationPolicy(liveValidationEnabled, "LIVE_GUARDED", validationNamespacePrefix,
                 maximumValidationTtlSeconds, requiredConfirmation, List.of(
@@ -208,6 +215,7 @@ public class OperationsReadinessService {
         ));
     }
 
+    /** OperationsReadinessService의 previewLiveValidation 처리에 필요한 업무 로직을 수행한다. */
     public LiveValidationPreview previewLiveValidation(UUID clusterId, String scenarioId, int ttlSeconds) {
         Cluster cluster = requireCluster(clusterId);
         ValidationScenario scenario = requireScenario(scenarioId);
@@ -233,6 +241,7 @@ public class OperationsReadinessService {
                 Instant.now().plusSeconds(boundedTtl));
     }
 
+    /** OperationsReadinessService의 runLiveValidation 처리의 핵심 작업 흐름을 실행한다. */
     public synchronized LiveValidationRun runLiveValidation(UUID clusterId, String scenarioId, int ttlSeconds,
                                                             String confirmation, String actor, String requestId) {
         if (!requiredConfirmation.equals(confirmation)) {
@@ -297,6 +306,7 @@ public class OperationsReadinessService {
         }
     }
 
+    /** OperationsReadinessService의 cleanupLiveValidation 처리에 필요한 업무 로직을 수행한다. */
     public LiveValidationRun cleanupLiveValidation(UUID runId, String actor, String requestId) {
         LiveValidationRun current = readinessRepository.findLiveValidationRun(runId)
                 .orElseThrow(() -> new NoSuchElementException("Live validation run not found: " + runId));
@@ -313,6 +323,7 @@ public class OperationsReadinessService {
         return saved;
     }
 
+    /** OperationsReadinessService의 cleanupExpiredLiveValidations 처리에 필요한 업무 로직을 수행한다. */
     @Scheduled(fixedDelayString = "${aiops.validation-lab.cleanup-interval-ms:60000}")
     public void cleanupExpiredLiveValidations() {
         if (!runtimeLeasePort.acquireOrRenew("scheduler:validation-cleanup", Duration.ofSeconds(90))) return;
@@ -325,15 +336,18 @@ public class OperationsReadinessService {
         }
     }
 
+    /** OperationsReadinessService의 runBenchmark 처리의 핵심 작업 흐름을 실행한다. */
     public AnalysisBenchmark runBenchmark(String actor) {
         return benchmark(regressionService.run(actor));
     }
 
+    /** OperationsReadinessService의 latestBenchmark 처리에 필요한 업무 로직을 수행한다. */
     public AnalysisBenchmark latestBenchmark() {
         List<RegressionRun> runs = regressionService.list(1);
         return runs.isEmpty() ? null : benchmark(runs.get(0));
     }
 
+    /** OperationsReadinessService의 remediationLearning 처리에 필요한 업무 로직을 수행한다. */
     public RemediationLearning remediationLearning(UUID incidentId) {
         var incident = operationsService.getIncident(incidentId).incident();
         List<OutcomeAggregate> samples = readinessRepository.aggregateRemediationOutcomes(
@@ -352,6 +366,7 @@ public class OperationsReadinessService {
                 recommendations);
     }
 
+    /** OperationsReadinessService의 reliabilityTrend 처리에 필요한 업무 로직을 수행한다. */
     public ReliabilityTrend reliabilityTrend(UUID clusterId, String namespace, int days) {
         int window = Math.max(7, Math.min(days, 90));
         ReliabilityTrendData data = readinessRepository.queryReliabilityTrend(
@@ -374,31 +389,37 @@ public class OperationsReadinessService {
                 collectorCoverage, data.daily(), data.scopes());
     }
 
+    /** OperationsReadinessService의 scenario 처리에 필요한 업무 로직을 수행한다. */
     private static ValidationScenario scenario(String id, String title, String category, String signal,
                                                String rootCause, String kind) {
         return new ValidationScenario(id, title, category, signal, rootCause, kind, "VIRTUAL_SAFE");
     }
 
+    /** OperationsReadinessService의 fromPriority 처리 데이터를 필요한 표현으로 변환한다. */
     private FleetQueueItem fromPriority(PriorityItem item) {
         return new FleetQueueItem(item.id(), item.sourceType(), item.clusterId(), text(item.clusterName(), "platform"),
                 item.namespace(), item.severity(), item.score(), item.title(), item.reason(), item.nextAction(),
                 item.targetPath(), item.detectedAt());
     }
 
+    /** OperationsReadinessService의 text 처리에 필요한 업무 로직을 수행한다. */
     private String text(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }
 
+    /** OperationsReadinessService의 requireScenario 처리 입력과 현재 상태의 유효성을 검증한다. */
     private ValidationScenario requireScenario(String scenarioId) {
         return SCENARIOS.stream().filter(item -> item.id().equals(scenarioId)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unsupported validation scenario: " + scenarioId));
     }
 
+    /** OperationsReadinessService의 requireCluster 처리 입력과 현재 상태의 유효성을 검증한다. */
     private Cluster requireCluster(UUID clusterId) {
         return clusterRepository.findById(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster not found: " + clusterId));
     }
 
+    /** OperationsReadinessService의 connectionCredential 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesConnectionCredential connectionCredential(UUID clusterId) {
         EncryptedClusterCredential credential = credentialRepository.findByClusterId(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster credential not found: " + clusterId));
@@ -407,10 +428,12 @@ public class OperationsReadinessService {
         return new KubernetesConnectionCredential(credential.credentialType(), payload);
     }
 
+    /** OperationsReadinessService의 boundedTtl 처리에 필요한 업무 로직을 수행한다. */
     private int boundedTtl(int ttlSeconds) {
         return Math.max(120, Math.min(ttlSeconds <= 0 ? 300 : ttlSeconds, maximumValidationTtlSeconds));
     }
 
+    /** OperationsReadinessService의 plannedResources 처리에 필요한 업무 로직을 수행한다. */
     private List<String> plannedResources(String scenarioId) {
         return switch (scenarioId) {
             case "port-mismatch" -> List.of("Deployment/aiops-port-mismatch", "Service/aiops-port-mismatch");
@@ -420,6 +443,7 @@ public class OperationsReadinessService {
         };
     }
 
+    /** OperationsReadinessService의 benchmark 처리에 필요한 업무 로직을 수행한다. */
     private AnalysisBenchmark benchmark(RegressionRun run) {
         int totalAssertions = run.cases().stream()
                 .mapToInt(item -> item.assertions().size() + item.failures().size()).sum();
@@ -441,6 +465,7 @@ public class OperationsReadinessService {
                 run.completedAt());
     }
 
+    /** OperationsReadinessService의 assertionRate 처리에 필요한 업무 로직을 수행한다. */
     private double assertionRate(List<RegressionCaseResult> cases, String token) {
         int passed = 0;
         int failed = 0;
@@ -451,12 +476,14 @@ public class OperationsReadinessService {
         return percentage(passed, passed + failed);
     }
 
+    /** OperationsReadinessService의 percentile95 처리에 필요한 업무 로직을 수행한다. */
     private long percentile95(List<Long> sorted) {
         if (sorted.isEmpty()) return 0;
         int index = Math.max(0, (int) Math.ceil(sorted.size() * 0.95) - 1);
         return sorted.get(Math.min(index, sorted.size() - 1));
     }
 
+    /** OperationsReadinessService의 recommendation 처리에 필요한 업무 로직을 수행한다. */
     private RemediationRecommendation recommendation(OutcomeAggregate item) {
         double success = percentage(item.succeeded(), item.samples());
         String confidence = item.samples() >= 20 ? "HIGH" : item.samples() >= 5 ? "MEDIUM" : "LOW";
@@ -470,20 +497,24 @@ public class OperationsReadinessService {
                 item.succeeded(), item.failed(), success, item.averageObservationSeconds(), confidence, explanation);
     }
 
+    /** OperationsReadinessService의 percentage 처리에 필요한 업무 로직을 수행한다. */
     private double percentage(int numerator, int denominator) {
         return denominator <= 0 ? 0 : Math.round(numerator * 1000.0 / denominator) / 10.0;
     }
 
+    /** OperationsReadinessService의 sanitize 처리에 필요한 업무 로직을 수행한다. */
     private String sanitize(String value) {
         if (value == null) return "";
         String compact = value.replaceAll("\\s+", " ").trim();
         return compact.length() <= 240 ? compact : compact.substring(0, 240) + "...";
     }
 
+    /** OperationsReadinessService의 blankToNull 처리에 필요한 업무 로직을 수행한다. */
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    /** OperationsReadinessService의 audit 처리에 필요한 업무 로직을 수행한다. */
     private void audit(String action, String targetType, String targetId, String actor, String requestId) {
         auditRepository.save(AuditLog.create(action, targetType, targetId, actor, requestId));
     }

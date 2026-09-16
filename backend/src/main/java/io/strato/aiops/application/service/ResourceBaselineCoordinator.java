@@ -31,11 +31,13 @@ public class ResourceBaselineCoordinator {
     private final OperationsRepositoryPort operationsRepository;
     private final ObjectMapper objectMapper;
 
+    /** ResourceBaselineCoordinator 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ResourceBaselineCoordinator(OperationsRepositoryPort operationsRepository, ObjectMapper objectMapper) {
         this.operationsRepository = operationsRepository;
         this.objectMapper = objectMapper;
     }
 
+    /** ResourceBaselineCoordinator의 reconcile 처리에 필요한 업무 로직을 수행한다. */
     public void reconcile(Cluster cluster, List<KubernetesResourceSnapshot> resources) {
         BaselinePlan plan = plan(cluster, resources,
                 operationsRepository.findResourceBaselines(cluster.id()), Instant.now());
@@ -44,6 +46,7 @@ public class ResourceBaselineCoordinator {
         plan.deletedBaselineIds().forEach(operationsRepository::deleteResourceBaseline);
     }
 
+    /** ResourceBaselineCoordinator의 plan 처리에 필요한 업무 로직을 수행한다. */
     BaselinePlan plan(Cluster cluster,
                       List<KubernetesResourceSnapshot> resources,
                       List<ResourceBaseline> existingBaselines,
@@ -92,6 +95,7 @@ public class ResourceBaselineCoordinator {
         return new BaselinePlan(List.copyOf(baselines), List.copyOf(changes), List.copyOf(deletedBaselineIds));
     }
 
+    /** ResourceBaselineCoordinator의 change 처리 대상의 상태를 갱신한다. */
     private ResourceChange change(Cluster cluster,
                                   ResourceBaseline current,
                                   ResourceBaseline previous,
@@ -106,6 +110,7 @@ public class ResourceBaselineCoordinator {
                 cleanText(summary, 2000), detectedAt);
     }
 
+    /** ResourceBaselineCoordinator의 safeChangeSummary 처리에 필요한 업무 로직을 수행한다. */
     private String safeChangeSummary(ResourceBaseline previous, ResourceBaseline current) {
         if (!Objects.equals(previous.status(), current.status())) {
             return "status: " + defaultText(previous.status(), "-") + " → " + defaultText(current.status(), "-");
@@ -113,6 +118,7 @@ public class ResourceBaselineCoordinator {
         return "안전 summary 필드가 변경되었습니다. 상세 manifest는 Kubernetes API에서 실시간 확인하세요.";
     }
 
+    /** ResourceBaselineCoordinator의 canonicalJson 처리 조건의 충족 여부를 판단한다. */
     private String canonicalJson(String value) {
         try {
             return objectMapper.writeValueAsString(objectMapper.readTree(defaultText(value, "{}")));
@@ -121,10 +127,12 @@ public class ResourceBaselineCoordinator {
         }
     }
 
+    /** ResourceBaselineCoordinator의 resourceKey 처리에 필요한 업무 로직을 수행한다. */
     private String resourceKey(String namespace, String kind, String name) {
         return defaultText(namespace, "") + "|" + kind + "|" + name;
     }
 
+    /** ResourceBaselineCoordinator의 hash 처리 조건의 충족 여부를 판단한다. */
     private String hash(String value) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
@@ -138,6 +146,7 @@ public class ResourceBaselineCoordinator {
         }
     }
 
+    /** ResourceBaselineCoordinator의 cleanText 처리에 필요한 업무 로직을 수행한다. */
     private String cleanText(String value, int maxLength) {
         if (value == null) {
             return null;
@@ -146,6 +155,7 @@ public class ResourceBaselineCoordinator {
         return cleaned.length() <= maxLength ? cleaned : cleaned.substring(0, maxLength);
     }
 
+    /** ResourceBaselineCoordinator의 defaultText 처리에 필요한 업무 로직을 수행한다. */
     private String defaultText(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }

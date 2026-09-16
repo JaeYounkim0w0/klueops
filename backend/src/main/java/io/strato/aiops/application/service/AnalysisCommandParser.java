@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 /** Parses the deliberately small kubectl subset supported by the analysis console. */
 final class AnalysisCommandParser {
 
+    /** AnalysisCommandParser의 parse 처리 데이터를 필요한 표현으로 변환한다. */
     ParsedCommand parse(String rawCommand, String analysisNamespace) {
         String command = value(rawCommand).trim().replace("${namespace}", defaultNamespace(analysisNamespace));
         if (command.isBlank()) {
@@ -53,6 +54,7 @@ final class AnalysisCommandParser {
                 targetRevision, safety, true, change, confirmation, reason);
     }
 
+    /** AnalysisCommandParser의 classifySafety 처리에 필요한 업무 로직을 수행한다. */
     private AnalysisCommandSafety classifySafety(List<String> tokens) {
         String normalized = String.join(" ", tokens).toLowerCase(Locale.ROOT);
         if (containsAny(normalized, " delete ", " apply ", " patch ", " replace ", " edit ", " create ",
@@ -72,6 +74,7 @@ final class AnalysisCommandParser {
         return AnalysisCommandSafety.BLOCKED;
     }
 
+    /** AnalysisCommandParser의 containsAny 처리에 필요한 업무 로직을 수행한다. */
     private boolean containsAny(String value, String... needles) {
         String padded = " " + value + " ";
         for (String needle : needles) {
@@ -80,6 +83,7 @@ final class AnalysisCommandParser {
         return false;
     }
 
+    /** AnalysisCommandParser의 tokenize 처리 데이터를 필요한 표현으로 변환한다. */
     private List<String> tokenize(String command) {
         List<String> tokens = new ArrayList<>();
         Matcher matcher = Pattern.compile("\"([^\"]*)\"|'([^']*)'|(\\S+)").matcher(command);
@@ -89,6 +93,7 @@ final class AnalysisCommandParser {
         return tokens;
     }
 
+    /** AnalysisCommandParser의 parseResource 처리 데이터를 필요한 표현으로 변환한다. */
     private ParsedResource parseResource(List<String> tokens, String operation) {
         List<String> positional = new ArrayList<>();
         for (int i = 2; i < tokens.size(); i++) {
@@ -112,16 +117,19 @@ final class AnalysisCommandParser {
         return new ParsedResource(positional.get(0), positional.size() > 1 ? positional.get(1) : "");
     }
 
+    /** AnalysisCommandParser의 parseKindName 처리 데이터를 필요한 표현으로 변환한다. */
     private ParsedResource parseKindName(String value) {
         String[] parts = value.split("/", 2);
         return new ParsedResource(parts[0], parts.length > 1 ? parts[1] : "");
     }
 
+    /** AnalysisCommandParser의 extractNamespace 처리에 필요한 업무 로직을 수행한다. */
     private String extractNamespace(List<String> tokens, String fallback) {
         String namespace = extractOption(tokens, "-n", "--namespace");
         return defaultNamespace(namespace == null ? fallback : namespace);
     }
 
+    /** AnalysisCommandParser의 extractOption 처리에 필요한 업무 로직을 수행한다. */
     private String extractOption(List<String> tokens, String... names) {
         for (int i = 0; i < tokens.size(); i++) {
             for (String name : names) {
@@ -132,6 +140,7 @@ final class AnalysisCommandParser {
         return null;
     }
 
+    /** AnalysisCommandParser의 extractIntOption 처리에 필요한 업무 로직을 수행한다. */
     private int extractIntOption(List<String> tokens, String name, int fallback) {
         String raw = extractOption(tokens, name);
         if (raw == null) return fallback;
@@ -142,16 +151,19 @@ final class AnalysisCommandParser {
         }
     }
 
+    /** AnalysisCommandParser의 hasOption 처리 조건의 충족 여부를 판단한다. */
     private boolean hasOption(List<String> tokens, String... names) {
         return tokens.stream().anyMatch(token -> List.of(names).contains(token));
     }
 
+    /** AnalysisCommandParser의 extractFieldSelectorInvolvedName 처리에 필요한 업무 로직을 수행한다. */
     private String extractFieldSelectorInvolvedName(List<String> tokens) {
         String selector = extractOption(tokens, "--field-selector");
         Matcher matcher = Pattern.compile("involvedObject\\.name=([^,\\s]+)").matcher(value(selector));
         return matcher.find() ? matcher.group(1) : "";
     }
 
+    /** AnalysisCommandParser의 isSupportedSafeMutation 처리 조건의 충족 여부를 판단한다. */
     private boolean isSupportedSafeMutation(List<String> tokens, String operation, ParsedResource resource,
                                             int replicas, int targetRevision) {
         if (!"Deployment".equals(normalizeResourceType(resource.resourceType())) || value(resource.resourceName()).isBlank()) {
@@ -164,6 +176,7 @@ final class AnalysisCommandParser {
         return "scale".equals(operation) && replicas >= 1 && replicas <= 20;
     }
 
+    /** AnalysisCommandParser의 confirmationText 처리에 필요한 업무 로직을 수행한다. */
     private String confirmationText(String namespace, String resourceName, String operation, List<String> tokens,
                                     int targetRevision) {
         String target = defaultNamespace(namespace) + "/" + requireText(resourceName, "resourceName");
@@ -173,6 +186,7 @@ final class AnalysisCommandParser {
         return "APPLY " + target;
     }
 
+    /** AnalysisCommandParser의 normalizeResourceType 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeResourceType(String resourceType) {
         return switch (value(resourceType).toLowerCase(Locale.ROOT)) {
             case "", "all" -> "";
@@ -194,17 +208,20 @@ final class AnalysisCommandParser {
         };
     }
 
+    /** AnalysisCommandParser의 defaultNamespace 처리에 필요한 업무 로직을 수행한다. */
     private String defaultNamespace(String namespace) {
         String normalized = value(namespace).trim();
         return normalized.isBlank() ? "default" : normalized;
     }
 
+    /** AnalysisCommandParser의 requireText 처리 입력과 현재 상태의 유효성을 검증한다. */
     private String requireText(String text, String name) {
         String normalized = value(text).trim();
         if (normalized.isBlank()) throw new IllegalArgumentException(name + " must not be blank");
         return normalized;
     }
 
+    /** AnalysisCommandParser의 value 처리에 필요한 업무 로직을 수행한다. */
     private String value(String text) {
         return text == null ? "" : text;
     }
@@ -216,6 +233,7 @@ final class AnalysisCommandParser {
                          String namespace, String containerName, int tailLines, String fieldSelectorInvolvedName,
                          boolean previousLogs, int replicas, int targetRevision, AnalysisCommandSafety safety,
                          boolean executable, boolean requiresConfirmation, String confirmationText, String reason) {
+        /** ParsedCommand의 blocked 처리에 필요한 업무 로직을 수행한다. */
         static ParsedCommand blocked(String command, String namespace, AnalysisCommandSafety safety, String reason) {
             return new ParsedCommand(command, "", "", "", namespace, null, 300, "", false, -1, -1, safety,
                     false, false, "", reason);

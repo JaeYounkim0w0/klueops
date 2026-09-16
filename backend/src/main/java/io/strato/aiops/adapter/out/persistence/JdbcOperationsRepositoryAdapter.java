@@ -39,10 +39,12 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
 
     private final JdbcTemplate jdbcTemplate;
 
+    /** JdbcOperationsRepositoryAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public JdbcOperationsRepositoryAdapter(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findIncidents 처리 결과를 조회해 반환한다. */
     @Override
     public List<Incident> findIncidents(UUID clusterId, String namespace, String state, String severity, int limit) {
         StringBuilder sql = new StringBuilder("""
@@ -59,6 +61,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return jdbcTemplate.query(sql.toString(), incidentMapper(), args.toArray());
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findIncidentById 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<Incident> findIncidentById(UUID incidentId) {
         return first(jdbcTemplate.query("""
@@ -67,6 +70,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 """, incidentMapper(), incidentId));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findIncidentByFingerprint 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<Incident> findIncidentByFingerprint(String fingerprint) {
         return first(jdbcTemplate.query("""
@@ -75,6 +79,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 """, incidentMapper(), fingerprint));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 saveIncident 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public Incident saveIncident(Incident incident) {
         int updated = jdbcTemplate.update("""
@@ -100,6 +105,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return findIncidentById(incident.id()).orElseThrow();
     }
 
+    /** JdbcOperationsRepositoryAdapter의 saveIncidentEvidence 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public void saveIncidentEvidence(IncidentEvidence evidence) {
         Integer count = jdbcTemplate.queryForObject(
@@ -115,6 +121,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 evidence.sourceRef(), evidence.summary(), evidence.factual(), timestamp(evidence.occurredAt()));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findIncidentEvidence 처리 결과를 조회해 반환한다. */
     @Override
     public List<IncidentEvidence> findIncidentEvidence(UUID incidentId) {
         return jdbcTemplate.query("select * from incident_evidence where incident_id=? order by occurred_at desc",
@@ -123,6 +130,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                         rs.getString("summary"), rs.getBoolean("factual"), instant(rs, "occurred_at")), incidentId);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 saveIncidentActivity 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public void saveIncidentActivity(IncidentActivity activity) {
         jdbcTemplate.update("""
@@ -132,12 +140,14 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 enumName(activity.toState()), activity.note(), activity.actor(), timestamp(activity.createdAt()));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findIncidentActivities 처리 결과를 조회해 반환한다. */
     @Override
     public List<IncidentActivity> findIncidentActivities(UUID incidentId) {
         return jdbcTemplate.query("select * from incident_activities where incident_id=? order by created_at desc",
                 incidentActivityMapper(), incidentId);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findIncidentActivitiesByIncidentIds 처리 결과를 조회해 반환한다. */
     @Override
     public List<IncidentActivity> findIncidentActivitiesByIncidentIds(Set<UUID> incidentIds) {
         if (incidentIds == null || incidentIds.isEmpty()) {
@@ -148,6 +158,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                         + ") order by created_at desc", incidentActivityMapper(), incidentIds.toArray());
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findIncidentRecovery 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<IncidentRecovery> findIncidentRecovery(UUID incidentId) {
         return first(jdbcTemplate.query("select * from incident_recovery_observations where incident_id=?",
@@ -157,6 +168,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                         rs.getString("last_observed_status"), true), incidentId));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 saveIncidentRecovery 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public IncidentRecovery saveIncidentRecovery(IncidentRecovery recovery) {
         int updated = jdbcTemplate.update("""
@@ -176,6 +188,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return findIncidentRecovery(recovery.incidentId()).orElseThrow();
     }
 
+    /** JdbcOperationsRepositoryAdapter의 saveNotification 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public Notification saveNotification(Notification notification) {
         int updated = jdbcTemplate.update("""
@@ -196,12 +209,14 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return findNotificationByDedupKey(notification.dedupKey()).orElseThrow();
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findNotificationByDedupKey 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<Notification> findNotificationByDedupKey(String dedupKey) {
         return first(jdbcTemplate.query("select * from operation_notifications where dedup_key=?",
                 notificationMapper(), dedupKey));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findNotifications 처리 결과를 조회해 반환한다. */
     @Override
     public List<Notification> findNotifications(boolean unreadOnly, int limit) {
         String sql = "select * from operation_notifications" + (unreadOnly ? " where is_read=false" : "")
@@ -209,34 +224,40 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return jdbcTemplate.query(sql, notificationMapper(), safeLimit(limit));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 countUnreadNotifications 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public long countUnreadNotifications() {
         Long count = jdbcTemplate.queryForObject("select count(*) from operation_notifications where is_read=false", Long.class);
         return count == null ? 0 : count;
     }
 
+    /** JdbcOperationsRepositoryAdapter의 markNotificationRead 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public void markNotificationRead(UUID notificationId) {
         jdbcTemplate.update("update operation_notifications set is_read=true, updated_at=? where id=?",
                 timestamp(Instant.now()), notificationId);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 markAllNotificationsRead 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public void markAllNotificationsRead() {
         jdbcTemplate.update("update operation_notifications set is_read=true, updated_at=? where is_read=false",
                 timestamp(Instant.now()));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findPolicyDefinitions 처리 결과를 조회해 반환한다. */
     @Override
     public List<PolicyDefinition> findPolicyDefinitions() {
         return jdbcTemplate.query("select * from policy_definitions order by category, name", policyDefinitionMapper());
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findPolicyDefinition 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<PolicyDefinition> findPolicyDefinition(String policyId) {
         return first(jdbcTemplate.query("select * from policy_definitions where id=?", policyDefinitionMapper(), policyId));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 savePolicyDefinition 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public PolicyDefinition savePolicyDefinition(PolicyDefinition definition) {
         jdbcTemplate.update("""
@@ -246,6 +267,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return findPolicyDefinition(definition.id()).orElseThrow();
     }
 
+    /** JdbcOperationsRepositoryAdapter의 replacePolicyEvaluations 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public void replacePolicyEvaluations(UUID clusterId, List<PolicyEvaluation> evaluations) {
@@ -267,6 +289,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         });
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findPolicyEvaluations 처리 결과를 조회해 반환한다. */
     @Override
     public List<PolicyEvaluation> findPolicyEvaluations(UUID clusterId, String namespace, String result, int limit) {
         StringBuilder sql = new StringBuilder("""
@@ -282,11 +305,13 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return jdbcTemplate.query(sql.toString(), policyEvaluationMapper(), args.toArray());
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findResourceBaselines 처리 결과를 조회해 반환한다. */
     @Override
     public List<ResourceBaseline> findResourceBaselines(UUID clusterId) {
         return jdbcTemplate.query("select * from resource_baselines where cluster_id=?", baselineMapper(), clusterId);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 saveResourceBaseline 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public void saveResourceBaseline(ResourceBaseline baseline) {
         int updated = jdbcTemplate.update("""
@@ -304,11 +329,13 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         }
     }
 
+    /** JdbcOperationsRepositoryAdapter의 deleteResourceBaseline 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Override
     public void deleteResourceBaseline(UUID baselineId) {
         jdbcTemplate.update("delete from resource_baselines where id=?", baselineId);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 saveResourceChange 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public void saveResourceChange(ResourceChange change) {
         jdbcTemplate.update("""
@@ -320,6 +347,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 change.currentHash(), change.summary(), timestamp(change.detectedAt()));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findResourceChanges 처리 결과를 조회해 반환한다. */
     @Override
     public List<ResourceChange> findResourceChanges(UUID clusterId, String namespace, int limit) {
         StringBuilder sql = new StringBuilder("""
@@ -334,6 +362,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return jdbcTemplate.query(sql.toString(), changeMapper(), args.toArray());
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findResourceChangeById 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<ResourceChange> findResourceChangeById(UUID changeId) {
         return first(jdbcTemplate.query("""
@@ -342,6 +371,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 """, changeMapper(), changeId));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findRunbooks 처리 결과를 조회해 반환한다. */
     @Override
     public List<RunbookTemplate> findRunbooks(String signal, String category) {
         StringBuilder sql = new StringBuilder("""
@@ -368,6 +398,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return jdbcTemplate.query(sql.toString(), runbookMapper(), args.toArray());
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findRunbookById 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<RunbookTemplate> findRunbookById(String runbookId) {
         return first(jdbcTemplate.query("""
@@ -383,11 +414,13 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 """, runbookMapper(), runbookId));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findAnalysisFeedback 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<AnalysisFeedback> findAnalysisFeedback(UUID analysisId) {
         return first(jdbcTemplate.query("select * from analysis_feedback where analysis_id=?", feedbackMapper(), analysisId));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 saveAnalysisFeedback 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public AnalysisFeedback saveAnalysisFeedback(AnalysisFeedback feedback) {
         int updated = jdbcTemplate.update("""
@@ -412,17 +445,20 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return findAnalysisFeedback(feedback.analysisId()).orElseThrow();
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findAnalysisFeedback 처리 결과를 조회해 반환한다. */
     @Override
     public List<AnalysisFeedback> findAnalysisFeedback(int limit) {
         return jdbcTemplate.query("select * from analysis_feedback order by updated_at desc limit ?", feedbackMapper(),
                 safeLimit(limit));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 getOperationSettings 처리 결과를 조회해 반환한다. */
     @Override
     public OperationSettings getOperationSettings() {
         return jdbcTemplate.queryForObject("select * from operation_settings where id=1", settingsMapper());
     }
 
+    /** JdbcOperationsRepositoryAdapter의 saveOperationSettings 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public OperationSettings saveOperationSettings(OperationSettings settings) {
         jdbcTemplate.update("""
@@ -439,6 +475,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         return getOperationSettings();
     }
 
+    /** JdbcOperationsRepositoryAdapter의 findAuditLogs 처리 결과를 조회해 반환한다. */
     @Override
     public List<AuditLog> findAuditLogs(String actor, String action, String targetType, String targetId,
                                         String requestId, Instant from, Instant to, int limit) {
@@ -464,6 +501,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 rs.getString("actor"), rs.getString("request_id"), instant(rs, "created_at")), args.toArray());
     }
 
+    /** JdbcOperationsRepositoryAdapter의 cleanup 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public CleanupPreview cleanup(OperationSettings settings, boolean execute) {
@@ -538,11 +576,13 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 evaluations, analyses, watchSignals, regressionRuns, auditLogs, commandExecutions, execute);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 count 처리에 필요한 업무 로직을 수행한다. */
     private long count(String sql, Instant cutoff) {
         Long count = jdbcTemplate.queryForObject(sql, Long.class, timestamp(cutoff));
         return count == null ? 0 : count;
     }
 
+    /** JdbcOperationsRepositoryAdapter의 incidentMapper 처리에 필요한 업무 로직을 수행한다. */
     private RowMapper<Incident> incidentMapper() {
         return (rs, rowNum) -> new Incident(uuid(rs, "id"), rs.getString("fingerprint"), uuid(rs, "cluster_id"),
                 rs.getString("cluster_name"), rs.getString("namespace"), rs.getString("resource_kind"),
@@ -553,6 +593,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 instant(rs, "last_detected_at"), rs.getString("updated_by"));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 incidentActivityMapper 처리에 필요한 업무 로직을 수행한다. */
     private RowMapper<IncidentActivity> incidentActivityMapper() {
         return (rs, rowNum) -> new IncidentActivity(uuid(rs, "id"), uuid(rs, "incident_id"),
                 rs.getString("activity_type"), incidentState(rs.getString("from_state")),
@@ -560,6 +601,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 instant(rs, "created_at"));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 notificationMapper 처리에 필요한 업무 로직을 수행한다. */
     private RowMapper<Notification> notificationMapper() {
         return (rs, rowNum) -> new Notification(uuid(rs, "id"), rs.getString("dedup_key"),
                 rs.getString("notification_type"), rs.getString("severity"), rs.getString("title"),
@@ -567,12 +609,14 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 rs.getInt("occurrence_count"), instant(rs, "created_at"), instant(rs, "updated_at"));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 policyDefinitionMapper 처리에 필요한 업무 로직을 수행한다. */
     private RowMapper<PolicyDefinition> policyDefinitionMapper() {
         return (rs, rowNum) -> new PolicyDefinition(rs.getString("id"), rs.getString("name"),
                 rs.getString("description"), rs.getString("category"), rs.getString("severity"),
                 rs.getBoolean("enabled"));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 policyEvaluationMapper 처리에 필요한 업무 로직을 수행한다. */
     private RowMapper<PolicyEvaluation> policyEvaluationMapper() {
         return (rs, rowNum) -> new PolicyEvaluation(uuid(rs, "id"), rs.getString("policy_id"),
                 uuid(rs, "cluster_id"), rs.getString("cluster_name"), rs.getString("namespace"),
@@ -581,6 +625,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 rs.getString("recommendation"), instant(rs, "evaluated_at"));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 baselineMapper 처리에 필요한 업무 로직을 수행한다. */
     private RowMapper<ResourceBaseline> baselineMapper() {
         return (rs, rowNum) -> new ResourceBaseline(uuid(rs, "id"), uuid(rs, "cluster_id"),
                 emptyToNull(rs.getString("namespace_key")), rs.getString("resource_kind"),
@@ -588,6 +633,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 rs.getString("summary_json"), instant(rs, "collected_at"));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 changeMapper 처리 대상의 상태를 갱신한다. */
     private RowMapper<ResourceChange> changeMapper() {
         return (rs, rowNum) -> new ResourceChange(uuid(rs, "id"), uuid(rs, "cluster_id"),
                 rs.getString("cluster_name"), rs.getString("namespace"), rs.getString("resource_kind"),
@@ -596,6 +642,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 rs.getString("summary"), instant(rs, "detected_at"));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 runbookMapper 처리의 핵심 작업 흐름을 실행한다. */
     private RowMapper<RunbookTemplate> runbookMapper() {
         return (rs, rowNum) -> new RunbookTemplate(rs.getString("id"), rs.getString("signal"),
                 rs.getString("category"), rs.getString("resource_kind"), rs.getString("title"),
@@ -605,6 +652,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 rs.getString("safety_level"), rs.getInt("version"), rs.getBoolean("enabled"));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 feedbackMapper 처리에 필요한 업무 로직을 수행한다. */
     private RowMapper<AnalysisFeedback> feedbackMapper() {
         return (rs, rowNum) -> new AnalysisFeedback(uuid(rs, "analysis_id"), rs.getString("accuracy"),
                 rs.getString("outcome"), rs.getBoolean("dangerous_suggestion"), rs.getString("comment"),
@@ -613,6 +661,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 rs.getString("confidence_expectation"), rs.getString("submitted_by"), instant(rs, "updated_at"));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 settingsMapper 처리 대상의 상태를 갱신한다. */
     private RowMapper<OperationSettings> settingsMapper() {
         return (rs, rowNum) -> new OperationSettings(rs.getInt("event_retention_days"),
                 rs.getInt("analysis_retention_days"), rs.getInt("job_retention_days"),
@@ -623,6 +672,7 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
                 rs.getString("updated_by"), instant(rs, "updated_at"));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 appendFilter 처리에 필요한 업무 로직을 수행한다. */
     private void appendFilter(StringBuilder sql, List<Object> args, String column, Object value) {
         if (value == null || value instanceof String text && text.isBlank()) {
             return;
@@ -631,43 +681,53 @@ public class JdbcOperationsRepositoryAdapter implements OperationsRepositoryPort
         args.add(value);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 safeLimit 처리에 필요한 업무 로직을 수행한다. */
     private int safeLimit(int limit) {
         return Math.max(1, Math.min(limit <= 0 ? 100 : limit, 500));
     }
 
+    /** JdbcOperationsRepositoryAdapter의 first 처리에 필요한 업무 로직을 수행한다. */
     private <T> Optional<T> first(List<T> values) {
         return values.stream().findFirst();
     }
 
+    /** JdbcOperationsRepositoryAdapter의 uuid 처리에 필요한 업무 로직을 수행한다. */
     private UUID uuid(ResultSet rs, String column) throws SQLException {
         return rs.getObject(column, UUID.class);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 nullableUuid 처리에 필요한 업무 로직을 수행한다. */
     private UUID nullableUuid(ResultSet rs, String column) throws SQLException {
         return rs.getObject(column) == null ? null : rs.getObject(column, UUID.class);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 instant 처리에 필요한 업무 로직을 수행한다. */
     private Instant instant(ResultSet rs, String column) throws SQLException {
         Timestamp value = rs.getTimestamp(column);
         return value == null ? null : value.toInstant();
     }
 
+    /** JdbcOperationsRepositoryAdapter의 timestamp 처리에 필요한 업무 로직을 수행한다. */
     private Timestamp timestamp(Instant value) {
         return value == null ? null : Timestamp.from(value);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 enumName 처리에 필요한 업무 로직을 수행한다. */
     private String enumName(Enum<?> value) {
         return value == null ? null : value.name();
     }
 
+    /** JdbcOperationsRepositoryAdapter의 incidentState 처리에 필요한 업무 로직을 수행한다. */
     private IncidentState incidentState(String value) {
         return value == null ? null : IncidentState.valueOf(value);
     }
 
+    /** JdbcOperationsRepositoryAdapter의 namespaceKey 처리에 필요한 업무 로직을 수행한다. */
     private String namespaceKey(String namespace) {
         return namespace == null ? "" : namespace;
     }
 
+    /** JdbcOperationsRepositoryAdapter의 emptyToNull 처리에 필요한 업무 로직을 수행한다. */
     private String emptyToNull(String value) {
         return value == null || value.isBlank() ? null : value;
     }

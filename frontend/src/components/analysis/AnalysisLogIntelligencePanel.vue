@@ -10,10 +10,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{ copy: [command: string] }>();
 
+/** text 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function text(value: unknown, fallback = '') {
   return displayText(value, fallback);
 }
 
+/** number 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function number(value: unknown, fallback = '0') {
   return value === null || value === undefined || value === '' ? fallback : String(value);
 }

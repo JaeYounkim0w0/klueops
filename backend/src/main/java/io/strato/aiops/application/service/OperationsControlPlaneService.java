@@ -78,6 +78,7 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
     private final OperationsScorecardQueryService scorecardQueryService;
     private volatile CachedOverview cachedOverview;
 
+    /** OperationsControlPlaneService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationsControlPlaneService(
             OperationsRepositoryPort operationsRepository,
             ClusterRepositoryPort clusterRepository,
@@ -122,6 +123,7 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         this.scorecardQueryService = scorecardQueryService;
     }
 
+    /** OperationsControlPlaneService의 getOverview 처리 결과를 조회해 반환한다. */
     public OperationsOverview getOverview() {
         CachedOverview cache = cachedOverview;
         if (cache != null && cache.createdAt().isAfter(Instant.now().minusSeconds(15))) {
@@ -132,6 +134,7 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return overview;
     }
 
+    /** OperationsControlPlaneService의 reconcile 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public OperationsOverview reconcile(String actor, String requestId) {
         for (Cluster cluster : clusterRepository.findAll()) {
@@ -143,10 +146,12 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return getOverview();
     }
 
+    /** OperationsControlPlaneService의 listIncidents 처리 결과를 조회해 반환한다. */
     public List<Incident> listIncidents(UUID clusterId, String namespace, String state, String severity, int limit) {
         return operationsRepository.findIncidents(clusterId, namespace, normalizeUpper(state), normalizeUpper(severity), limit);
     }
 
+    /** OperationsControlPlaneService의 getIncident 처리 결과를 조회해 반환한다. */
     public IncidentDetail getIncident(UUID incidentId) {
         Incident incident = operationsRepository.findIncidentById(incidentId)
                 .orElseThrow(() -> new NoSuchElementException("Incident not found: " + incidentId));
@@ -155,6 +160,7 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
                 incidentRecoveryCoordinator.view(incident), incidentIntelligenceService.build(incident, evidence));
     }
 
+    /** OperationsControlPlaneService의 updateIncidentState 처리 대상의 상태를 갱신한다. */
     @Transactional
     public Incident updateIncidentState(UUID incidentId, IncidentState nextState, String note, String actor, String requestId) {
         Incident current = operationsRepository.findIncidentById(incidentId)
@@ -173,14 +179,17 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return saved;
     }
 
+    /** OperationsControlPlaneService의 listNotifications 처리 결과를 조회해 반환한다. */
     public List<Notification> listNotifications(boolean unreadOnly, int limit) {
         return operationsRepository.findNotifications(unreadOnly, limit);
     }
 
+    /** OperationsControlPlaneService의 unreadNotificationCount 처리에 필요한 업무 로직을 수행한다. */
     public long unreadNotificationCount() {
         return operationsRepository.countUnreadNotifications();
     }
 
+    /** OperationsControlPlaneService의 markNotificationRead 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public void markNotificationRead(UUID notificationId, String actor, String requestId) {
         operationsRepository.markNotificationRead(notificationId);
@@ -188,6 +197,7 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         invalidateOverview();
     }
 
+    /** OperationsControlPlaneService의 markAllNotificationsRead 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public void markAllNotificationsRead(String actor, String requestId) {
         operationsRepository.markAllNotificationsRead();
@@ -195,10 +205,12 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         invalidateOverview();
     }
 
+    /** OperationsControlPlaneService의 listPolicies 처리 결과를 조회해 반환한다. */
     public List<PolicyDefinition> listPolicies() {
         return operationsRepository.findPolicyDefinitions();
     }
 
+    /** OperationsControlPlaneService의 updatePolicy 처리 대상의 상태를 갱신한다. */
     @Transactional
     public PolicyDefinition updatePolicy(String policyId, boolean enabled, String severity, String actor, String requestId) {
         PolicyDefinition current = operationsRepository.findPolicyDefinition(policyId)
@@ -211,6 +223,7 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return saved;
     }
 
+    /** OperationsControlPlaneService의 evaluatePolicies 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public List<PolicyEvaluation> evaluatePolicies(UUID clusterId, String actor, String requestId) {
         Cluster cluster = clusterRepository.findById(clusterId)
@@ -225,28 +238,34 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return operationsRepository.findPolicyEvaluations(clusterId, null, null, 500);
     }
 
+    /** OperationsControlPlaneService의 listPolicyEvaluations 처리 결과를 조회해 반환한다. */
     public List<PolicyEvaluation> listPolicyEvaluations(UUID clusterId, String namespace, String result, int limit) {
         return operationsRepository.findPolicyEvaluations(clusterId, namespace, normalizeUpper(result), limit);
     }
 
+    /** OperationsControlPlaneService의 listChanges 처리 결과를 조회해 반환한다. */
     public List<ResourceChange> listChanges(UUID clusterId, String namespace, int limit) {
         return operationsRepository.findResourceChanges(clusterId, namespace, limit);
     }
 
+    /** OperationsControlPlaneService의 getChange 처리 결과를 조회해 반환한다. */
     public ResourceChange getChange(UUID changeId) {
         return operationsRepository.findResourceChangeById(changeId)
                 .orElseThrow(() -> new NoSuchElementException("Resource change not found: " + changeId));
     }
 
+    /** OperationsControlPlaneService의 listRunbooks 처리 결과를 조회해 반환한다. */
     public List<RunbookTemplate> listRunbooks(String signal, String category) {
         return operationsRepository.findRunbooks(signal, category);
     }
 
+    /** OperationsControlPlaneService의 getRunbook 처리 결과를 조회해 반환한다. */
     public RunbookTemplate getRunbook(String runbookId) {
         return operationsRepository.findRunbookById(runbookId)
                 .orElseThrow(() -> new NoSuchElementException("Runbook not found: " + runbookId));
     }
 
+    /** OperationsControlPlaneService의 matchRunbooks 처리에 필요한 업무 로직을 수행한다. */
     public List<RunbookTemplate> matchRunbooks(String signal, String category, String resourceKind) {
         String normalizedSignal = normalizeToken(signal);
         return operationsRepository.findRunbooks(null, null).stream()
@@ -260,12 +279,14 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
                 .toList();
     }
 
+    /** OperationsControlPlaneService의 getFeedback 처리 결과를 조회해 반환한다. */
     public AnalysisFeedback getFeedback(UUID analysisId) {
         analysisRepository.findById(analysisId)
                 .orElseThrow(() -> new NoSuchElementException("Analysis not found: " + analysisId));
         return operationsRepository.findAnalysisFeedback(analysisId).orElse(null);
     }
 
+    /** OperationsControlPlaneService의 saveFeedback 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Transactional
     public AnalysisFeedback saveFeedback(UUID analysisId, String accuracy, String outcome, boolean dangerous,
                                          String comment, String actualRootCause, String actualResolution,
@@ -287,14 +308,17 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return saved;
     }
 
+    /** OperationsControlPlaneService의 getAiQuality 처리 결과를 조회해 반환한다. */
     public AiQualitySummary getAiQuality() {
         return aiQualityQueryService.getQuality();
     }
 
+    /** OperationsControlPlaneService의 getAiCalibration 처리 결과를 조회해 반환한다. */
     public AiCalibrationSummary getAiCalibration() {
         return aiQualityQueryService.getCalibration();
     }
 
+    /** OperationsControlPlaneService의 ingestWatchSignal 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public void ingestWatchSignal(WatchSignal signal) {
@@ -302,10 +326,12 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         invalidateOverview();
     }
 
+    /** OperationsControlPlaneService의 getTriageQueue 처리 결과를 조회해 반환한다. */
     public TriageQueue getTriageQueue(UUID clusterId, String namespace, String state, int limit) {
         return watchSignalTriageService.getQueue(clusterId, namespace, state, limit);
     }
 
+    /** OperationsControlPlaneService의 updateSignalGroupState 처리 대상의 상태를 갱신한다. */
     @Transactional
     public WatchSignalGroup updateSignalGroupState(UUID groupId, String requestedState, String actor, String requestId) {
         WatchSignalGroup saved = watchSignalTriageService.updateState(groupId, requestedState, actor, requestId);
@@ -313,14 +339,17 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return saved;
     }
 
+    /** OperationsControlPlaneService의 getScorecard 처리 결과를 조회해 반환한다. */
     public OperationsScorecard getScorecard() {
         return scorecardQueryService.getScorecard();
     }
 
+    /** OperationsControlPlaneService의 getSettings 처리 결과를 조회해 반환한다. */
     public OperationSettings getSettings() {
         return operationsRepository.getOperationSettings();
     }
 
+    /** OperationsControlPlaneService의 updateSettings 처리 대상의 상태를 갱신한다. */
     @Transactional
     public OperationSettings updateSettings(OperationSettings requested, String actor, String requestId) {
         OperationSettings validated = new OperationSettings(
@@ -342,10 +371,12 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return saved;
     }
 
+    /** OperationsControlPlaneService의 previewCleanup 처리에 필요한 업무 로직을 수행한다. */
     public CleanupPreview previewCleanup() {
         return operationsRepository.cleanup(getSettings(), false);
     }
 
+    /** OperationsControlPlaneService의 executeCleanup 처리의 핵심 작업 흐름을 실행한다. */
     @Transactional
     public CleanupPreview executeCleanup(String actor, String requestId) {
         CleanupPreview result = operationsRepository.cleanup(getSettings(), true);
@@ -354,11 +385,13 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return result;
     }
 
+    /** OperationsControlPlaneService의 listAuditLogs 처리 결과를 조회해 반환한다. */
     public List<AuditLog> listAuditLogs(String actor, String action, String targetType, String targetId,
                                         String requestId, Instant from, Instant to, int limit) {
         return operationsRepository.findAuditLogs(actor, action, targetType, targetId, requestId, from, to, limit);
     }
 
+    /** OperationsControlPlaneService의 reconcileCluster 처리에 필요한 업무 로직을 수행한다. */
     private void reconcileCluster(Cluster cluster, String actor) {
         List<KubernetesResourceSnapshot> resources = currentResourceInventory(cluster.id());
         List<PolicyEvaluation> evaluations = policyEvaluator.evaluate(
@@ -373,6 +406,7 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
                         notification.message(), notification.targetPath(), notification.dedupKey()));
     }
 
+   /** OperationsControlPlaneService의 currentResourceInventory 처리에 필요한 업무 로직을 수행한다. */
    private List<KubernetesResourceSnapshot> currentResourceInventory(UUID clusterId) {
         return syncJobRepository.findLatestByClusterIdAndStatusIn(clusterId, EnumSet.of(SyncJobStatus.SUCCEEDED))
                 .map(syncJob -> {
@@ -390,6 +424,7 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
                 .orElseGet(List::of);
     }
 
+  /** OperationsControlPlaneService의 createRuntimeNotifications 처리에 필요한 데이터를 생성하거나 저장한다. */
   private void createRuntimeNotifications() {
         OperationSettings settings = getSettings();
         Instant longRunningCutoff = Instant.now().minusSeconds(settings.longRunningJobSeconds());
@@ -405,11 +440,13 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         }
     }
 
+    /** OperationsControlPlaneService의 createNotification 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void createNotification(String type, String severity, String title, String message, String targetPath,
                                     String sourceKey) {
         notificationPublisher.publish(type, severity, title, message, targetPath, sourceKey);
     }
 
+   /** OperationsControlPlaneService의 normalizeToken 처리 데이터를 필요한 표현으로 변환한다. */
    private String normalizeToken(String value) {
         if (value == null) {
             return "";
@@ -417,16 +454,19 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return value.replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
     }
 
+   /** OperationsControlPlaneService의 normalizeUpper 처리 데이터를 필요한 표현으로 변환한다. */
    private String normalizeUpper(String value) {
         return value == null || value.isBlank() ? null : value.trim().toUpperCase(Locale.ROOT);
     }
 
+    /** OperationsControlPlaneService의 normalizeSeverity 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeSeverity(String value) {
         String normalized = normalizeUpper(value);
         return normalized != null && Set.of("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO").contains(normalized)
                 ? normalized : "MEDIUM";
     }
 
+    /** OperationsControlPlaneService의 requireSeverity 처리 입력과 현재 상태의 유효성을 검증한다. */
     private String requireSeverity(String value) {
         String normalized = normalizeUpper(value);
         if (normalized == null || !Set.of("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO").contains(normalized)) {
@@ -435,6 +475,7 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return normalized;
     }
 
+    /** OperationsControlPlaneService의 requireOneOf 처리 입력과 현재 상태의 유효성을 검증한다. */
     private String requireOneOf(String value, Set<String> allowed, String field) {
         String normalized = normalizeUpper(value);
         if (!allowed.contains(normalized)) {
@@ -443,15 +484,18 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return normalized;
     }
 
+    /** OperationsControlPlaneService의 normalizeOptional 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeOptional(String value, Set<String> allowed) {
         if (value == null || value.isBlank()) return null;
         return requireOneOf(value, allowed, "confidenceExpectation");
     }
 
+    /** OperationsControlPlaneService의 urgency 처리에 필요한 업무 로직을 수행한다. */
     private String urgency(int score) {
         return score >= 65 ? "즉시 확인" : score >= 40 ? "오늘 확인" : "관찰";
     }
 
+    /** OperationsControlPlaneService의 cleanText 처리에 필요한 업무 로직을 수행한다. */
     private String cleanText(String value, int maxLength) {
         if (value == null) {
             return null;
@@ -460,10 +504,12 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return cleaned.length() <= maxLength ? cleaned : cleaned.substring(0, maxLength);
     }
 
+    /** OperationsControlPlaneService의 defaultText 처리에 필요한 업무 로직을 수행한다. */
     private String defaultText(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }
 
+    /** OperationsControlPlaneService의 range 처리에 필요한 업무 로직을 수행한다. */
     private int range(int value, int min, int max, String field) {
         if (value < min || value > max) {
             throw new IllegalArgumentException(field + " must be between " + min + " and " + max);
@@ -471,10 +517,12 @@ public class OperationsControlPlaneService implements WatchSignalTriageUseCase {
         return value;
     }
 
+    /** OperationsControlPlaneService의 audit 처리에 필요한 업무 로직을 수행한다. */
     private void audit(String action, String targetType, String targetId, String actor, String requestId) {
         auditRepository.save(AuditLog.create(action, targetType, targetId, actor, requestId));
     }
 
+    /** OperationsControlPlaneService의 invalidateOverview 처리에 필요한 업무 로직을 수행한다. */
     private void invalidateOverview() {
         cachedOverview = null;
     }

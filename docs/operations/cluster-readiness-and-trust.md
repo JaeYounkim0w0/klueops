@@ -12,6 +12,23 @@
 
 운영자는 `CRITICAL/BLOCKED`를 먼저 해소하고 `UNKNOWN`은 네트워크, API discovery 또는 권한을 보완한 뒤 재검사한다.
 
+## 연결 확인과 전체 동기화 권한
+
+`연결 확인`은 저장한 API Server, CA와 token으로 Kubernetes API에 인증하고 기본 API 또는 Namespace를 읽을 수 있는지 확인한다. 이 검사가 성공해도 전체 동기화가 사용하는 클러스터 범위 `list` 권한까지 보장하지 않는다.
+
+전체 동기화 credential은 다음 리소스에 대한 `get/list`를 가져야 한다.
+
+- core: Namespace, Node, Pod, Service, Endpoint, ConfigMap, Secret metadata, ServiceAccount, PersistentVolumeClaim, PersistentVolume, ResourceQuota, LimitRange, Event
+- apps: Deployment, ReplicaSet, StatefulSet, DaemonSet
+- batch: Job, CronJob
+- networking: Ingress, NetworkPolicy
+- autoscaling: HorizontalPodAutoscaler
+- policy: PodDisruptionBudget
+
+동기화는 등록 클러스터 전체를 수집하므로 Namespace의 `RoleBinding`만으로는 부족하다. 전용 read-only `ClusterRole`과 `ClusterRoleBinding`을 사용하고 `kubectl auth can-i list deployments.apps --as=system:serviceaccount:<namespace>:<service-account> --all-namespaces`처럼 대표 리소스를 사전 확인한다. 현재 수집기는 Secret의 값이 아니라 metadata만 저장하지만 API 조회 권한 자체는 필요하므로 credential과 RBAC를 민감 정보로 취급한다.
+
+로컬 `docker-desktop-exposure` fixture는 Docker Desktop Kubernetes의 in-cluster API인 `https://kubernetes.default.svc`를 ServiceAccount 방식으로 등록한다. `scripts/acceptance/fixtures/application-exposure.yaml`은 이 로컬 수용 테스트를 위한 읽기 권한을 포함한다. 운영에서는 동기화 전용 ServiceAccount를 별도로 만들고 Helm 배포 또는 변경 권한과 분리한다.
+
 ## AI Trust Center
 
 `AI > AI 신뢰 센터`는 서버가 같은 시점에 구성한 snapshot을 표시한다. 모델 자체 confidence 대신 운영자 feedback, ground truth, benchmark, 50개 deterministic regression과 release gate를 근거로 상태를 계산한다.

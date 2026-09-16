@@ -40,6 +40,7 @@ public class OperationsOverviewQueryService {
     private final AnalysisSessionRepositoryPort analysisRepository;
     private final KubernetesEventSnapshotRepositoryPort eventRepository;
 
+    /** OperationsOverviewQueryService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationsOverviewQueryService(ClusterRepositoryPort clusterRepository,
                                           OperationsRepositoryPort operationsRepository,
                                           AsyncJobRepositoryPort jobRepository,
@@ -52,6 +53,7 @@ public class OperationsOverviewQueryService {
         this.eventRepository = eventRepository;
     }
 
+    /** OperationsOverviewQueryService의 build 처리에 필요한 결과를 조합해 반환한다. */
     public OperationsOverview build(AiQualitySummary aiQuality) {
         List<Cluster> clusters = clusterRepository.findAll();
         List<Incident> incidents = operationsRepository.findIncidents(null, null, null, null, 500);
@@ -83,6 +85,7 @@ public class OperationsOverviewQueryService {
                 capacityPosture(evaluations), aiQuality);
     }
 
+    /** OperationsOverviewQueryService의 clusterHealth 처리에 필요한 업무 로직을 수행한다. */
     static ClusterHealth clusterHealth(Cluster cluster,
                                        List<Incident> incidents,
                                        List<PolicyEvaluation> evaluations,
@@ -105,6 +108,7 @@ public class OperationsOverviewQueryService {
                 warningEvents, observed, posture);
     }
 
+    /** OperationsOverviewQueryService의 capacityPosture 처리에 필요한 업무 로직을 수행한다. */
     static CapacityPosture capacityPosture(List<PolicyEvaluation> evaluations) {
         int workloads = count(evaluations, item -> "WORKLOAD_AVAILABILITY".equals(item.policyId()));
         int unavailable = count(evaluations, item -> "WORKLOAD_AVAILABILITY".equals(item.policyId())
@@ -125,6 +129,7 @@ public class OperationsOverviewQueryService {
                 pendingPvcs, namespacesWithoutNetworkPolicy, governanceGaps, summary);
     }
 
+    /** OperationsOverviewQueryService의 priorityQueue 처리에 필요한 업무 로직을 수행한다. */
     private static List<PriorityItem> priorityQueue(List<Incident> incidents, List<AsyncJob> jobs) {
         List<PriorityItem> result = incidents.stream()
                 .filter(incident -> incident.state() != IncidentState.RESOLVED)
@@ -147,6 +152,7 @@ public class OperationsOverviewQueryService {
                 .limit(20).toList();
     }
 
+    /** OperationsOverviewQueryService의 severityScore 처리에 필요한 업무 로직을 수행한다. */
     private static int severityScore(String severity) {
         return switch (severity == null ? "" : severity.trim().toUpperCase(java.util.Locale.ROOT)) {
             case "CRITICAL" -> 70;
@@ -157,14 +163,17 @@ public class OperationsOverviewQueryService {
         };
     }
 
+    /** OperationsOverviewQueryService의 urgency 처리에 필요한 업무 로직을 수행한다. */
     private static String urgency(int score) {
         return score >= 65 ? "즉시 확인" : score >= 40 ? "오늘 확인" : "관찰";
     }
 
+    /** OperationsOverviewQueryService의 count 처리에 필요한 업무 로직을 수행한다. */
     private static <T> int count(List<T> values, java.util.function.Predicate<T> predicate) {
         return Math.toIntExact(values.stream().filter(predicate).count());
     }
 
+    /** OperationsOverviewQueryService의 defaultText 처리에 필요한 업무 로직을 수행한다. */
     private static String defaultText(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }

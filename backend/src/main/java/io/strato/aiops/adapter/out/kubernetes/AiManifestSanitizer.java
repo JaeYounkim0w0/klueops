@@ -15,10 +15,12 @@ class AiManifestSanitizer {
     private static final String REDACTED = "***REDACTED***";
     private final ObjectMapper objectMapper;
 
+    /** AiManifestSanitizer 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     AiManifestSanitizer(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /** AiManifestSanitizer의 sanitize 처리에 필요한 업무 로직을 수행한다. */
     String sanitize(Object manifest) {
         JsonNode root = objectMapper.valueToTree(manifest);
         redact(root, true);
@@ -26,6 +28,7 @@ class AiManifestSanitizer {
         return Serialization.asYaml(safeManifest);
     }
 
+    /** AiManifestSanitizer의 sanitize 처리에 필요한 업무 로직을 수행한다. */
     String sanitize(String jsonManifest) {
         try {
             JsonNode root = objectMapper.readTree(jsonManifest);
@@ -36,6 +39,7 @@ class AiManifestSanitizer {
         }
     }
 
+    /** AiManifestSanitizer의 redact 처리에 필요한 업무 로직을 수행한다. */
     private void redact(JsonNode node, boolean root) {
         if (node instanceof ObjectNode object) {
             if (object.has("annotations")) {
@@ -58,12 +62,14 @@ class AiManifestSanitizer {
         }
     }
 
+    /** AiManifestSanitizer의 redactMapValues 처리에 필요한 업무 로직을 수행한다. */
     private void redactMapValues(ObjectNode object, String fieldName) {
         JsonNode data = object.get(fieldName);
         if (!(data instanceof ObjectNode values)) return;
         values.fieldNames().forEachRemaining(key -> values.put(key, REDACTED));
     }
 
+    /** AiManifestSanitizer의 isSensitiveDataKind 처리 조건의 충족 여부를 판단한다. */
     private boolean isSensitiveDataKind(String kind) {
         return "ConfigMap".equalsIgnoreCase(kind) || "Secret".equalsIgnoreCase(kind);
     }

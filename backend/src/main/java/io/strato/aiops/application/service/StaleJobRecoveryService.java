@@ -1,6 +1,7 @@
 package io.strato.aiops.application.service;
 
 import io.strato.aiops.application.port.out.AsyncJobRepositoryPort;
+import io.strato.aiops.application.port.out.ApplicationLifecycleRepositoryPort;
 import io.strato.aiops.application.port.out.RuntimeLeasePort;
 import io.strato.aiops.domain.job.AsyncJob;
 import org.slf4j.Logger;
@@ -22,22 +23,31 @@ public class StaleJobRecoveryService {
     private final AsyncJobRepositoryPort asyncJobRepositoryPort;
     private final long maximumRuntimeSeconds;
     private final RuntimeLeasePort runtimeLeasePort;
+    private final ApplicationLifecycleRepositoryPort applicationLifecycleRepositoryPort;
 
+    /** StaleJobRecoveryService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     @org.springframework.beans.factory.annotation.Autowired
     public StaleJobRecoveryService(
             AsyncJobRepositoryPort asyncJobRepositoryPort,
             @Value("${aiops.jobs.maximum-runtime-seconds:900}") long maximumRuntimeSeconds,
-            RuntimeLeasePort runtimeLeasePort
+            RuntimeLeasePort runtimeLeasePort,
+            ApplicationLifecycleRepositoryPort applicationLifecycleRepositoryPort
     ) {
         this.asyncJobRepositoryPort = asyncJobRepositoryPort;
         this.maximumRuntimeSeconds = maximumRuntimeSeconds;
         this.runtimeLeasePort = runtimeLeasePort;
+        this.applicationLifecycleRepositoryPort = applicationLifecycleRepositoryPort;
     }
 
+    /** StaleJobRecoveryService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     StaleJobRecoveryService(AsyncJobRepositoryPort asyncJobRepositoryPort, long maximumRuntimeSeconds) {
-        this(asyncJobRepositoryPort, maximumRuntimeSeconds, RuntimeLeasePort.localOnly());
+        this.asyncJobRepositoryPort = asyncJobRepositoryPort;
+        this.maximumRuntimeSeconds = maximumRuntimeSeconds;
+        this.runtimeLeasePort = RuntimeLeasePort.localOnly();
+        this.applicationLifecycleRepositoryPort = null;
     }
 
+    /** StaleJobRecoveryService의 recoverStaleJobs 처리에 필요한 업무 로직을 수행한다. */
     @Scheduled(fixedDelayString = "${aiops.jobs.recovery-interval-ms:60000}")
     @Transactional
     public void recoverStaleJobs() {
@@ -48,13 +58,21 @@ public class StaleJobRecoveryService {
         }
     }
 
+    /** StaleJobRecoveryService의 recoverStaleJobsAt 처리에 필요한 업무 로직을 수행한다. */
     int recoverStaleJobsAt(Instant now) {
         Instant cutoff = now.minusSeconds(maximumRuntimeSeconds);
         List<AsyncJob> staleJobs = asyncJobRepositoryPort.findActiveCreatedBefore(cutoff);
         staleJobs.forEach(job -> {
-            job.markTimedOut(now, "Job exceeded the maximum runtime of " + maximumRuntimeSeconds + " seconds");
+            String errorMessage = "Job exceeded the maximum runtime of " + maximumRuntimeSeconds + " seconds";
+            job.markTimedOut(now, errorMessage);
             asyncJobRepositoryPort.save(job);
+            if (applicationLifecycleRepositoryPort != null)
+                applicationLifecycleRepositoryPort.recoverTimedOutOperation(job.id(), now, errorMessage);
         });
+        if (applicationLifecycleRepositoryPort != null) {
+            // 이미 terminal 상태인 Job에 남은 PENDING/RUNNING Helm 이력도 매 주기 복구한다.
+            applicationLifecycleRepositoryPort.recoverOrphanedOperations(now);
+        }
         return staleJobs.size();
     }
 }

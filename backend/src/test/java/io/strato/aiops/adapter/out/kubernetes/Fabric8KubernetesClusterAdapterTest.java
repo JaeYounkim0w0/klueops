@@ -13,10 +13,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class Fabric8KubernetesClusterAdapterTest {
 
+    /** Fabric8KubernetesClusterAdapterTest의 connectionTestAcceptsNewVersionFieldsWhenNamespacesAreReachable 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void connectionTestAcceptsNewVersionFieldsWhenNamespacesAreReachable() throws Exception {
         try (MockWebServer server = new MockWebServer()) {
             server.setDispatcher(new Dispatcher() {
+                /** 익명 구현체의 dispatch 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public MockResponse dispatch(RecordedRequest request) {
                     String path = request.getPath() == null ? "" : request.getPath();
@@ -70,6 +72,7 @@ class Fabric8KubernetesClusterAdapterTest {
         }
     }
 
+    /** Fabric8KubernetesClusterAdapterTest의 jsonResponse 처리에 필요한 업무 로직을 수행한다. */
     private static MockResponse jsonResponse(String body) {
         return new MockResponse()
                 .setResponseCode(200)
@@ -77,6 +80,7 @@ class Fabric8KubernetesClusterAdapterTest {
                 .setBody(body);
     }
 
+    /** Fabric8KubernetesClusterAdapterTest의 kubeconfig 처리에 필요한 업무 로직을 수행한다. */
     private static String kubeconfig(String serverUrl) {
         return """
                 apiVersion: v1

@@ -7,5 +7,6 @@ import java.util.UUID;
 
 interface ClusterCredentialJpaRepository extends JpaRepository<ClusterCredentialEntity, UUID> {
 
+    /** ClusterCredentialJpaRepository의 findFirstByClusterIdOrderByCreatedAtDesc 처리 결과를 조회해 반환한다. */
     Optional<ClusterCredentialEntity> findFirstByClusterIdOrderByCreatedAtDesc(UUID clusterId);
 }

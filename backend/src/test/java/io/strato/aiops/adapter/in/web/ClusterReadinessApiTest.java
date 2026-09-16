@@ -38,6 +38,7 @@ class ClusterReadinessApiTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /** ClusterReadinessApiTest의 returnsEvidenceBasedReadinessViews 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsEvidenceBasedReadinessViews() throws Exception {
         String clusterId = registerCluster();
@@ -69,6 +70,7 @@ class ClusterReadinessApiTest {
                 .andExpect(jsonPath("$.currentVersion").value("v1.31.2"));
     }
 
+    /** ClusterReadinessApiTest의 registerCluster 처리에 필요한 데이터를 생성하거나 저장한다. */
     private String registerCluster() throws Exception {
         String response = mockMvc.perform(post("/api/clusters")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -90,20 +92,24 @@ class ClusterReadinessApiTest {
     @TestConfiguration
     static class ReadinessTestConfig {
 
+        /** ReadinessTestConfig의 readinessClusterPort 처리 결과를 조회해 반환한다. */
         @Bean
         @Primary
         KubernetesClusterPort readinessClusterPort() {
             return new KubernetesClusterPort() {
+                /** 익명 구현체의 testConnection 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public KubernetesConnectionTestResult testConnection(KubernetesConnectionCredential credential) {
                     return KubernetesConnectionTestResult.success("v1.31.2", List.of("default"));
                 }
 
+                /** 익명 구현체의 listNamespaces 처리 결과를 조회해 반환한다. */
                 @Override
                 public List<KubernetesNamespace> listNamespaces(KubernetesConnectionCredential credential) {
                     return List.of(new KubernetesNamespace("default", "Active"));
                 }
 
+                /** 익명 구현체의 listNodes 처리 결과를 조회해 반환한다. */
                 @Override
                 public List<KubernetesNode> listNodes(KubernetesConnectionCredential credential) {
                     return List.of(new KubernetesNode("worker-1", "Ready", "v1.31.2", "Linux", "containerd://1.7"));
@@ -111,10 +117,12 @@ class ClusterReadinessApiTest {
             };
         }
 
+        /** ReadinessTestConfig의 readinessMutationPort 처리 결과를 조회해 반환한다. */
         @Bean
         @Primary
         KubernetesMutationPort readinessMutationPort() {
             return new KubernetesMutationPort() {
+                /** 익명 구현체의 canI 처리 조건의 충족 여부를 판단한다. */
                 @Override
                 public KubernetesAccessReviewResult canI(KubernetesConnectionCredential credential, String namespace,
                                                           String verb, String group, String resource,
@@ -123,12 +131,19 @@ class ClusterReadinessApiTest {
                             namespace, "test access review");
                 }
 
+                /** 익명 구현체의 dryRunRolloutRestartDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override public KubernetesMutationResult dryRunRolloutRestartDeployment(KubernetesConnectionCredential c, String n, String d) { throw new UnsupportedOperationException(); }
+                /** 익명 구현체의 rolloutRestartDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override public KubernetesMutationResult rolloutRestartDeployment(KubernetesConnectionCredential c, String n, String d) { throw new UnsupportedOperationException(); }
+                /** 익명 구현체의 dryRunScaleDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override public KubernetesMutationResult dryRunScaleDeployment(KubernetesConnectionCredential c, String n, String d, int r) { throw new UnsupportedOperationException(); }
+                /** 익명 구현체의 scaleDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override public KubernetesMutationResult scaleDeployment(KubernetesConnectionCredential c, String n, String d, int r) { throw new UnsupportedOperationException(); }
+                /** 익명 구현체의 listDeploymentRevisions 처리 결과를 조회해 반환한다. */
                 @Override public List<KubernetesDeploymentRevision> listDeploymentRevisions(KubernetesConnectionCredential c, String n, String d) { return List.of(); }
+                /** 익명 구현체의 previewRollbackDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override public KubernetesRollbackPlan previewRollbackDeployment(KubernetesConnectionCredential c, String n, String d, Integer r) { throw new UnsupportedOperationException(); }
+                /** 익명 구현체의 rollbackDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override public KubernetesMutationResult rollbackDeployment(KubernetesConnectionCredential c, String n, String d, Integer r) { throw new UnsupportedOperationException(); }
             };
         }

@@ -45,10 +45,12 @@ public class OperatorWorkspaceController {
 
     private final OperatorWorkspaceService service;
 
+    /** OperatorWorkspaceController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperatorWorkspaceController(OperatorWorkspaceService service) {
         this.service = service;
     }
 
+    /** OperatorWorkspaceController의 search 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Search accessible clusters, resources, incidents, analyses and runbooks")
     @GetMapping("/search")
     public List<SearchResult> search(@RequestParam @NotBlank String q,
@@ -60,6 +62,7 @@ public class OperatorWorkspaceController {
         return service.search(q, clusterId, namespace, types, limit, access(request));
     }
 
+    /** OperatorWorkspaceController의 resourceContext 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get relationships, changes and incidents for a Kubernetes resource snapshot")
     @GetMapping("/clusters/{clusterId}/resources/{kind}/{name}/context")
     public ResourceContext resourceContext(@PathVariable UUID clusterId, @PathVariable String kind,
@@ -69,12 +72,14 @@ public class OperatorWorkspaceController {
         return service.resourceContext(clusterId, namespace, kind, name, access(request));
     }
 
+    /** OperatorWorkspaceController의 collaboration 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get incident collaboration metadata and linked incidents")
     @GetMapping("/incidents/{incidentId}/collaboration")
     public IncidentCollaboration collaboration(@PathVariable UUID incidentId, HttpServletRequest request) {
         return service.collaboration(incidentId, access(request));
     }
 
+    /** OperatorWorkspaceController의 updateCollaboration 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Update incident owner, tags and response targets")
     @PatchMapping("/incidents/{incidentId}/collaboration")
     public IncidentCollaboration updateCollaboration(@PathVariable UUID incidentId,
@@ -84,6 +89,7 @@ public class OperatorWorkspaceController {
                 body.resolveDueAt(), actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 comment 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Append an operator comment to the incident timeline")
     @PostMapping("/incidents/{incidentId}/comments")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -92,6 +98,7 @@ public class OperatorWorkspaceController {
         service.addComment(incidentId, body.comment(), actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 createIncident 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Operation(summary = "Create a manual incident from operator evidence")
     @PostMapping("/incidents/manual")
     @ResponseStatus(HttpStatus.CREATED)
@@ -100,6 +107,7 @@ public class OperatorWorkspaceController {
                 body.severity(), body.title(), body.summary(), body.nextAction(), actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 link 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Link two related incidents")
     @PostMapping("/incidents/{incidentId}/links")
     public IncidentCollaboration link(@PathVariable UUID incidentId, @Valid @RequestBody IncidentLinkRequest body,
@@ -108,6 +116,7 @@ public class OperatorWorkspaceController {
                 requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 unlink 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Remove a relationship between two incidents")
     @DeleteMapping("/incidents/{incidentId}/links/{relatedIncidentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -115,6 +124,7 @@ public class OperatorWorkspaceController {
         service.unlinkIncident(incidentId, relatedIncidentId, actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 merge 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Logically merge incidents while retaining source evidence")
     @PostMapping("/incidents/{incidentId}/merge")
     public IncidentCollaboration merge(@PathVariable UUID incidentId, @Valid @RequestBody MergeRequest body,
@@ -122,6 +132,7 @@ public class OperatorWorkspaceController {
         return service.merge(incidentId, body.sourceIncidentIds(), body.note(), actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 split 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Split selected evidence into a new incident")
     @PostMapping("/incidents/{incidentId}/split")
     @ResponseStatus(HttpStatus.CREATED)
@@ -131,12 +142,14 @@ public class OperatorWorkspaceController {
                 requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 runbookLibrary 처리의 핵심 작업 흐름을 실행한다. */
     @Operation(summary = "List system and custom runbooks")
     @GetMapping("/runbooks/library")
     public List<ManagedRunbook> runbookLibrary(HttpServletRequest request) {
         return service.runbookLibrary(access(request));
     }
 
+    /** OperatorWorkspaceController의 createRunbook 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Operation(summary = "Create a versioned custom runbook")
     @PostMapping("/runbooks/custom")
     @ResponseStatus(HttpStatus.CREATED)
@@ -144,6 +157,7 @@ public class OperatorWorkspaceController {
         return service.createRunbook(body.toInput(), actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 updateRunbook 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Update a custom runbook and create a new immutable version")
     @PutMapping("/runbooks/custom/{runbookId}")
     public ManagedRunbook updateRunbook(@PathVariable String runbookId, @Valid @RequestBody RunbookRequest body,
@@ -151,6 +165,7 @@ public class OperatorWorkspaceController {
         return service.updateRunbook(runbookId, body.toInput(), actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 duplicateRunbook 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Duplicate a system or custom runbook into an editable custom runbook")
     @PostMapping("/runbooks/{runbookId}/duplicate")
     @ResponseStatus(HttpStatus.CREATED)
@@ -158,6 +173,7 @@ public class OperatorWorkspaceController {
         return service.duplicateRunbook(runbookId, actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 setRunbookEnabled 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Enable or disable a custom runbook")
     @PatchMapping("/runbooks/custom/{runbookId}/enabled")
     public ManagedRunbook setRunbookEnabled(@PathVariable String runbookId,
@@ -166,12 +182,14 @@ public class OperatorWorkspaceController {
         return service.setRunbookEnabled(runbookId, body.enabled(), actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 runbookVersions 처리의 핵심 작업 흐름을 실행한다. */
     @Operation(summary = "List immutable versions of a custom runbook")
     @GetMapping("/runbooks/custom/{runbookId}/versions")
     public List<RunbookVersion> runbookVersions(@PathVariable String runbookId, HttpServletRequest request) {
         return service.runbookVersions(runbookId, access(request));
     }
 
+    /** OperatorWorkspaceController의 restoreRunbook 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Restore a custom runbook version as a new latest version")
     @PostMapping("/runbooks/custom/{runbookId}/versions/{version}/restore")
     public ManagedRunbook restoreRunbook(@PathVariable String runbookId, @PathVariable @Min(1) int version,
@@ -179,6 +197,7 @@ public class OperatorWorkspaceController {
         return service.restoreRunbook(runbookId, version, actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 deleteRunbook 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Operation(summary = "Delete a custom runbook and its immutable version history")
     @DeleteMapping("/runbooks/custom/{runbookId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -186,14 +205,17 @@ public class OperatorWorkspaceController {
         service.deleteRunbook(runbookId, actor(request), requestId(request), access(request));
     }
 
+    /** OperatorWorkspaceController의 access 처리에 필요한 업무 로직을 수행한다. */
     private ResolvedAccess access(HttpServletRequest request) {
         return (ResolvedAccess) request.getAttribute(ApiAuthorizationInterceptor.RESOLVED_ACCESS_ATTRIBUTE);
     }
 
+    /** OperatorWorkspaceController의 actor 처리에 필요한 업무 로직을 수행한다. */
     private String actor(HttpServletRequest request) {
         return request.getUserPrincipal() == null ? "local-operator" : request.getUserPrincipal().getName();
     }
 
+    /** OperatorWorkspaceController의 requestId 처리에 필요한 업무 로직을 수행한다. */
     private String requestId(HttpServletRequest request) {
         return String.valueOf(request.getAttribute(RequestAttributes.REQUEST_ID));
     }
@@ -234,6 +256,7 @@ public class OperatorWorkspaceController {
             boolean enabled,
             @Size(max = 1000) String changeNote
     ) {
+        /** RunbookRequest의 toInput 처리 데이터를 필요한 표현으로 변환한다. */
         RunbookInput toInput() {
             return new RunbookInput(signal, category, resourceKind, title, beginnerExplanation, verificationCommand,
                     expectedResult, safeAction, validationCommand, rollbackGuidance, safetyLevel, enabled, changeNote);

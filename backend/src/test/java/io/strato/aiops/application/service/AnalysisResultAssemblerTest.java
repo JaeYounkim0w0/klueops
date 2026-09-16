@@ -14,6 +14,7 @@ class AnalysisResultAssemblerTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private final AnalysisResultAssembler assembler = new AnalysisResultAssembler();
 
+    /** AnalysisResultAssemblerTest의 mergesOnlyFieldsWhoseJsonShapeMatchesTheContract 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void mergesOnlyFieldsWhoseJsonShapeMatchesTheContract() {
         ObjectNode target = mapper.createObjectNode().put("summary", "fallback").put("riskScore", 10);
@@ -35,6 +36,7 @@ class AnalysisResultAssemblerTest {
         assertThat(target.path("performance").isObject()).isTrue();
     }
 
+    /** AnalysisResultAssemblerTest의 preservesFallbackValueWhenSourceTextIsBlankOrMissing 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void preservesFallbackValueWhenSourceTextIsBlankOrMissing() {
         ObjectNode target = mapper.createObjectNode().put("summary", "fallback");
@@ -47,6 +49,7 @@ class AnalysisResultAssemblerTest {
         assertThat(target.has("performance")).isFalse();
     }
 
+    /** AnalysisResultAssemblerTest의 mapsNamespaceSectionsByNameWithoutDependingOnListOrder 처리 데이터를 필요한 표현으로 변환한다. */
     @Test
     void mapsNamespaceSectionsByNameWithoutDependingOnListOrder() {
         ObjectNode target = mapper.createObjectNode().put("summary", "fallback");
@@ -71,6 +74,7 @@ class AnalysisResultAssemblerTest {
         assertThat(target.has("logAnalysis")).isFalse();
     }
 
+    /** AnalysisResultAssemblerTest의 mapsClusterSectionsAndPreservesFallbackForInvalidShapes 처리 데이터를 필요한 표현으로 변환한다. */
     @Test
     void mapsClusterSectionsAndPreservesFallbackForInvalidShapes() {
         ObjectNode target = mapper.createObjectNode().put("severity", "MEDIUM");
@@ -93,6 +97,7 @@ class AnalysisResultAssemblerTest {
         assertThat(target.path("operationsGuide").path("summary").asText()).isEqualTo("verify first");
     }
 
+    /** AnalysisResultAssemblerTest의 writesBoundedSectionTelemetryForSuccessReuseAndFallback 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void writesBoundedSectionTelemetryForSuccessReuseAndFallback() {
         ObjectNode target = mapper.createObjectNode();
@@ -123,6 +128,7 @@ class AnalysisResultAssemblerTest {
         assertThat(diagnostics.path("sections").get(1).path("cacheHit").asBoolean()).isTrue();
     }
 
+    /** AnalysisResultAssemblerTest의 writesIncrementalCountsWithoutTreatingDeterministicSectionsAsAiCalls 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void writesIncrementalCountsWithoutTreatingDeterministicSectionsAsAiCalls() {
         ObjectNode target = mapper.createObjectNode();
@@ -143,6 +149,7 @@ class AnalysisResultAssemblerTest {
         assertThat(incremental.path("summary").asText()).contains("1개 섹션");
     }
 
+    /** AnalysisResultAssemblerTest의 keepsSingleCallFallbackTelemetryWithoutSectionStatusContract 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void keepsSingleCallFallbackTelemetryWithoutSectionStatusContract() {
         ObjectNode target = mapper.createObjectNode();
@@ -157,6 +164,7 @@ class AnalysisResultAssemblerTest {
         assertThat(target.path("analysisDiagnostics").path("failedSections").asInt()).isEqualTo(1);
     }
 
+    /** AnalysisResultAssemblerTest의 result 처리에 필요한 업무 로직을 수행한다. */
     private AnalysisSectionExecutor.Result result(String name, ObjectNode value, String error) {
         return new AnalysisSectionExecutor.Result(name, value, 10, 5, error);
     }

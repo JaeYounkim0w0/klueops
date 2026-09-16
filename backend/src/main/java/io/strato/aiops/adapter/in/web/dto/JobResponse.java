@@ -19,6 +19,7 @@ public record JobResponse(
         @Schema(description = "Error code") String errorCode,
         @Schema(description = "Error message") String errorMessage
 ) {
+    /** JobResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static JobResponse from(AsyncJob job) {
         return new JobResponse(
                 job.id(),

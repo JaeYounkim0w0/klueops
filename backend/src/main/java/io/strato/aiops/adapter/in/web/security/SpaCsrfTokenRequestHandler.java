@@ -15,6 +15,7 @@ public final class SpaCsrfTokenRequestHandler implements CsrfTokenRequestHandler
     private final CsrfTokenRequestHandler plain = new CsrfTokenRequestAttributeHandler();
     private final CsrfTokenRequestHandler xor = new XorCsrfTokenRequestAttributeHandler();
 
+    /** SpaCsrfTokenRequestHandler의 handle 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
                        Supplier<CsrfToken> csrfToken) {
@@ -22,6 +23,7 @@ public final class SpaCsrfTokenRequestHandler implements CsrfTokenRequestHandler
         csrfToken.get();
     }
 
+    /** SpaCsrfTokenRequestHandler의 resolveCsrfTokenValue 처리에 필요한 결과를 조합해 반환한다. */
     @Override
     public String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken csrfToken) {
         boolean spaHeader = StringUtils.hasText(request.getHeader(csrfToken.getHeaderName()));

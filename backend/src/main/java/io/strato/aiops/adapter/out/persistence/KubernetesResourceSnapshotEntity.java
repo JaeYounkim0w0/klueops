@@ -46,9 +46,11 @@ class KubernetesResourceSnapshotEntity {
     @Column(nullable = false)
     private Instant collectedAt;
 
+    /** KubernetesResourceSnapshotEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected KubernetesResourceSnapshotEntity() {
     }
 
+    /** KubernetesResourceSnapshotEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private KubernetesResourceSnapshotEntity(UUID id, UUID clusterId, UUID syncJobId, String namespace, String resourceType,
                                              String resourceName, String resourceUid, String status, String summaryJson,
                                              String rawJson, boolean truncated, Instant collectedAt) {
@@ -66,6 +68,7 @@ class KubernetesResourceSnapshotEntity {
         this.collectedAt = collectedAt;
     }
 
+    /** KubernetesResourceSnapshotEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static KubernetesResourceSnapshotEntity fromDomain(KubernetesResourceSnapshot snapshot) {
         return new KubernetesResourceSnapshotEntity(
                 snapshot.id(),
@@ -83,6 +86,7 @@ class KubernetesResourceSnapshotEntity {
         );
     }
 
+    /** KubernetesResourceSnapshotEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     KubernetesResourceSnapshot toDomain() {
         return new KubernetesResourceSnapshot(id, clusterId, syncJobId, namespace, resourceType, resourceName, resourceUid, status, summaryJson, rawJson, truncated, collectedAt);
     }

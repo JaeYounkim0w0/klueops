@@ -15,6 +15,7 @@ public record CreateAiChatConversationRequest(
         @Size(max = 253) String namespace,
         UUID applicationId
 ) {
+    /** CreateAiChatConversationRequest의 toCommand 처리 데이터를 필요한 표현으로 변환한다. */
     public CreateAiChatConversationCommand toCommand() {
         AiChatMode resolvedMode = mode == null
                 ? (clusterId == null && applicationId == null ? AiChatMode.GENERAL : AiChatMode.CLUSTER)

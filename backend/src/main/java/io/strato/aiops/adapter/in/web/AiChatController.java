@@ -58,6 +58,7 @@ public class AiChatController {
     private final TaskScheduler heartbeatScheduler;
     private final long heartbeatMs;
 
+    /** AiChatController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AiChatController(AiChatUseCase aiChatUseCase, ApplicationUseCase applicationUseCase,
                             IdentityAccessService identityAccessService,
                             @Qualifier("aiChatHeartbeatScheduler") TaskScheduler heartbeatScheduler,
@@ -69,6 +70,7 @@ public class AiChatController {
         this.heartbeatMs = Math.max(1, heartbeatMs);
     }
 
+    /** AiChatController의 createConversation 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Operation(summary = "Create AI chat conversation")
     @PostMapping("/conversations")
     @ResponseStatus(HttpStatus.CREATED)
@@ -80,6 +82,7 @@ public class AiChatController {
                 request.toCommand(), actor(servletRequest), requestId(servletRequest)));
     }
 
+    /** AiChatController의 listConversations 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List recent AI chat conversations")
     @GetMapping("/conversations")
     public List<AiChatConversationResponse> listConversations(
@@ -89,6 +92,7 @@ public class AiChatController {
                 .map(AiChatConversationResponse::from).toList();
     }
 
+    /** AiChatController의 getConversation 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Get AI chat conversation")
     @GetMapping("/conversations/{conversationId}")
     public AiChatConversationResponse getConversation(@PathVariable UUID conversationId, HttpServletRequest request) {
@@ -97,6 +101,7 @@ public class AiChatController {
         return AiChatConversationResponse.from(conversation);
     }
 
+    /** AiChatController의 listMessages 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List AI chat messages")
     @GetMapping("/conversations/{conversationId}/messages")
     public List<AiChatMessageResponse> listMessages(@PathVariable UUID conversationId, HttpServletRequest request) {
@@ -105,6 +110,7 @@ public class AiChatController {
         return aiChatUseCase.listMessages(conversationId, actor(request)).stream().map(AiChatMessageResponse::from).toList();
     }
 
+    /** AiChatController의 sendMessage 처리 결과를 지정된 대상에 전달한다. */
     @Operation(summary = "Send AI chat message")
     @PostMapping("/conversations/{conversationId}/messages")
     @ResponseStatus(HttpStatus.CREATED)
@@ -128,6 +134,9 @@ public class AiChatController {
                 actor(servletRequest), requestId(servletRequest)));
     }
 
+    /**
+     * AI 상담 요청을 SSE로 처리하며 요청 접수 상태, heartbeat, 답변 조각과 완료 상태를 순서대로 전송한다.
+     */
     @Operation(summary = "Stream an AI chat response using server-sent events")
     @PostMapping(value = "/conversations/{conversationId}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> streamMessage(@PathVariable UUID conversationId,
@@ -150,6 +159,8 @@ public class AiChatController {
         String requestId = requestId(servletRequest);
         StreamingResponseBody body = outputStream -> {
             AiChatSseWriter writer = new AiChatSseWriter(outputStream);
+            // 모델 응답 전에도 요청 접수 사실을 즉시 전달해 사용자가 멈춘 화면으로 오해하지 않게 한다.
+            writer.writeEvent("status", "accepted");
             ScheduledFuture<?> heartbeat = heartbeatScheduler.scheduleAtFixedRate(writer::writeHeartbeat,
                     Instant.now().plusMillis(heartbeatMs), Duration.ofMillis(heartbeatMs));
             try {
@@ -169,6 +180,7 @@ public class AiChatController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM).body(body);
     }
 
+    /** AiChatController의 listContextReferences 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List AI chat context references for a message")
     @GetMapping("/messages/{messageId}/context-references")
     public List<AiChatContextReferenceResponse> listContextReferences(@PathVariable UUID messageId, HttpServletRequest request) {
@@ -177,6 +189,7 @@ public class AiChatController {
         return aiChatUseCase.listContextReferences(messageId, actor(request)).stream().map(AiChatContextReferenceResponse::from).toList();
     }
 
+    /** AiChatController의 listConversationContextReferences 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List all AI chat context references for a conversation")
     @GetMapping("/conversations/{conversationId}/context-references")
     public List<AiChatContextReferenceResponse> listConversationContextReferences(
@@ -187,6 +200,7 @@ public class AiChatController {
                 .map(AiChatContextReferenceResponse::from).toList();
     }
 
+    /** AiChatController의 updateConversation 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Update AI chat conversation title, favorite, or archive state")
     @PatchMapping("/conversations/{conversationId}")
     public AiChatConversationResponse updateConversation(@PathVariable UUID conversationId,
@@ -198,6 +212,7 @@ public class AiChatController {
                 request.favorite(), request.archived(), actor(servletRequest), requestId(servletRequest)));
     }
 
+    /** AiChatController의 deleteConversation 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Operation(summary = "Permanently delete an AI chat conversation and its messages")
     @DeleteMapping("/conversations/{conversationId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -207,15 +222,18 @@ public class AiChatController {
         aiChatUseCase.deleteConversation(conversationId, actor(servletRequest), requestId(servletRequest));
     }
 
+    /** AiChatController의 ownedConversation 처리에 필요한 업무 로직을 수행한다. */
     private AiChatConversation ownedConversation(UUID conversationId, HttpServletRequest request) {
         return aiChatUseCase.getConversation(conversationId, actor(request));
     }
 
+    /** AiChatController의 authorizeConversation 처리에 필요한 업무 로직을 수행한다. */
     private void authorizeConversation(HttpServletRequest request, AiChatConversation conversation, Capability capability) {
         TargetScope scope = resolveTargetScope(conversation.clusterId(), conversation.namespace(), conversation.applicationId());
         authorizeTarget(request, scope.clusterId(), scope.namespace(), capability);
     }
 
+    /** AiChatController의 resolveTargetScope 처리에 필요한 결과를 조합해 반환한다. */
     private TargetScope resolveTargetScope(UUID clusterId, String namespace, UUID applicationId) {
         if (applicationId == null) {
             return new TargetScope(clusterId, normalizeNamespace(namespace));
@@ -231,14 +249,17 @@ public class AiChatController {
         return new TargetScope(application.clusterId(), application.namespace());
     }
 
+    /** AiChatController의 normalizeNamespace 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeNamespace(String namespace) {
         return namespace == null || namespace.isBlank() ? null : namespace.trim();
     }
 
+    /** AiChatController의 authorizeTarget 처리에 필요한 업무 로직을 수행한다. */
     private void authorizeTarget(HttpServletRequest request, UUID clusterId, String namespace) {
         authorizeTarget(request, clusterId, namespace, Capability.ANALYSIS_READ);
     }
 
+    /** AiChatController의 authorizeTarget 처리에 필요한 업무 로직을 수행한다. */
     private void authorizeTarget(HttpServletRequest request, UUID clusterId, String namespace, Capability capability) {
         ResolvedAccess access = (ResolvedAccess) request.getAttribute(ApiAuthorizationInterceptor.RESOLVED_ACCESS_ATTRIBUTE);
         boolean allowed = access == null || (clusterId == null
@@ -249,6 +270,7 @@ public class AiChatController {
         }
     }
 
+    /** AiChatController의 canAccess 처리 조건의 충족 여부를 판단한다. */
     private boolean canAccess(HttpServletRequest request, UUID clusterId, String namespace) {
         ResolvedAccess access = (ResolvedAccess) request.getAttribute(ApiAuthorizationInterceptor.RESOLVED_ACCESS_ATTRIBUTE);
         return access == null || (clusterId == null
@@ -256,6 +278,7 @@ public class AiChatController {
                 : identityAccessService.allows(access, Capability.ANALYSIS_READ, clusterId, namespace));
     }
 
+    /** AiChatController의 canAccessConversation 처리 조건의 충족 여부를 판단한다. */
     private boolean canAccessConversation(HttpServletRequest request, AiChatConversation conversation) {
         try {
             TargetScope scope = resolveTargetScope(conversation.clusterId(), conversation.namespace(), conversation.applicationId());
@@ -265,10 +288,12 @@ public class AiChatController {
         }
     }
 
+    /** AiChatController의 actor 처리에 필요한 업무 로직을 수행한다. */
     private String actor(HttpServletRequest request) {
         return request.getUserPrincipal() == null ? "anonymous" : request.getUserPrincipal().getName();
     }
 
+    /** AiChatController의 requestId 처리에 필요한 업무 로직을 수행한다. */
     private String requestId(HttpServletRequest request) {
         return String.valueOf(request.getAttribute(RequestAttributes.REQUEST_ID));
     }

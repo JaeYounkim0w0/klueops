@@ -46,6 +46,7 @@ public class IncidentIntelligenceService {
     private final SyncJobRepositoryPort syncJobRepository;
     private final ObjectMapper objectMapper;
 
+    /** IncidentIntelligenceService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public IncidentIntelligenceService(
             OperationsRepositoryPort operationsRepository,
             KubernetesResourceSnapshotRepositoryPort resourceRepository,
@@ -58,6 +59,7 @@ public class IncidentIntelligenceService {
         this.objectMapper = objectMapper;
     }
 
+    /** IncidentIntelligenceService의 build 처리에 필요한 결과를 조합해 반환한다. */
     public IncidentIntelligence build(Incident incident, List<IncidentEvidence> evidence) {
         List<KubernetesResourceSnapshot> inventory = currentInventory(incident.clusterId());
         IncidentCorrelation correlation = correlate(incident, inventory);
@@ -66,6 +68,7 @@ public class IncidentIntelligenceService {
         return new IncidentIntelligence(correlation, changes, confidence, verificationPlan(incident, correlation));
     }
 
+    /** IncidentIntelligenceService의 correlate 처리에 필요한 업무 로직을 수행한다. */
     private IncidentCorrelation correlate(Incident incident, List<KubernetesResourceSnapshot> inventory) {
         Map<String, KubernetesResourceSnapshot> resources = new LinkedHashMap<>();
         inventory.stream()
@@ -124,6 +127,7 @@ public class IncidentIntelligenceService {
                 Math.max(0, nodes.size() - 1), workloads, services, summary, collectedAt);
     }
 
+    /** IncidentIntelligenceService의 addOwnerEdges 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addOwnerEdges(KubernetesResourceSnapshot resource, JsonNode summary,
                                Map<String, KubernetesResourceSnapshot> resources,
                                Map<String, CorrelationNode> nodes, Map<String, CorrelationEdge> edges) {
@@ -142,6 +146,7 @@ public class IncidentIntelligenceService {
         }
     }
 
+    /** IncidentIntelligenceService의 addVolumeEdges 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addVolumeEdges(KubernetesResourceSnapshot resource, JsonNode summary,
                                 Map<String, KubernetesResourceSnapshot> resources,
                                 Map<String, CorrelationNode> nodes, Map<String, CorrelationEdge> edges) {
@@ -156,6 +161,7 @@ public class IncidentIntelligenceService {
         }
     }
 
+    /** IncidentIntelligenceService의 addTargetReferenceEdges 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addTargetReferenceEdges(KubernetesResourceSnapshot resource, JsonNode summary,
                                          Map<String, KubernetesResourceSnapshot> resources,
                                          Map<String, CorrelationNode> nodes, Map<String, CorrelationEdge> edges) {
@@ -168,6 +174,7 @@ public class IncidentIntelligenceService {
         }
     }
 
+    /** IncidentIntelligenceService의 addServiceEdges 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addServiceEdges(KubernetesResourceSnapshot service, JsonNode serviceSummary,
                                  List<KubernetesResourceSnapshot> inventory,
                                  Map<String, KubernetesResourceSnapshot> resources,
@@ -191,6 +198,7 @@ public class IncidentIntelligenceService {
                 "same namespace/name", resources, nodes, edges);
     }
 
+    /** IncidentIntelligenceService의 connect 처리에 필요한 업무 로직을 수행한다. */
     private void connect(String sourceId, String namespace, String targetKind, String targetName, String relation,
                          boolean inferred, String evidence, Map<String, KubernetesResourceSnapshot> resources,
                          Map<String, CorrelationNode> nodes, Map<String, CorrelationEdge> edges) {
@@ -209,6 +217,7 @@ public class IncidentIntelligenceService {
         edges.putIfAbsent(edgeKey, new CorrelationEdge(sourceId, targetId, relation, inferred, evidence));
     }
 
+    /** IncidentIntelligenceService의 rankChanges 처리에 필요한 업무 로직을 수행한다. */
     private List<ChangeCandidate> rankChanges(Incident incident, IncidentCorrelation correlation) {
         Set<String> graph = correlation.nodes().stream().map(CorrelationNode::id).collect(LinkedHashSet::new,
                 LinkedHashSet::add, LinkedHashSet::addAll);
@@ -222,6 +231,7 @@ public class IncidentIntelligenceService {
                 .toList();
     }
 
+    /** IncidentIntelligenceService의 scoreChange 처리에 필요한 업무 로직을 수행한다. */
     private ChangeCandidate scoreChange(Incident incident, ResourceChange change, Set<String> graph, Instant anchor) {
         String id = resourceId(change.namespace(), change.resourceKind(), change.resourceName());
         boolean target = sameResource(incident, change);
@@ -243,6 +253,7 @@ public class IncidentIntelligenceService {
                 change.changeType(), change.summary(), change.detectedAt(), score, relation, explanation);
     }
 
+    /** IncidentIntelligenceService의 assessConfidence 처리에 필요한 업무 로직을 수행한다. */
     private ConfidenceAssessment assessConfidence(Incident incident, List<IncidentEvidence> evidence,
                                                   IncidentCorrelation correlation, List<ChangeCandidate> changes) {
         int facts = (int) evidence.stream().filter(IncidentEvidence::factual).count();
@@ -292,6 +303,7 @@ public class IncidentIntelligenceService {
                 List.copyOf(missing), List.copyOf(rationale));
     }
 
+    /** IncidentIntelligenceService의 verificationPlan 처리에 필요한 업무 로직을 수행한다. */
     private List<VerificationStep> verificationPlan(Incident incident, IncidentCorrelation correlation) {
         String namespace = defaultText(incident.namespace(), "default");
         String kind = commandKind(canonicalKind(incident.resourceKind()));
@@ -322,11 +334,13 @@ public class IncidentIntelligenceService {
         return List.copyOf(steps);
     }
 
+    /** IncidentIntelligenceService의 step 처리에 필요한 업무 로직을 수행한다. */
     private VerificationStep step(int order, String title, String purpose, String command,
                                   String expected, String safety) {
         return new VerificationStep(order, title, purpose, command, expected, safety, false);
     }
 
+    /** IncidentIntelligenceService의 currentInventory 처리에 필요한 업무 로직을 수행한다. */
     private List<KubernetesResourceSnapshot> currentInventory(UUID clusterId) {
         return syncJobRepository.findLatestByClusterIdAndStatusIn(clusterId, EnumSet.of(SyncJobStatus.SUCCEEDED))
                 .map(job -> {
@@ -343,6 +357,7 @@ public class IncidentIntelligenceService {
                 }).orElseGet(List::of);
     }
 
+    /** IncidentIntelligenceService의 connectedComponent 처리에 필요한 업무 로직을 수행한다. */
     private Set<String> connectedComponent(String target, Iterable<CorrelationEdge> edges) {
         Map<String, Set<String>> adjacency = new LinkedHashMap<>();
         for (CorrelationEdge edge : edges) {
@@ -360,6 +375,7 @@ public class IncidentIntelligenceService {
         return visited;
     }
 
+    /** IncidentIntelligenceService의 addNode 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addNode(Map<String, CorrelationNode> nodes, KubernetesResourceSnapshot resource,
                          String role, boolean inferred) {
         String id = resourceId(resource.namespace(), resource.resourceType(), resource.resourceName());
@@ -369,6 +385,7 @@ public class IncidentIntelligenceService {
                 resource.status(), effectiveRole, isUnhealthy(resource), inferred && (previous == null || previous.inferred())));
     }
 
+    /** IncidentIntelligenceService의 isUnhealthy 처리 조건의 충족 여부를 판단한다. */
     private boolean isUnhealthy(KubernetesResourceSnapshot resource) {
         String status = defaultText(resource.status(), "").toUpperCase(Locale.ROOT);
         if ("Pod".equals(resource.resourceType())) return Set.of("PENDING", "FAILED", "UNKNOWN").contains(status);
@@ -380,6 +397,7 @@ public class IncidentIntelligenceService {
         return false;
     }
 
+    /** IncidentIntelligenceService의 labelsMatch 처리에 필요한 업무 로직을 수행한다. */
     private boolean labelsMatch(JsonNode selector, JsonNode labels) {
         if (!selector.isObject() || selector.isEmpty() || !labels.isObject()) return false;
         for (var field : selector.properties()) {
@@ -388,12 +406,14 @@ public class IncidentIntelligenceService {
         return true;
     }
 
+    /** IncidentIntelligenceService의 sameResource 처리에 필요한 업무 로직을 수행한다. */
     private boolean sameResource(Incident incident, ResourceChange change) {
         return Objects.equals(defaultText(incident.namespace(), ""), defaultText(change.namespace(), ""))
                 && Objects.equals(canonicalKind(incident.resourceKind()), canonicalKind(change.resourceKind()))
                 && Objects.equals(incident.resourceName(), change.resourceName());
     }
 
+    /** IncidentIntelligenceService의 read 처리 결과를 조회해 반환한다. */
     private JsonNode read(String value) {
         if (value == null || value.isBlank()) return objectMapper.createObjectNode();
         try {
@@ -403,6 +423,7 @@ public class IncidentIntelligenceService {
         }
     }
 
+    /** IncidentIntelligenceService의 array 처리에 필요한 업무 로직을 수행한다. */
     private List<JsonNode> array(JsonNode node, String field) {
         JsonNode value = node.path(field);
         if (!value.isArray()) return List.of();
@@ -411,16 +432,19 @@ public class IncidentIntelligenceService {
         return result;
     }
 
+    /** IncidentIntelligenceService의 text 처리에 필요한 업무 로직을 수행한다. */
     private String text(JsonNode node, String field) {
         JsonNode value = node.path(field);
         return value.isTextual() && !value.asText().isBlank() ? value.asText() : null;
     }
 
+    /** IncidentIntelligenceService의 resourceId 처리에 필요한 업무 로직을 수행한다. */
     private String resourceId(String namespace, String kind, String name) {
         return defaultText(namespace, "_cluster") + "/" + defaultText(canonicalKind(kind), "Resource")
                 + "/" + defaultText(name, "unknown");
     }
 
+    /** IncidentIntelligenceService의 canonicalKind 처리 조건의 충족 여부를 판단한다. */
     private String canonicalKind(String kind) {
         if (kind == null) return null;
         return switch (kind.toLowerCase(Locale.ROOT).replace("-", "")) {
@@ -441,6 +465,7 @@ public class IncidentIntelligenceService {
         };
     }
 
+    /** IncidentIntelligenceService의 commandKind 처리에 필요한 업무 로직을 수행한다. */
     private String commandKind(String kind) {
         if (kind == null) return "resource";
         return switch (kind) {
@@ -452,6 +477,7 @@ public class IncidentIntelligenceService {
         };
     }
 
+    /** IncidentIntelligenceService의 relationRole 처리에 필요한 업무 로직을 수행한다. */
     private String relationRole(String relation) {
         return switch (relation) {
             case "OWNED_BY" -> "OWNER";
@@ -462,6 +488,7 @@ public class IncidentIntelligenceService {
         };
     }
 
+    /** IncidentIntelligenceService의 defaultText 처리에 필요한 업무 로직을 수행한다. */
     private String defaultText(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }

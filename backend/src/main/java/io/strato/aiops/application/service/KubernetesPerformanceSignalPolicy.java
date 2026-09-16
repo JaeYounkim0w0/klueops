@@ -9,6 +9,7 @@ import java.util.List;
 @Component
 public class KubernetesPerformanceSignalPolicy {
 
+    /** KubernetesPerformanceSignalPolicy의 select 처리에 필요한 업무 로직을 수행한다. */
     public DeterministicPerformanceScalingSectionBuilder.Input select(KubernetesNamespaceDiagnostics diagnostics) {
         List<KubernetesNamespaceDiagnostics.DiagnosticResource> problemResources = diagnostics.resources().stream()
                 .filter(this::isProblemResource)
@@ -70,14 +71,17 @@ public class KubernetesPerformanceSignalPolicy {
                 scaleCandidates);
     }
 
+    /** KubernetesPerformanceSignalPolicy의 hasResourceKind 처리 조건의 충족 여부를 판단한다. */
     private boolean hasResourceKind(KubernetesNamespaceDiagnostics diagnostics, String kind) {
         return diagnostics.resources().stream().anyMatch(resource -> kind.equals(resource.resourceType()));
     }
 
+    /** KubernetesPerformanceSignalPolicy의 isWarningEvent 처리 조건의 충족 여부를 판단한다. */
     private boolean isWarningEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         return "Warning".equalsIgnoreCase(event.type());
     }
 
+    /** KubernetesPerformanceSignalPolicy의 isProblemResource 처리 조건의 충족 여부를 판단한다. */
     private boolean isProblemResource(KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         String status = valueOrBlank(resource.status()).toLowerCase();
         if (status.isBlank()) {
@@ -88,12 +92,14 @@ public class KubernetesPerformanceSignalPolicy {
                 || status.matches("\\d+/\\d+") && !status.startsWith(status.substring(status.indexOf('/') + 1) + "/");
     }
 
+    /** KubernetesPerformanceSignalPolicy의 isHighSignalLog 처리 조건의 충족 여부를 판단한다. */
     private boolean isHighSignalLog(KubernetesNamespaceDiagnostics.DiagnosticPodLog log) {
         String text = valueOrBlank(log.log()).toLowerCase();
         return text.contains("error") || text.contains("exception") || text.contains("failed")
                 || text.contains("panic") || text.contains("oom") || text.contains("crashloop");
     }
 
+    /** KubernetesPerformanceSignalPolicy의 isPerformanceRelevantResource 처리 조건의 충족 여부를 판단한다. */
     private boolean isPerformanceRelevantResource(KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         String type = valueOrBlank(resource.resourceType());
         String status = valueOrBlank(resource.status()).toLowerCase();
@@ -104,12 +110,14 @@ public class KubernetesPerformanceSignalPolicy {
         };
     }
 
+    /** KubernetesPerformanceSignalPolicy의 isPerformanceRelevantEvent 처리 조건의 충족 여부를 판단한다. */
     private boolean isPerformanceRelevantEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         return reason.contains("failedscheduling") || reason.contains("failedmount") || reason.contains("unhealthy")
                 || reason.contains("backoff") || reason.contains("failed") || reason.contains("notready") || reason.contains("oom");
     }
 
+    /** KubernetesPerformanceSignalPolicy의 performanceRecommendation 처리에 필요한 업무 로직을 수행한다. */
     private String performanceRecommendation(KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         String type = valueOrBlank(resource.resourceType());
         String status = valueOrBlank(resource.status()).toLowerCase();
@@ -125,6 +133,7 @@ public class KubernetesPerformanceSignalPolicy {
         return "관련 리소스 describe 결과와 이벤트를 확인해 성능 저하로 이어질 상태 신호인지 검증하세요.";
     }
 
+    /** KubernetesPerformanceSignalPolicy의 performanceEventRecommendation 처리에 필요한 업무 로직을 수행한다. */
     private String performanceEventRecommendation(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         if (reason.contains("failedscheduling")) return "node allocatable, taint/toleration, affinity, requests/limits, quota 상태를 확인하세요.";
@@ -134,10 +143,12 @@ public class KubernetesPerformanceSignalPolicy {
         return "이벤트 발생 시각과 대상 리소스 상태를 함께 확인하세요.";
     }
 
+    /** KubernetesPerformanceSignalPolicy의 truncate 처리에 필요한 업무 로직을 수행한다. */
     private static String truncate(String value, int maxLength) {
         return value == null || value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 
+    /** KubernetesPerformanceSignalPolicy의 valueOrBlank 처리에 필요한 업무 로직을 수행한다. */
     private static String valueOrBlank(String value) {
         return value == null ? "" : value;
     }

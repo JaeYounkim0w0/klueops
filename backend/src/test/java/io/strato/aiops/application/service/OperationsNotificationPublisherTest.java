@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class OperationsNotificationPublisherTest {
 
+    /** OperationsNotificationPublisherTest의 keepsDedupKeyStableInsideSuppressionWindow 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void keepsDedupKeyStableInsideSuppressionWindow() {
         String first = OperationsNotificationPublisher.dedupKey(
@@ -20,6 +21,7 @@ class OperationsNotificationPublisherTest {
         assertThat(first).isEqualTo(second).isNotEqualTo(nextWindow);
     }
 
+    /** OperationsNotificationPublisherTest의 masksSecretsAndBoundsNotificationText 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void masksSecretsAndBoundsNotificationText() {
         String sanitized = OperationsNotificationPublisher.cleanText("password=strato123 token=abcdef", 22);

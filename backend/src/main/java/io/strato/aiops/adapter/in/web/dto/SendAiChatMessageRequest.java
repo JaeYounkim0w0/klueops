@@ -13,6 +13,7 @@ public record SendAiChatMessageRequest(
         @NotBlank @Size(max = 4000) String message,
         @Valid AiChatContextSelectionRequest contextSelection
 ) {
+    /** SendAiChatMessageRequest의 toCommand 처리 데이터를 필요한 표현으로 변환한다. */
     public SendAiChatMessageCommand toCommand(UUID conversationId) {
         return new SendAiChatMessageCommand(conversationId, message,
                 contextSelection == null ? null : contextSelection.toCommand());

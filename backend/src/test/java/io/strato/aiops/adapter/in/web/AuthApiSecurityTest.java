@@ -49,6 +49,7 @@ class AuthApiSecurityTest {
     @Autowired
     private ClientRegistrationRepository clientRegistrationRepository;
 
+    /** AuthApiSecurityTest의 keepsPublicIssuerAndAuthorizationWithInternalTransportEndpoints 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void keepsPublicIssuerAndAuthorizationWithInternalTransportEndpoints() {
         var registration = clientRegistrationRepository.findByRegistrationId("aiops");
@@ -65,6 +66,7 @@ class AuthApiSecurityTest {
                 .startsWith("http://aiops-keycloak.default.svc:8080/");
     }
 
+    /** AuthApiSecurityTest의 returnsJson401ForProtectedApi 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsJson401ForProtectedApi() throws Exception {
         mockMvc.perform(get("/api/clusters"))
@@ -72,6 +74,7 @@ class AuthApiSecurityTest {
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
     }
 
+    /** AuthApiSecurityTest의 exposesAnonymousSessionStateWithoutRedirect 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesAnonymousSessionStateWithoutRedirect() throws Exception {
         mockMvc.perform(get("/api/auth/me"))
@@ -79,6 +82,7 @@ class AuthApiSecurityTest {
                 .andExpect(jsonPath("$.authenticated").value(false));
     }
 
+    /** AuthApiSecurityTest의 exposesKubernetesHealthProbeGroupsWithoutAuthentication 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesKubernetesHealthProbeGroupsWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/actuator/health/readiness"))
@@ -87,18 +91,21 @@ class AuthApiSecurityTest {
                 .andExpect(status().isOk());
     }
 
+    /** AuthApiSecurityTest의 letsTheOneTimeTicketLayerAuthenticateTerminalWebSocketUpgrades 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void letsTheOneTimeTicketLayerAuthenticateTerminalWebSocketUpgrades() throws Exception {
         mockMvc.perform(get("/ws/command-sessions/00000000-0000-0000-0000-000000000000"))
                 .andExpect(status().isBadRequest());
     }
 
+    /** AuthApiSecurityTest의 returnsNotFoundForAnUnmappedAuthenticatedRoute 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsNotFoundForAnUnmappedAuthenticatedRoute() throws Exception {
         mockMvc.perform(get("/unmapped-spa-route").with(oidcLogin()))
                 .andExpect(status().isNotFound());
     }
 
+    /** AuthApiSecurityTest의 provisionsAuthenticatedOidcUserAndReturnsIdentity 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void provisionsAuthenticatedOidcUserAndReturnsIdentity() throws Exception {
         mockMvc.perform(get("/api/auth/me").with(oidcLogin().idToken(token -> token
@@ -117,6 +124,7 @@ class AuthApiSecurityTest {
                 .andExpect(jsonPath("$.session.canExtend").value(true));
     }
 
+    /** AuthApiSecurityTest의 extendsAnAuthenticatedBrowserSession 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void extendsAnAuthenticatedBrowserSession() throws Exception {
         var login = oidcLogin().idToken(token -> token
@@ -130,6 +138,7 @@ class AuthApiSecurityTest {
                 .andExpect(jsonPath("$.canExtend").value(true));
     }
 
+    /** AuthApiSecurityTest의 rejectsMutationWithoutCsrf 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsMutationWithoutCsrf() throws Exception {
         var login = oidcLogin().idToken(token -> token.issuer("https://idp.example").subject("operator-2"));
@@ -137,8 +146,9 @@ class AuthApiSecurityTest {
                 .andExpect(status().isForbidden());
     }
 
+    /** AuthApiSecurityTest의 rejectsAuthenticatedUsersWithoutExplicitRoleOrGroupMapping 처리에 필요한 업무 로직을 수행한다. */
     @Test
-    void enforcesCapabilitiesAfterAuthentication() throws Exception {
+    void rejectsAuthenticatedUsersWithoutExplicitRoleOrGroupMapping() throws Exception {
         mockMvc.perform(get("/api/clusters").with(oidcLogin().idToken(token -> token
                         .issuer("https://idp.example").subject("unassigned"))))
                 .andExpect(status().isForbidden())
@@ -147,9 +157,11 @@ class AuthApiSecurityTest {
         mockMvc.perform(get("/api/clusters").with(oidcLogin().idToken(token -> token
                         .issuer("https://idp.example").subject("viewer")
                         .claim("groups", java.util.List.of("aiops-viewers")))))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
+    /** AuthApiSecurityTest의 filtersClusterCollectionByServerSideScope 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void filtersClusterCollectionByServerSideScope() throws Exception {
         UUID visible = UUID.randomUUID();
@@ -175,6 +187,7 @@ class AuthApiSecurityTest {
                 .andExpect(jsonPath("$[?(@.id == '%s')]".formatted(hidden)).doesNotExist());
     }
 
+    /** AuthApiSecurityTest의 insertCluster 처리에 필요한 업무 로직을 수행한다. */
     private void insertCluster(UUID id, String name) {
         jdbcTemplate.update("""
                 insert into clusters (id, tenant_id, workspace_id, name, description, environment, provider, region, status,

@@ -2,6 +2,7 @@ import { displayText } from '@/utils/text';
 
 export type AnalysisResult = Record<string, unknown>;
 
+/** stripMarkdownFence 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function stripMarkdownFence(value: string) {
   return value
     .trim()
@@ -10,6 +11,7 @@ export function stripMarkdownFence(value: string) {
     .trim();
 }
 
+/** parseAnalysisResult 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 export function parseAnalysisResult(value?: string): AnalysisResult | null {
   if (!value) {
     return null;
@@ -24,6 +26,7 @@ export function parseAnalysisResult(value?: string): AnalysisResult | null {
   }
 }
 
+/** formattedAnalysisJson 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 export function formattedAnalysisJson(value?: string) {
   if (!value) {
     return '';
@@ -36,16 +39,19 @@ export function formattedAnalysisJson(value?: string) {
   }
 }
 
+/** arrayValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function arrayValue(value: unknown): AnalysisResult[] {
   return Array.isArray(value)
     ? value.filter((item): item is AnalysisResult => typeof item === 'object' && item !== null && !Array.isArray(item))
     : [];
 }
 
+/** objectValue 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function objectValue(value: unknown): AnalysisResult {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as AnalysisResult : {};
 }
 
+/** stringArray 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => displayText(String(item), '')).filter(Boolean) : [];
 }

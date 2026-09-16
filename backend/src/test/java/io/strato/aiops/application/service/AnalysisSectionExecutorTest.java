@@ -17,6 +17,7 @@ class AnalysisSectionExecutorTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /** AnalysisSectionExecutorTest의 returnsSuccessfulSectionWithBoundedMetadata 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsSuccessfulSectionWithBoundedMetadata() {
         AnalysisSectionExecutor executor = executor((section, instruction, context) ->
@@ -29,6 +30,7 @@ class AnalysisSectionExecutorTest {
         assertThat(result.contextChars()).isEqualTo(7);
     }
 
+    /** AnalysisSectionExecutorTest의 rejectsClusterSectionWithoutOperationalContent 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsClusterSectionWithoutOperationalContent() {
         AnalysisSectionExecutor executor = executor((section, instruction, context) -> "{}", Runnable::run, 1000);
@@ -40,6 +42,7 @@ class AnalysisSectionExecutorTest {
         assertThat(result.status()).isEqualTo("FALLBACK");
     }
 
+    /** AnalysisSectionExecutorTest의 returnsTimeoutFallbackWithoutFailingWholeAnalysis 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsTimeoutFallbackWithoutFailingWholeAnalysis() {
         ExecutorService worker = Executors.newSingleThreadExecutor();
@@ -63,6 +66,7 @@ class AnalysisSectionExecutorTest {
         }
     }
 
+    /** AnalysisSectionExecutorTest의 reusesNamespaceSectionWhenNormalizedContextFingerprintMatches 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void reusesNamespaceSectionWhenNormalizedContextFingerprintMatches() {
         AtomicInteger calls = new AtomicInteger();
@@ -89,13 +93,16 @@ class AnalysisSectionExecutorTest {
         assertThat(reused.result().path("summary").asText()).isEqualTo("first");
     }
 
+    /** AnalysisSectionExecutorTest의 executor 처리에 필요한 업무 로직을 수행한다. */
     private AnalysisSectionExecutor executor(SectionAi ai, java.util.concurrent.Executor worker, long timeoutMs) {
         AiAnalysisPort port = new AiAnalysisPort() {
+            /** 익명 구현체의 analyze 처리의 핵심 작업 흐름을 실행한다. */
             @Override
             public String analyze(String context) {
                 return ai.analyze("full", "", context);
             }
 
+            /** 익명 구현체의 analyzeSection 처리의 핵심 작업 흐름을 실행한다. */
             @Override
             public String analyzeSection(String sectionName, String instruction, String context) {
                 return ai.analyze(sectionName, instruction, context);
@@ -106,6 +113,7 @@ class AnalysisSectionExecutorTest {
     }
 
     private interface SectionAi {
+        /** SectionAi의 analyze 처리의 핵심 작업 흐름을 실행한다. */
         String analyze(String section, String instruction, String context);
     }
 }

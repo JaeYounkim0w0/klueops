@@ -4,8 +4,8 @@
 
 ## 시작 순서
 
-1. 로그인 후 상단에서 Tenant와 Workspace를 확인한다.
-2. `Clusters`에서 대상 클러스터의 연결 상태와 마지막 동기화 시각을 확인한다.
+1. 로그인 후 상단 컨텍스트 바에서 Tenant와 Workspace를 확인한다. 좁은 화면에서는 왼쪽 위 메뉴 버튼으로 짙은 내비게이션을 연다.
+2. `Clusters`에서 대상 클러스터의 연결 상태와 마지막 동기화 시각을 확인한다. 연결 확인 성공은 전체 동기화 RBAC 충족을 의미하지 않으므로 첫 동기화 결과도 확인한다.
 3. 클러스터 상세에서 Namespace와 리소스를 선택한다.
 4. Kubernetes 콘솔이 필요하면 대상 Cluster와 Namespace가 잠겼는지 확인한 뒤 조회 명령부터 실행한다.
    명령이 익숙하지 않으면 `Cook Book`에서 점검 목적을 검색하고 범위와 요구 조건을 확인한 뒤 명령 작업 공간으로 가져온다.
@@ -17,17 +17,46 @@
 
 ## 메뉴 안내
 
+짙은 좌측 내비게이션은 `개요`, `운영 대응`, `인프라`, `Application Delivery`, `AI 운영`, `거버넌스`, `플랫폼 설정`, `개인 영역`으로 업무를 구분하며 현재 메뉴를 파란 표시선으로 보여준다. 권한이 없는 그룹은 제목과 메뉴를 함께 숨기고, 운영 통합 검색과 알림은 상단에서 항상 사용할 수 있다.
+
 | 메뉴 | 주요 용도 |
 | --- | --- |
 | Dashboard | 여러 클러스터의 운영 우선순위와 진행 중인 Job 확인 |
 | Clusters | 클러스터 등록, 연결 확인, 동기화, Namespace/리소스 조회 |
 | Kubernetes Console | 선택 Cluster에서 kubectl 조회·변경·Pod TTY 실행과 이력 확인 |
+| Applications | Tenant Chart 검색·보관, Custom Values, Helm 배포와 Application 수명주기 관리 |
 | AI Analysis | Namespace 또는 Cluster 범위의 원인·로그·성능·위험·Runbook 분석 |
 | AI Chat | 일반 상담 또는 선택한 Kubernetes 리소스 기반 상담 |
 | Incidents | 반복 장애, 담당자, 상태, 영향 범위와 타임라인 관리 |
 | Runbooks | 검증 명령, 안전한 조치, 예상 결과와 복구 절차 관리 |
-| Operations | Watch, 품질 인증, 정리 정책, 운영 신뢰성 확인 |
-| Settings | 계정·권한, Tenant/Workspace, 시스템 설정 및 감사 이력 관리 |
+| 거버넌스 | Policies, Audit, Watch와 운영 신뢰성 확인 |
+| 플랫폼 설정 | 사용자·OIDC Group, Tenant/Workspace, AI Provider·모델과 시스템 설정 관리 |
+| 사용자 및 권한 | Tenant 구성원·그룹·기능 정책 관리, Platform Manager의 플랫폼 계정 권한 화면 연결 |
+
+## Helm Application 배포 시작
+
+1. `Applications > Chart Library`에서 보유 Chart를 선택한다. 각 카드의 `제공사`는 Chart를 발행·관리하는 주체이고 `소스`는 Artifact Hub 또는 직접 업로드 같은 유입 경로다. 필요한 Chart가 없으면 `Discover`에서 검색해 현재 Tenant로 가져오거나 Source/.tgz를 등록한다. 직접 업로드처럼 metadata만으로 제공사를 확인할 수 없으면 `제공사 미확인`으로 표시한다. Tenant Admin 또는 Platform Manager는 불필요한 Chart의 `제거`를 선택하고 `source/package`를 정확히 입력해 Library에서 숨길 수 있다. 기존 배포·Release·Values 이력은 유지되며 동일 Chart를 다시 가져오면 복원된다.
+2. Values Profile을 생성하고 YAML을 저장한다. 새 Profile은 빈 override `{}`에서 시작하며 수동 YAML도 해당 Chart로 Helm 렌더링을 통과해야 저장된다. `nodePort`는 Service type이 `NodePort` 또는 `LoadBalancer`일 때 Kubernetes 기본 범위 `30000-32767`에서 지정한다. 범위를 벗어나면 편집 화면에서 즉시 오류가 표시되고 Revision 저장이 차단되며, Backend도 렌더링된 Service를 다시 검증한다. `AI로 Values 제안`은 특정 제품용 예시가 아니라 선택한 exact Chart의 제공사, Chart/App 버전과 요청에 관련된 실제 Values/Schema 골격을 기준으로 요청을 반영하고, 구조 검사와 Helm 검증이 끝난 결과만 보여준다. 기본값이 이미 요청을 만족하면 불필요한 중복 override는 생략할 수 있다. 간단 요청뿐 아니라 persistence, resource, security context, probe, existing Secret 같은 복합 요청도 한 문장으로 설명할 수 있다. Chart 정보와 검증 횟수를 확인하고 제안을 검토한 뒤 적용한다. 비밀번호·token 본문은 쓰지 말고 사전에 만든 Secret 이름을 `existingSecret`으로 요청한다.
+3. `배포`에서 권한이 있는 Cluster와 기존 Namespace를 선택한다. 새 Namespace는 capability가 있을 때만 생성한다. Target의 `현재 Values로 렌더링되는 Service`에서 Service type, Service/Target Port와 선택형 Node Port가 의도한 값인지 먼저 확인한다. Preview는 등록 Cluster credential이 대상 Namespace의 Helm release Secret을 `get/list/create`할 수 있는지 검사하며, 부족하면 승인 전에 차단하고 필요한 권한을 표시한다.
+4. 노출 방식은 `Cluster 내부`, `Chart에서 관리`, `KlueOps HTTPRoute` 중에서 고른다. Chart의 Values가 Ingress/HTTPRoute를 지원하면 `Chart에서 관리`를 선택한다. `KlueOps HTTPRoute`는 렌더링된 HTTP Service/Port와 대상 Cluster의 READY Gateway를 목록에서 고른 뒤 hostname/path를 입력한다. Service Port는 `spec.ports[].port`이며 `targetPort`나 `nodePort`가 아니다. PostgreSQL·Redis처럼 HTTP가 아닌 TCP 서비스는 HTTPRoute 대상이 아니며 port-forward, NodePort, LoadBalancer 또는 TCP listener가 준비된 TCPRoute를 사용한다.
+5. HTTPRoute 목록이 비어 있으면 Cluster Admin이 Gateway API CRD, Gateway Controller와 HTTP/HTTPS listener가 있는 Gateway를 준비했는지 `kubectl get gatewayclass`, `kubectl get gateway -A`로 확인한다. 다른 Namespace의 Gateway를 사용할 때는 Listener `allowedRoutes`가 Application Namespace를 허용해야 한다. 등록한 Cluster credential에도 Gateway 및 대상 Namespace `get/list` 읽기 권한이 필요하다. KlueOps가 이를 자동 설치하지 않는다. 나중에 설치했다면 `다시 조회`하고, 먼저 내부용으로 배포했다면 Application Upgrade에서 노출을 추가한다.
+6. Preview에서 렌더링 결과와 경고를 확인한다. `Chart에서 관리`는 렌더 결과에 Ingress 또는 HTTPRoute가 실제 포함되어야 한다. 정확한 확인 문구를 입력해 실행한다.
+7. Applications 목록에서 배포에 사용한 Helm Chart와 Chart/App 버전을 확인한다. `DEPLOYING`, `UPGRADING`, `ROLLING_BACK`, `UNINSTALLING` 상태가 하나라도 있으면 화면이 완료·실패까지 자동 갱신되며, 완료 후 Revision·Runtime·History도 함께 바뀐다. Application을 선택하면 Chart package·제공사/source, workload/Pod, Service·Ingress·HTTPRoute 접근 URL과 endpoint 상태, IP/Host, Service/Target/Node Port, History가 표시된다. `클러스터 내부` 주소는 Cluster 안에서만 접근할 수 있다. HTTP/HTTPS endpoint만 브라우저 링크로 제공하며 PostgreSQL 같은 `tcp://` endpoint는 전용 client 또는 port-forward 접속 정보를 표시한다. `READY`는 Route 조건이 수락된 상태, `APPLIED`는 적용 후 조건 판정 중, `DEGRADED`는 거부되었거나 참조가 해결되지 않은 상태이며 클릭 가능한 URL로 취급하지 않는다. 종료된 Application에는 upgrade, rollback, uninstall을 다시 실행할 수 없다.
+
+### 로컬 PostgreSQL 접속 예시
+
+ClusterIP의 `*.svc.cluster.local` 주소는 Cluster 내부 DNS이므로 로컬 PC의 `hosts`에 `127.0.0.1`로 매핑하지 않는다. 개발 환경에서는 다음처럼 포트 포워딩한 뒤 PostgreSQL client에서 host `127.0.0.1`, port `15432`, database/user `postgres`, SSL mode `disable`로 접속한다.
+
+```bash
+kubectl -n docker-desktop-postgres port-forward service/postgres 15432:5432
+PGPASSWORD='<password>' psql "host=127.0.0.1 port=15432 user=postgres dbname=postgres sslmode=disable"
+```
+
+HTTPRoute 상태가 `DEGRADED`면 무시하지 않는다. `Accepted=False` 또는 `ResolvedRefs=False`라는 뜻으로 해당 URL은 유효한 접근 경로가 아니다. 특히 PostgreSQL Service에 만든 HTTPRoute는 프로토콜 자체가 맞지 않으므로 제거하고 위 TCP 접근 방식 중 하나를 선택한다.
+
+Application Delivery는 Argo CD/Flux를 설치하거나 Git 저장소를 지속 동기화하는 GitOps Controller가 아니다. KlueOps가 관리하는 Helm Release의 명시적 install, upgrade, rollback과 uninstall을 제공한다.
+
+Application 제거는 exact confirmation 후 비동기 Job으로 실행된다. Job Center가 서버 상태를 자동 갱신하며 성공하면 배포 목록과 상세 정보가 함께 사라진다. 공유 Namespace와 Tenant Chart Library는 유지되고, 실패한 경우에만 Application이 남아 원인을 확인하고 다시 처리할 수 있다. Phase 2 적용 전에 이미 `UNINSTALLED`로 남아 있던 Application metadata도 database migration에서 한 번 정리한다.
 
 ## 화면의 공통 상태
 

@@ -18,6 +18,7 @@ public record CommandFavoriteResponse(
         Instant createdAt,
         Instant updatedAt
 ) {
+    /** CommandFavoriteResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static CommandFavoriteResponse from(CommandFavorite value) {
         return new CommandFavoriteResponse(value.id(), value.clusterId(), value.ownerUserId(), value.name(),
                 value.description(), value.command(), value.namespace(), value.shared(), value.sortOrder(),

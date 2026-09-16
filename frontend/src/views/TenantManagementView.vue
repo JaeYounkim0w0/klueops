@@ -18,6 +18,7 @@ const canManage = computed(() => auth.hasCapability('platform:admin'));
 
 onMounted(() => void tenancy.load());
 
+/** createTenant 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function createTenant(): Promise<void> {
   if (!canManage.value || !tenantForm.code.trim() || !tenantForm.name.trim()) return;
   saving.value = 'tenant';
@@ -37,6 +38,7 @@ async function createTenant(): Promise<void> {
   }
 }
 
+/** createWorkspace 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function createWorkspace(): Promise<void> {
   if (!canManage.value || !tenancy.currentTenantId || !workspaceForm.code.trim() || !workspaceForm.name.trim()) return;
   saving.value = 'workspace';
@@ -57,10 +59,12 @@ async function createWorkspace(): Promise<void> {
   }
 }
 
+/** optional 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function optional(value: string): string | undefined {
   return value.trim() || undefined;
 }
 
+/** resetMessages 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function resetMessages(): void {
   error.value = '';
   feedback.value = '';
@@ -96,24 +100,24 @@ function resetMessages(): void {
     </section>
 
     <div class="tenancy-management-grid">
-      <section class="tenancy-form-band">
+      <section class="tenancy-form-band ui-surface-card">
         <header><div><h2>{{ t('tenancy.createTenant') }}</h2><p>{{ t('tenancy.createTenantDescription') }}</p></div></header>
-        <form @submit.prevent="createTenant">
-          <label><span>{{ t('tenancy.code') }}</span><input v-model="tenantForm.code" pattern="[A-Za-z0-9-]+" placeholder="customer-a" required /></label>
-          <label><span>{{ t('tenancy.name') }}</span><input v-model="tenantForm.name" placeholder="Customer A" required /></label>
-          <label class="wide"><span>{{ t('tenancy.description') }}</span><textarea v-model="tenantForm.description" rows="3" /></label>
+        <form class="ui-form-grid" @submit.prevent="createTenant">
+          <label class="ui-form-field"><span>{{ t('tenancy.code') }}</span><input v-model="tenantForm.code" pattern="[A-Za-z0-9-]+" placeholder="customer-a" required /></label>
+          <label class="ui-form-field"><span>{{ t('tenancy.name') }}</span><input v-model="tenantForm.name" placeholder="Customer A" required /></label>
+          <label class="wide ui-form-field ui-form-field-wide"><span>{{ t('tenancy.description') }}</span><textarea v-model="tenantForm.description" rows="3" /></label>
           <button type="submit" class="primary-button" :disabled="!canManage || saving === 'tenant'">
             <i :class="saving === 'tenant' ? 'pi pi-spin pi-spinner' : 'pi pi-plus'"></i>{{ t('tenancy.createTenant') }}
           </button>
         </form>
       </section>
 
-      <section class="tenancy-form-band">
+      <section class="tenancy-form-band ui-surface-card">
         <header><div><h2>{{ t('tenancy.createWorkspace') }}</h2><p>{{ t('tenancy.createWorkspaceDescription') }}</p></div></header>
-        <form @submit.prevent="createWorkspace">
-          <label><span>{{ t('tenancy.code') }}</span><input v-model="workspaceForm.code" pattern="[A-Za-z0-9-]+" placeholder="platform-ops" required /></label>
-          <label><span>{{ t('tenancy.name') }}</span><input v-model="workspaceForm.name" placeholder="Platform Operations" required /></label>
-          <label class="wide"><span>{{ t('tenancy.description') }}</span><textarea v-model="workspaceForm.description" rows="3" /></label>
+        <form class="ui-form-grid" @submit.prevent="createWorkspace">
+          <label class="ui-form-field"><span>{{ t('tenancy.code') }}</span><input v-model="workspaceForm.code" pattern="[A-Za-z0-9-]+" placeholder="platform-ops" required /></label>
+          <label class="ui-form-field"><span>{{ t('tenancy.name') }}</span><input v-model="workspaceForm.name" placeholder="Platform Operations" required /></label>
+          <label class="wide ui-form-field ui-form-field-wide"><span>{{ t('tenancy.description') }}</span><textarea v-model="workspaceForm.description" rows="3" /></label>
           <button type="submit" class="primary-button" :disabled="!canManage || !tenancy.currentTenantId || saving === 'workspace'">
             <i :class="saving === 'workspace' ? 'pi pi-spin pi-spinner' : 'pi pi-folder-plus'"></i>{{ t('tenancy.createWorkspace') }}
           </button>

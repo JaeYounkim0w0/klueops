@@ -1,0 +1,171 @@
+/* 제품 전 화면에서 사용하는 기본 입력 컨트롤의 시각·상태 계약이다. */
+:root {
+  --control-height: 42px;
+  --control-border: #c9d6e5;
+  --control-border-hover: #8eadd1;
+  --control-focus: #1768e5;
+  --control-placeholder: #8391a5;
+  --control-disabled: #eef2f6;
+}
+
+/* div/section 같은 범용 컨테이너는 태그가 아닌 의미 기반 공통 class로 조합한다. */
+.ui-surface-card {
+  min-width: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ui-form-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.ui-form-field > span:first-child {
+  color: #52647a;
+  font-size: 12px;
+  font-weight: 800;
+  transition: color 140ms ease;
+}
+
+.ui-form-field:focus-within > span:first-child {
+  color: var(--primary-color);
+}
+
+.ui-form-field-wide {
+  grid-column: 1 / -1;
+}
+
+:where(
+  input:not([type]),
+  input[type='text'],
+  input[type='search'],
+  input[type='email'],
+  input[type='password'],
+  input[type='url'],
+  input[type='tel'],
+  input[type='number'],
+  input[type='date'],
+  input[type='datetime-local'],
+  input[type='time'],
+  select,
+  textarea
+) {
+  min-width: 0;
+  min-height: var(--control-height);
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  outline: 0;
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  box-shadow: 0 1px 2px rgb(31 50 76 / 4%);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+:where(
+  input:not([type]),
+  input[type='text'],
+  input[type='search'],
+  input[type='email'],
+  input[type='password'],
+  input[type='url'],
+  input[type='tel'],
+  input[type='number'],
+  input[type='date'],
+  input[type='datetime-local'],
+  input[type='time']
+) {
+  padding: 0 13px;
+}
+
+:where(select) {
+  appearance: none;
+  padding: 0 38px 0 13px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2352677f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 15px;
+}
+
+:where(textarea) {
+  padding: 11px 13px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+:where(input, select, textarea)::placeholder {
+  color: var(--control-placeholder);
+  opacity: 1;
+}
+
+:where(
+  input:not([type]),
+  input[type='text'],
+  input[type='search'],
+  input[type='email'],
+  input[type='password'],
+  input[type='url'],
+  input[type='tel'],
+  input[type='number'],
+  input[type='date'],
+  input[type='datetime-local'],
+  input[type='time'],
+  select,
+  textarea
+):hover:not(:disabled):not(:focus) {
+  border-color: var(--control-border-hover);
+}
+
+:where(
+  input:not([type]),
+  input[type='text'],
+  input[type='search'],
+  input[type='email'],
+  input[type='password'],
+  input[type='url'],
+  input[type='tel'],
+  input[type='number'],
+  input[type='date'],
+  input[type='datetime-local'],
+  input[type='time'],
+  select,
+  textarea
+):focus-visible {
+  border-color: var(--control-focus);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgb(23 104 229 / 14%), 0 3px 10px rgb(31 79 142 / 8%);
+}
+
+:where(input, select, textarea):disabled {
+  border-color: #d9e1ea;
+  background-color: var(--control-disabled);
+  color: #8794a6;
+  box-shadow: none;
+}
+
+:where(input[type='checkbox'], input[type='radio']) {
+  accent-color: var(--primary-color);
+}
+
+:where(input[type='checkbox'], input[type='radio']):not(:disabled) {
+  cursor: pointer;
+}
+
+:where(input, textarea):-webkit-autofill {
+  -webkit-text-fill-color: var(--text-color);
+  box-shadow: 0 0 0 1000px var(--surface-card) inset;
+}
+
+@media (max-width: 800px) {
+  .ui-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

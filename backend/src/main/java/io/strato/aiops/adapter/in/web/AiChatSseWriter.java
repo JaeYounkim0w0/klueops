@@ -10,10 +10,12 @@ final class AiChatSseWriter {
     private final OutputStream outputStream;
     private IOException failure;
 
+    /** AiChatSseWriter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     AiChatSseWriter(OutputStream outputStream) {
         this.outputStream = outputStream;
     }
 
+    /** AiChatSseWriter의 writeEvent 처리에 필요한 업무 로직을 수행한다. */
     synchronized void writeEvent(String eventType, String value) {
         if (failure != null) {
             throw new UncheckedIOException(failure);
@@ -33,6 +35,7 @@ final class AiChatSseWriter {
         }
     }
 
+    /** AiChatSseWriter의 writeHeartbeat 처리에 필요한 업무 로직을 수행한다. */
     void writeHeartbeat() {
         writeEvent("heartbeat", "keep-alive");
     }

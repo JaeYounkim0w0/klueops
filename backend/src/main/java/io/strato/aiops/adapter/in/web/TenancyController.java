@@ -32,11 +32,13 @@ public class TenancyController {
     private final TenancyUseCase tenancy;
     private final IdentityAccessService identityAccessService;
 
+    /** TenancyController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public TenancyController(TenancyUseCase tenancy, IdentityAccessService identityAccessService) {
         this.tenancy = tenancy;
         this.identityAccessService = identityAccessService;
     }
 
+    /** TenancyController의 listTenants 처리 결과를 조회해 반환한다. */
     @GetMapping("/tenants")
     @Operation(summary = "List accessible tenants")
     public List<TenantResponse> listTenants(HttpServletRequest request) {
@@ -46,6 +48,7 @@ public class TenancyController {
                 .map(TenantResponse::from).toList();
     }
 
+    /** TenancyController의 createTenant 처리에 필요한 데이터를 생성하거나 저장한다. */
     @PostMapping("/tenants")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create tenant")
@@ -53,11 +56,13 @@ public class TenancyController {
         return TenantResponse.from(tenancy.createTenant(request.code(), request.name(), request.description(), actor(servletRequest)));
     }
 
+    /** TenancyController의 getTenant 처리 결과를 조회해 반환한다. */
     @GetMapping("/tenants/{tenantId}")
     public TenantResponse getTenant(@PathVariable UUID tenantId) {
         return TenantResponse.from(tenancy.getTenant(tenantId));
     }
 
+    /** TenancyController의 listWorkspaces 처리 결과를 조회해 반환한다. */
     @GetMapping("/tenants/{tenantId}/workspaces")
     @Operation(summary = "List tenant workspaces")
     public List<WorkspaceResponse> listWorkspaces(@PathVariable UUID tenantId, HttpServletRequest request) {
@@ -68,6 +73,7 @@ public class TenancyController {
                 .map(WorkspaceResponse::from).toList();
     }
 
+    /** TenancyController의 createWorkspace 처리에 필요한 데이터를 생성하거나 저장한다. */
     @PostMapping("/tenants/{tenantId}/workspaces")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create tenant workspace")
@@ -76,24 +82,29 @@ public class TenancyController {
         return WorkspaceResponse.from(tenancy.createWorkspace(tenantId, request.code(), request.name(), request.description(), actor(servletRequest)));
     }
 
+    /** TenancyController의 getWorkspace 처리 결과를 조회해 반환한다. */
     @GetMapping("/workspaces/{workspaceId}")
     public WorkspaceResponse getWorkspace(@PathVariable UUID workspaceId) {
         return WorkspaceResponse.from(tenancy.getWorkspace(workspaceId));
     }
 
+    /** TenancyController의 actor 처리에 필요한 업무 로직을 수행한다. */
     private String actor(HttpServletRequest request) {
         return request.getUserPrincipal() == null ? "anonymous" : request.getUserPrincipal().getName();
     }
 
+    /** TenancyController의 access 처리에 필요한 업무 로직을 수행한다. */
     private ResolvedAccess access(HttpServletRequest request) {
         return (ResolvedAccess) request.getAttribute(ApiAuthorizationInterceptor.RESOLVED_ACCESS_ATTRIBUTE);
     }
 
     public record CreateTenancyRequest(@NotBlank String code, @NotBlank String name, String description) {}
     public record TenantResponse(UUID id, String code, String name, String description, String status, String createdBy, Instant createdAt, Instant updatedAt) {
+        /** TenantResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
         static TenantResponse from(Tenant value) { return new TenantResponse(value.id(), value.code(), value.name(), value.description(), value.status().name(), value.createdBy(), value.createdAt(), value.updatedAt()); }
     }
     public record WorkspaceResponse(UUID id, UUID tenantId, String code, String name, String description, String status, String createdBy, Instant createdAt, Instant updatedAt) {
+        /** WorkspaceResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
         static WorkspaceResponse from(Workspace value) { return new WorkspaceResponse(value.id(), value.tenantId(), value.code(), value.name(), value.description(), value.status().name(), value.createdBy(), value.createdAt(), value.updatedAt()); }
     }
 }

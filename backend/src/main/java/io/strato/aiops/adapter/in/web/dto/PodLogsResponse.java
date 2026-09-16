@@ -14,6 +14,7 @@ public record PodLogsResponse(
         List<PodLogsResult.ContainerLogResult> containers,
         Instant collectedAt
 ) {
+    /** PodLogsResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static PodLogsResponse from(PodLogsResult result) {
         return new PodLogsResponse(
                 result.clusterId(),

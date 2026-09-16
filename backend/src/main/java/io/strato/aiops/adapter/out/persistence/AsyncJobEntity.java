@@ -40,9 +40,11 @@ class AsyncJobEntity {
     @Column(length = 1000)
     private String errorMessage;
 
+    /** AsyncJobEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected AsyncJobEntity() {
     }
 
+    /** AsyncJobEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private AsyncJobEntity(UUID id, AsyncJobType type, AsyncJobStatus status, Instant createdAt, Instant startedAt,
                            Instant completedAt, String errorCode, String errorMessage) {
         this.id = id;
@@ -55,6 +57,7 @@ class AsyncJobEntity {
         this.errorMessage = errorMessage;
     }
 
+    /** AsyncJobEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static AsyncJobEntity fromDomain(AsyncJob job) {
         return new AsyncJobEntity(
                 job.id(),
@@ -68,6 +71,7 @@ class AsyncJobEntity {
         );
     }
 
+    /** AsyncJobEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     AsyncJob toDomain() {
         return new AsyncJob(id, type, status, createdAt, startedAt, completedAt, errorCode, errorMessage);
     }

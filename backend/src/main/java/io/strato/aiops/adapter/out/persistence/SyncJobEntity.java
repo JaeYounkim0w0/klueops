@@ -53,9 +53,11 @@ class SyncJobEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    /** SyncJobEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     protected SyncJobEntity() {
     }
 
+    /** SyncJobEntity 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     private SyncJobEntity(UUID id, UUID asyncJobId, UUID clusterId, SyncType syncType, SyncJobStatus status, String requestedBy,
                           int resourceCount, int eventCount, Instant startedAt, Instant completedAt, String errorMessage, Instant createdAt) {
         this.id = id;
@@ -72,6 +74,7 @@ class SyncJobEntity {
         this.createdAt = createdAt;
     }
 
+    /** SyncJobEntity의 fromDomain 처리 데이터를 필요한 표현으로 변환한다. */
     static SyncJobEntity fromDomain(SyncJob syncJob) {
         return new SyncJobEntity(
                 syncJob.id(),
@@ -89,6 +92,7 @@ class SyncJobEntity {
         );
     }
 
+    /** SyncJobEntity의 toDomain 처리 데이터를 필요한 표현으로 변환한다. */
     SyncJob toDomain() {
         return new SyncJob(id, asyncJobId, clusterId, syncType, status, requestedBy, resourceCount, eventCount, startedAt, completedAt, errorMessage, createdAt);
     }

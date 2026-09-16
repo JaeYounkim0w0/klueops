@@ -14,10 +14,12 @@ public class AiTrustCenterController {
 
     private final AiTrustCenterService service;
 
+    /** AiTrustCenterController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AiTrustCenterController(AiTrustCenterService service) {
         this.service = service;
     }
 
+    /** AiTrustCenterController의 snapshot 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get a point-in-time AI trust evidence snapshot")
     @GetMapping
     public AiTrustCenterService.Snapshot snapshot() {

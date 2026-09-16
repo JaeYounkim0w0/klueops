@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AiEvaluationMetricsTest {
 
+    /** AiEvaluationMetricsTest의 calculatesPerCategoryConfusionMetricsAndAbstentionAccuracy 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void calculatesPerCategoryConfusionMetricsAndAbstentionAccuracy() {
         var summary = AiEvaluationMetrics.calculate(List.of(
@@ -30,6 +31,7 @@ class AiEvaluationMetricsTest {
         assertThat(summary.sampleCount()).isEqualTo(5);
     }
 
+    /** AiEvaluationMetricsTest의 returnsInsufficientEvidenceWhenThereAreNoObservations 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsInsufficientEvidenceWhenThereAreNoObservations() {
         var summary = AiEvaluationMetrics.calculate(List.of());

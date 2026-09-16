@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MigrationPortabilityTest {
 
+    /** MigrationPortabilityTest의 migrationsAvoidNonPortableLargeObjectTypes 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void migrationsAvoidNonPortableLargeObjectTypes() throws IOException {
         Path migrations = Path.of("src/main/resources/db/migration");
@@ -29,6 +30,7 @@ class MigrationPortabilityTest {
         }
     }
 
+    /** MigrationPortabilityTest의 containsH2OnlyType 처리에 필요한 업무 로직을 수행한다. */
     private boolean containsH2OnlyType(Path path, String type) {
         try {
             String sql = Files.readString(path).toLowerCase(Locale.ROOT);

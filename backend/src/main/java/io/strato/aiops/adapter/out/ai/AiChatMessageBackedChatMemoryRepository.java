@@ -19,17 +19,20 @@ public class AiChatMessageBackedChatMemoryRepository implements ChatMemoryReposi
     private final AiChatMessageRepositoryPort messageRepositoryPort;
     private final int maxMessages;
 
+    /** AiChatMessageBackedChatMemoryRepository 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AiChatMessageBackedChatMemoryRepository(AiChatMessageRepositoryPort messageRepositoryPort,
                                                    @Value("${aiops.ai.chat-memory.max-messages:20}") int maxMessages) {
         this.messageRepositoryPort = messageRepositoryPort;
         this.maxMessages = maxMessages;
     }
 
+    /** AiChatMessageBackedChatMemoryRepository의 findConversationIds 처리 결과를 조회해 반환한다. */
     @Override
     public List<String> findConversationIds() {
         return List.of();
     }
 
+    /** AiChatMessageBackedChatMemoryRepository의 findByConversationId 처리 결과를 조회해 반환한다. */
     @Override
     public List<Message> findByConversationId(String conversationId) {
         UUID id = parseConversationId(conversationId);
@@ -42,17 +45,20 @@ public class AiChatMessageBackedChatMemoryRepository implements ChatMemoryReposi
                 .toList();
     }
 
+    /** AiChatMessageBackedChatMemoryRepository의 saveAll 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public void saveAll(String conversationId, List<Message> messages) {
         // Domain service persists the complete chat history. Spring AI memory reads from that history
         // and should not write duplicate messages through the advisor lifecycle.
     }
 
+    /** AiChatMessageBackedChatMemoryRepository의 deleteByConversationId 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Override
     public void deleteByConversationId(String conversationId) {
         // Conversation deletion is owned by the application domain, not the memory advisor.
     }
 
+    /** AiChatMessageBackedChatMemoryRepository의 parseConversationId 처리 데이터를 필요한 표현으로 변환한다. */
     private UUID parseConversationId(String conversationId) {
         try {
             return UUID.fromString(conversationId);
@@ -61,6 +67,7 @@ public class AiChatMessageBackedChatMemoryRepository implements ChatMemoryReposi
         }
     }
 
+    /** AiChatMessageBackedChatMemoryRepository의 toSpringAiMessage 처리 데이터를 필요한 표현으로 변환한다. */
     private List<Message> toSpringAiMessage(AiChatMessage message) {
         if (message.errorCode() != null) {
             return List.of();

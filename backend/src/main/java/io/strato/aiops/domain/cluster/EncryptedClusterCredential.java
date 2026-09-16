@@ -15,6 +15,7 @@ public final class EncryptedClusterCredential {
     private final String nonce;
     private final Instant createdAt;
 
+    /** EncryptedClusterCredential 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public EncryptedClusterCredential(UUID id, UUID clusterId, ClusterCredentialType credentialType, String encryptedPayload,
                                       String keyId, String algorithm, String nonce, Instant createdAt) {
         this.id = Objects.requireNonNull(id, "id must not be null");
@@ -27,6 +28,7 @@ public final class EncryptedClusterCredential {
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
     }
 
+    /** EncryptedClusterCredential의 create 처리에 필요한 데이터를 생성하거나 저장한다. */
     public static EncryptedClusterCredential create(UUID clusterId, ClusterCredentialType credentialType, EncryptedSecret encryptedSecret) {
         return new EncryptedClusterCredential(
                 UUID.randomUUID(),
@@ -40,34 +42,42 @@ public final class EncryptedClusterCredential {
         );
     }
 
+    /** EncryptedClusterCredential의 id 처리에 필요한 업무 로직을 수행한다. */
     public UUID id() {
         return id;
     }
 
+    /** EncryptedClusterCredential의 clusterId 처리에 필요한 업무 로직을 수행한다. */
     public UUID clusterId() {
         return clusterId;
     }
 
+    /** EncryptedClusterCredential의 credentialType 처리에 필요한 업무 로직을 수행한다. */
     public ClusterCredentialType credentialType() {
         return credentialType;
     }
 
+    /** EncryptedClusterCredential의 encryptedPayload 처리에 필요한 업무 로직을 수행한다. */
     public String encryptedPayload() {
         return encryptedPayload;
     }
 
+    /** EncryptedClusterCredential의 keyId 처리에 필요한 업무 로직을 수행한다. */
     public String keyId() {
         return keyId;
     }
 
+    /** EncryptedClusterCredential의 algorithm 처리에 필요한 업무 로직을 수행한다. */
     public String algorithm() {
         return algorithm;
     }
 
+    /** EncryptedClusterCredential의 nonce 처리에 필요한 업무 로직을 수행한다. */
     public String nonce() {
         return nonce;
     }
 
+    /** EncryptedClusterCredential의 createdAt 처리에 필요한 데이터를 생성하거나 저장한다. */
     public Instant createdAt() {
         return createdAt;
     }

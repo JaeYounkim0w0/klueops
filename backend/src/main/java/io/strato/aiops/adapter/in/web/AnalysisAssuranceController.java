@@ -28,18 +28,21 @@ public class AnalysisAssuranceController {
     private final KubernetesWatchCoordinator watchCoordinator;
     private final AnalysisRegressionService regressionService;
 
+    /** AnalysisAssuranceController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AnalysisAssuranceController(KubernetesWatchCoordinator watchCoordinator,
                                        AnalysisRegressionService regressionService) {
         this.watchCoordinator = watchCoordinator;
         this.regressionService = regressionService;
     }
 
+    /** AnalysisAssuranceController의 watchStatus 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List Kubernetes Watch runtime status for registered clusters")
     @GetMapping("/operations/watch/status")
     public List<WatchRuntimeStatus> watchStatus() {
         return watchCoordinator.statuses();
     }
 
+    /** AnalysisAssuranceController의 watchSignals 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List recent Kubernetes Watch signals")
     @GetMapping("/operations/watch/signals")
     public List<WatchSignal> watchSignals(@RequestParam(required = false) UUID clusterId,
@@ -48,30 +51,35 @@ public class AnalysisAssuranceController {
         return watchCoordinator.signals(clusterId, namespace, limit);
     }
 
+    /** AnalysisAssuranceController의 restartWatch 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Reconnect Kubernetes Watch for one cluster")
     @PostMapping("/operations/watch/clusters/{clusterId}/restart")
     public WatchRuntimeStatus restartWatch(@PathVariable UUID clusterId) {
         return watchCoordinator.restart(clusterId);
     }
 
+    /** AnalysisAssuranceController의 pauseWatch 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Pause Kubernetes Watch reconnects for one cluster")
     @PostMapping("/operations/watch/clusters/{clusterId}/pause")
     public WatchRuntimeStatus pauseWatch(@PathVariable UUID clusterId) {
         return watchCoordinator.pause(clusterId);
     }
 
+    /** AnalysisAssuranceController의 resumeWatch 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Resume Kubernetes Watch for one cluster")
     @PostMapping("/operations/watch/clusters/{clusterId}/resume")
     public WatchRuntimeStatus resumeWatch(@PathVariable UUID clusterId) {
         return watchCoordinator.resume(clusterId);
     }
 
+    /** AnalysisAssuranceController의 runRegression 처리의 핵심 작업 흐름을 실행한다. */
     @Operation(summary = "Execute deterministic AI analysis regression certification")
     @PostMapping("/analysis-regression/runs")
     public RegressionRun runRegression(HttpServletRequest request) {
         return regressionService.run(actor(request));
     }
 
+    /** AnalysisAssuranceController의 regressionRuns 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "List AI analysis regression certification runs")
     @GetMapping("/analysis-regression/runs")
     public List<RegressionRun> regressionRuns(
@@ -79,12 +87,14 @@ public class AnalysisAssuranceController {
         return regressionService.list(limit);
     }
 
+    /** AnalysisAssuranceController의 regressionRun 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get one AI analysis regression certification run")
     @GetMapping("/analysis-regression/runs/{runId}")
     public RegressionRun regressionRun(@PathVariable UUID runId) {
         return regressionService.get(runId);
     }
 
+    /** AnalysisAssuranceController의 actor 처리에 필요한 업무 로직을 수행한다. */
     private String actor(HttpServletRequest request) {
         return request.getUserPrincipal() == null ? "anonymous" : request.getUserPrincipal().getName();
     }

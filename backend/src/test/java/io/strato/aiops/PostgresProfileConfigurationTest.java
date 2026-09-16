@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class PostgresProfileConfigurationTest {
 
+    /** PostgresProfileConfigurationTest의 postgresProfileUsesFlywaySchemaValidationAndBoundedPool 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void postgresProfileUsesFlywaySchemaValidationAndBoundedPool() throws IOException {
         ClassPathResource resource = new ClassPathResource("application-postgres.yml");
@@ -31,6 +32,7 @@ class PostgresProfileConfigurationTest {
                 .isEqualTo("${AIOPS_DB_VALIDATION_TIMEOUT_MS:5000}");
     }
 
+    /** PostgresProfileConfigurationTest의 value 처리에 필요한 업무 로직을 수행한다. */
     private Object value(List<PropertySource<?>> sources, String name) {
         return sources.stream()
                 .map(source -> source.getProperty(name))

@@ -16,10 +16,12 @@ public class JdbcCommandExecutionAdmissionAdapter implements CommandExecutionAdm
     private static final String ADMISSION_LOCK = "aiops-command-execution-admission";
     private final JdbcTemplate jdbc;
 
+    /** JdbcCommandExecutionAdmissionAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public JdbcCommandExecutionAdmissionAdapter(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
+    /** JdbcCommandExecutionAdmissionAdapter의 acquire 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public void acquire(AdmissionRequest request) {
@@ -63,32 +65,38 @@ public class JdbcCommandExecutionAdmissionAdapter implements CommandExecutionAdm
                 timestamp(request.acquiredAt()));
     }
 
+    /** JdbcCommandExecutionAdmissionAdapter의 renew 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public void renew(UUID executionId, Instant expiresAt) {
         jdbc.update("update command_execution_leases set expires_at=? where execution_id=?",
                 timestamp(expiresAt), executionId);
     }
 
+    /** JdbcCommandExecutionAdmissionAdapter의 release 처리에 필요한 업무 로직을 수행한다. */
     @Override
     public void release(UUID executionId) {
         jdbc.update("delete from command_execution_leases where execution_id=?", executionId);
     }
 
+    /** JdbcCommandExecutionAdmissionAdapter의 isActive 처리 조건의 충족 여부를 판단한다. */
     @Override
     public boolean isActive(UUID executionId, Instant now) {
         return count("select count(*) from command_execution_leases where execution_id=? and expires_at>?",
                 executionId, timestamp(now)) > 0;
     }
 
+    /** JdbcCommandExecutionAdmissionAdapter의 count 처리에 필요한 업무 로직을 수행한다. */
     private int count(String sql, Object... arguments) {
         Long value = jdbc.queryForObject(sql, Long.class, arguments);
         return value == null ? 0 : Math.toIntExact(value);
     }
 
+    /** JdbcCommandExecutionAdmissionAdapter의 exceeded 처리에 필요한 업무 로직을 수행한다. */
     private CommandCapacityExceededException exceeded(String message, int retryAfterSeconds) {
         return new CommandCapacityExceededException(message, retryAfterSeconds);
     }
 
+    /** JdbcCommandExecutionAdmissionAdapter의 timestamp 처리에 필요한 업무 로직을 수행한다. */
     private Timestamp timestamp(Instant value) {
         return Timestamp.from(value);
     }

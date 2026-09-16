@@ -16,6 +16,7 @@ public record AnalysisWorkflowStateResponse(
         String updatedBy,
         Instant updatedAt
 ) {
+    /** AnalysisWorkflowStateResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static AnalysisWorkflowStateResponse from(AnalysisWorkflowState workflowState) {
         return new AnalysisWorkflowStateResponse(workflowState.id(), workflowState.analysisId(),
                 workflowState.issueGroupId(), workflowState.status(), workflowState.note(),

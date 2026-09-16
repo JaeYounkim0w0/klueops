@@ -25,6 +25,8 @@ portal:
     runtimeExistingSecret: ""
   crypto:
     masterKeyExistingSecret: ""
+  security:
+    credentialRevealEnabled: false
   session:
     cookieSecure: true
   ingress:

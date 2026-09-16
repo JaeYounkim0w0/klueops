@@ -15,6 +15,7 @@ public final class ClusterSyncSetting {
     private final Instant createdAt;
     private final Instant updatedAt;
 
+    /** ClusterSyncSetting 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ClusterSyncSetting(UUID id, UUID clusterId, boolean autoSyncEnabled, int syncIntervalSeconds, Instant createdAt, Instant updatedAt) {
         this.id = Objects.requireNonNull(id, "id must not be null");
         this.clusterId = Objects.requireNonNull(clusterId, "clusterId must not be null");
@@ -24,6 +25,7 @@ public final class ClusterSyncSetting {
         this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt must not be null");
     }
 
+    /** ClusterSyncSetting의 create 처리에 필요한 데이터를 생성하거나 저장한다. */
     public static ClusterSyncSetting create(UUID clusterId, Boolean autoSyncEnabled, Integer syncIntervalSeconds) {
         Instant now = Instant.now();
         return new ClusterSyncSetting(
@@ -36,6 +38,7 @@ public final class ClusterSyncSetting {
         );
     }
 
+    /** ClusterSyncSetting의 update 처리 대상의 상태를 갱신한다. */
     public ClusterSyncSetting update(Boolean autoSyncEnabled, Integer syncIntervalSeconds) {
         return new ClusterSyncSetting(
                 id,
@@ -47,26 +50,32 @@ public final class ClusterSyncSetting {
         );
     }
 
+    /** ClusterSyncSetting의 id 처리에 필요한 업무 로직을 수행한다. */
     public UUID id() {
         return id;
     }
 
+    /** ClusterSyncSetting의 clusterId 처리에 필요한 업무 로직을 수행한다. */
     public UUID clusterId() {
         return clusterId;
     }
 
+    /** ClusterSyncSetting의 autoSyncEnabled 처리에 필요한 업무 로직을 수행한다. */
     public boolean autoSyncEnabled() {
         return autoSyncEnabled;
     }
 
+    /** ClusterSyncSetting의 syncIntervalSeconds 처리의 핵심 작업 흐름을 실행한다. */
     public int syncIntervalSeconds() {
         return syncIntervalSeconds;
     }
 
+    /** ClusterSyncSetting의 createdAt 처리에 필요한 데이터를 생성하거나 저장한다. */
     public Instant createdAt() {
         return createdAt;
     }
 
+    /** ClusterSyncSetting의 updatedAt 처리 대상의 상태를 갱신한다. */
     public Instant updatedAt() {
         return updatedAt;
     }

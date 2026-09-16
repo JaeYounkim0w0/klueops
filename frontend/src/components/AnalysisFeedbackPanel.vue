@@ -16,6 +16,7 @@ const saving = ref(false);
 const message = ref('');
 const error = ref('');
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load() {
   message.value = '';
   error.value = '';
@@ -36,6 +37,7 @@ async function load() {
   }
 }
 
+/** save 처리에 필요한 데이터를 생성하거나 저장한다. */
 async function save() {
   saving.value = true;
   message.value = '';

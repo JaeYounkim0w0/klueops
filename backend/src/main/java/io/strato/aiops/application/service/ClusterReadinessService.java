@@ -61,6 +61,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
     private final Duration cacheTtl;
     private final ConcurrentHashMap<CacheKey, CacheEntry> cache = new ConcurrentHashMap<>();
 
+    /** ClusterReadinessService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ClusterReadinessService(
             ClusterRepositoryPort clusterRepository,
             ClusterCredentialRepositoryPort credentialRepository,
@@ -85,6 +86,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         this.cacheTtl = Duration.ofSeconds(Math.max(30, cacheSeconds));
     }
 
+    /** ClusterReadinessService의 getReadiness 처리 결과를 조회해 반환한다. */
     @Override
     public ClusterReadinessReport getReadiness(UUID clusterId, String namespace, String targetVersion, boolean refresh) {
         long startedAt = System.nanoTime();
@@ -128,6 +130,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         return report;
     }
 
+    /** ClusterReadinessService의 assessCapabilities 처리에 필요한 업무 로직을 수행한다. */
     private ClusterReadinessReport.CapabilityMatrix assessCapabilities(KubernetesConnectionCredential credential,
                                                                         String namespace,
                                                                         boolean reachable) {
@@ -144,6 +147,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
                 summary.unknown(), summary.score(), List.copyOf(checks));
     }
 
+    /** ClusterReadinessService의 assessCapability 처리에 필요한 업무 로직을 수행한다. */
     private ClusterReadinessReport.CapabilityCheck assessCapability(KubernetesConnectionCredential credential,
                                                                      String namespace,
                                                                      boolean reachable,
@@ -157,6 +161,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
                 result.allowed() ? "ALLOWED" : "DENIED", result.reason(), "SELF_SUBJECT_ACCESS_REVIEW");
     }
 
+    /** ClusterReadinessService의 unknownCapability 처리에 필요한 업무 로직을 수행한다. */
     private ClusterReadinessReport.CapabilityCheck unknownCapability(CapabilitySpec spec, String namespace,
                                                                       Throwable error) {
         String reason = error == null ? "Connection unavailable; capability could not be verified"
@@ -166,6 +171,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
                 "SELF_SUBJECT_ACCESS_REVIEW");
     }
 
+    /** ClusterReadinessService의 assessCredential 처리에 필요한 업무 로직을 수행한다. */
     private ClusterReadinessReport.CredentialHealth assessCredential(EncryptedClusterCredential encrypted,
                                                                       String payload,
                                                                       KubernetesConnectionTestResult connection,
@@ -233,6 +239,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
                 List.copyOf(recommendations), connection.message());
     }
 
+    /** ClusterReadinessService의 applyCertificateFinding 처리에 필요한 업무 로직을 수행한다. */
     private String applyCertificateFinding(String label, Instant expiry, Instant checkedAt, String status,
                                            List<String> findings, List<String> recommendations) {
         if (expiry == null) return status;
@@ -255,6 +262,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         return status;
     }
 
+    /** ClusterReadinessService의 assessUpgrade 처리에 필요한 업무 로직을 수행한다. */
     private ClusterReadinessReport.UpgradeReadiness assessUpgrade(UUID clusterId,
                                                                    KubernetesConnectionTestResult connection,
                                                                    List<KubernetesNode> nodes,
@@ -311,6 +319,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
                 "KUBERNETES_VERSION_NODE_CRD_AND_SNAPSHOT_FACTS");
     }
 
+    /** ClusterReadinessService의 appendDeprecatedApiFindings 처리에 필요한 업무 로직을 수행한다. */
     private void appendDeprecatedApiFindings(UUID clusterId, int targetMinor,
                                              List<ClusterReadinessReport.UpgradeFinding> findings) {
         if (targetMinor < 0) return;
@@ -331,6 +340,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         }
     }
 
+    /** ClusterReadinessService의 appendAddonFinding 처리에 필요한 업무 로직을 수행한다. */
     private void appendAddonFinding(KubernetesResourceSnapshot resource,
                                     List<ClusterReadinessReport.UpgradeFinding> findings) {
         KubernetesUpgradeCatalog.AddonRule rule = UPGRADE_CATALOG.addons().stream()
@@ -351,6 +361,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         }
     }
 
+    /** ClusterReadinessService의 earliest 처리에 필요한 업무 로직을 수행한다. */
     private Instant earliest(Instant... values) {
         Instant result = null;
         for (Instant value : values) {
@@ -359,6 +370,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         return result;
     }
 
+    /** ClusterReadinessService의 appendCrdFindings 처리에 필요한 업무 로직을 수행한다. */
     private void appendCrdFindings(KubernetesResourceSnapshot resource,
                                    List<ClusterReadinessReport.UpgradeFinding> findings) {
         try {
@@ -403,6 +415,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         }
     }
 
+    /** ClusterReadinessService의 credentialLifetime 처리에 필요한 업무 로직을 수행한다. */
     private CredentialLifetime credentialLifetime(ClusterCredentialType type, String payload) {
         try {
             String token;
@@ -432,6 +445,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         }
     }
 
+    /** ClusterReadinessService의 certificateExpiry 처리에 필요한 업무 로직을 수행한다. */
     private Instant certificateExpiry(String encodedCertificate) {
         if (encodedCertificate == null || encodedCertificate.isBlank()) return null;
         try {
@@ -446,12 +460,14 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         }
     }
 
+    /** ClusterReadinessService의 rootMessage 처리에 필요한 업무 로직을 수행한다. */
     private String rootMessage(Throwable throwable) {
         Throwable current = throwable;
         while (current.getCause() != null) current = current.getCause();
         return current.getMessage() == null ? current.getClass().getSimpleName() : current.getMessage();
     }
 
+    /** ClusterReadinessService의 apiVersion 처리에 필요한 업무 로직을 수행한다. */
     private String apiVersion(String rawJson) {
         if (rawJson == null || rawJson.isBlank()) return "";
         try {
@@ -461,6 +477,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         }
     }
 
+    /** ClusterReadinessService의 safeNodes 처리에 필요한 업무 로직을 수행한다. */
     private List<KubernetesNode> safeNodes(KubernetesConnectionCredential credential) {
         try {
             return kubernetesClusterPort.listNodes(credential);
@@ -469,6 +486,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         }
     }
 
+    /** ClusterReadinessService의 capabilitySpecs 처리에 필요한 업무 로직을 수행한다. */
     private List<CapabilitySpec> capabilitySpecs() {
         return List.of(
                 new CapabilitySpec("namespace-read", "DISCOVERY", "Read namespaces", "list", "", "namespaces", null, false),
@@ -483,6 +501,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         );
     }
 
+    /** ClusterReadinessService의 credentialScore 처리에 필요한 업무 로직을 수행한다. */
     private int credentialScore(String status) {
         return switch (status) {
             case "HEALTHY" -> 100;
@@ -491,6 +510,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         };
     }
 
+    /** ClusterReadinessService의 statusForScore 처리에 필요한 업무 로직을 수행한다. */
     private String statusForScore(int score, boolean reachable) {
         if (!reachable) return "CRITICAL";
         if (score >= 85) return "READY";
@@ -498,6 +518,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         return "BLOCKED";
     }
 
+    /** ClusterReadinessService의 minor 처리에 필요한 업무 로직을 수행한다. */
     private int minor(String version) {
         if (version == null) return -1;
         String[] parts = version.replaceFirst("^v", "").split("\\.");
@@ -509,12 +530,14 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         }
     }
 
+    /** ClusterReadinessService의 normalizeVersion 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeVersion(String version) {
         if (version == null || version.isBlank()) return null;
         String normalized = version.trim().toLowerCase(Locale.ROOT);
         return normalized.startsWith("v") ? normalized : "v" + normalized;
     }
 
+    /** ClusterReadinessService의 nextMinorVersion 처리에 필요한 업무 로직을 수행한다. */
     private String nextMinorVersion(String currentVersion) {
         if (currentVersion == null) return null;
         String normalized = normalizeVersion(currentVersion);
@@ -527,6 +550,7 @@ public class ClusterReadinessService implements ClusterReadinessUseCase {
         }
     }
 
+    /** ClusterReadinessService의 textOrDefault 처리에 필요한 업무 로직을 수행한다. */
     private String textOrDefault(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value.trim();
     }

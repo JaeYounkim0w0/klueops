@@ -16,10 +16,12 @@ public class OperationsNotificationPublisher {
 
     private final OperationsRepositoryPort operationsRepository;
 
+    /** OperationsNotificationPublisher 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationsNotificationPublisher(OperationsRepositoryPort operationsRepository) {
         this.operationsRepository = operationsRepository;
     }
 
+    /** OperationsNotificationPublisher의 publish 처리 결과를 지정된 대상에 전달한다. */
     public Notification publish(String type,
                                 String severity,
                                 String title,
@@ -38,12 +40,14 @@ public class OperationsNotificationPublisher {
                 current.occurrenceCount() + 1, current.createdAt(), now));
     }
 
+    /** OperationsNotificationPublisher의 dedupKey 처리에 필요한 업무 로직을 수행한다. */
     static String dedupKey(String type, String sourceKey, int suppressMinutes, Instant now) {
         long bucketSeconds = Math.max(60, suppressMinutes * 60L);
         long bucket = now.getEpochSecond() / bucketSeconds;
         return sha256(type + "|" + sourceKey + "|" + bucket);
     }
 
+    /** OperationsNotificationPublisher의 cleanText 처리에 필요한 업무 로직을 수행한다. */
     static String cleanText(String value, int maxLength) {
         if (value == null) {
             return null;
@@ -52,6 +56,7 @@ public class OperationsNotificationPublisher {
         return cleaned.length() <= maxLength ? cleaned : cleaned.substring(0, maxLength);
     }
 
+    /** OperationsNotificationPublisher의 sha256 처리에 필요한 업무 로직을 수행한다. */
     static String sha256(String value) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));

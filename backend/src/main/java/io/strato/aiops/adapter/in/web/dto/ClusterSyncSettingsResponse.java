@@ -15,6 +15,7 @@ public record ClusterSyncSettingsResponse(
         Instant createdAt,
         Instant updatedAt
 ) {
+    /** ClusterSyncSettingsResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static ClusterSyncSettingsResponse from(ClusterSyncSetting syncSetting) {
         return new ClusterSyncSettingsResponse(
                 syncSetting.id(),

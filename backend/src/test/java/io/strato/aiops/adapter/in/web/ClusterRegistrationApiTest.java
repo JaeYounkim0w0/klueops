@@ -31,6 +31,7 @@ class ClusterRegistrationApiTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** ClusterRegistrationApiTest의 registersClusterWithKubeconfigCredential 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Test
     void registersClusterWithKubeconfigCredential() throws Exception {
         mockMvc.perform(post("/api/clusters")
@@ -63,6 +64,7 @@ class ClusterRegistrationApiTest {
                 .andExpect(jsonPath("$.status").value("REGISTERED"));
     }
 
+    /** ClusterRegistrationApiTest의 registersClusterWithServiceAccountCredential 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Test
     void registersClusterWithServiceAccountCredential() throws Exception {
         mockMvc.perform(post("/api/clusters")
@@ -92,6 +94,7 @@ class ClusterRegistrationApiTest {
                 .andExpect(jsonPath("$.status").value("REGISTERED"));
     }
 
+    /** ClusterRegistrationApiTest의 rejectsUnsupportedExecPluginKubeconfig 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsUnsupportedExecPluginKubeconfig() throws Exception {
         mockMvc.perform(post("/api/clusters")
@@ -112,6 +115,7 @@ class ClusterRegistrationApiTest {
                 .andExpect(jsonPath("$.requestId", notNullValue()));
     }
 
+    /** ClusterRegistrationApiTest의 deletesClusterRegistration 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Test
     void deletesClusterRegistration() throws Exception {
         String response = mockMvc.perform(post("/api/clusters")
@@ -147,6 +151,7 @@ class ClusterRegistrationApiTest {
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }
 
+    /** ClusterRegistrationApiTest의 deletesClusterRegistrationWithSyncData 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Test
     void deletesClusterRegistrationWithSyncData() throws Exception {
         String response = mockMvc.perform(post("/api/clusters")

@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 @Component
 final class NamespaceAnalysisContextBuilder {
 
+    /** NamespaceAnalysisContextBuilder의 build 처리에 필요한 결과를 조합해 반환한다. */
     String build(UUID clusterId, String namespace, String applicationName,
                  KubernetesNamespaceDiagnostics diagnostics, String sectionName, int maxChars,
                  Consumer<StringBuilder> signalAppender) {
@@ -21,6 +22,8 @@ final class NamespaceAnalysisContextBuilder {
             context.append("applicationName=").append(applicationName).append('\n');
         }
         context.append("metricsPolicy=Prometheus is not integrated. Do not invent CPU/memory/traffic metrics.\n");
+        context.append("currentStateRule=Current Ready/resource status is authoritative. A Running and fully Ready Pod with zero restarts must not be described as failing initialization solely from an older startup event or log line.\n");
+        context.append("resolvedSignalRule=Signals marked ResolvedTransient are historical context, not active incidents.\n");
         context.append("diagnosticCounts resources=").append(diagnostics.resources().size())
                 .append(" events=").append(diagnostics.events().size())
                 .append(" podLogs=").append(diagnostics.podLogs().size())
@@ -43,6 +46,7 @@ final class NamespaceAnalysisContextBuilder {
         return limit(context.toString(), maxChars);
     }
 
+    /** NamespaceAnalysisContextBuilder의 limit 처리에 필요한 업무 로직을 수행한다. */
     private String limit(String context, int maxChars) {
         if (context.length() <= maxChars) {
             return context;

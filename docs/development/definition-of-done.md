@@ -13,10 +13,15 @@
 - audit log 필요 여부 확인
 - Secret/PII 마스킹 확인
 - 관련 docs 갱신
+- Frontend UI 변경은 기존 공통 CSS와 semantic UI class를 우선 사용했는지, 기능별 CSS에 공통 control/surface/layout/state 규칙을 중복 작성하지 않았는지 확인한다.
+- 새 기능별 CSS는 해당 기능 고유의 구조·상태·상호작용만 포함하며 공통 design token을 사용하고 소유권이 드러나는 파일에 배치한다.
 - 사용자에게 노출되는 메뉴, 화면, 워크플로, 권한 또는 운영 절차를 변경했다면 `docs/user-guide/`의 Word 가이드와 문서 생성 스크립트를 함께 갱신한다.
 - 갱신한 Word는 `render_docx.py`로 PNG 렌더링하고 모든 페이지의 잘림, 겹침, 글꼴, 용어를 시각 검수한다.
 - 사용자 영향이 전혀 없는 내부 변경만 Word 갱신을 생략할 수 있으며 진행 문서에 `Word update: N/A`와 근거를 기록한다.
 - `./scripts/validate-backend.sh` 또는 관련 검증 스크립트 통과
+- 사용자 화면이 바뀐 기능은 로컬 Kubernetes에 반영한 뒤 자체 브라우저에서 실제 OIDC 로그인하고 대표 성공·실패·권한 흐름을 직접 수행한다. API 응답, 화면 상태, Console 오류와 관련 Pod log를 함께 확인하며 자동 테스트만으로 완료 처리하지 않는다.
+- 브라우저 수용 검증에는 최소 desktop viewport, 주요 modal/confirmation, 새로고침·deep-link, 권한 거부와 장시간 Job 추적을 포함하고 실행한 계정·환경·결과를 문서화한다. Secret과 비밀번호는 증빙에 기록하지 않는다.
+- 성능 민감 경로는 pagination/query count/payload bound, 외부 호출 timeout·동시성 상한과 N+1 방지 여부를 검토하고 관련 테스트를 통과한다.
 
 AI 기능은 다음 조건을 추가로 만족해야 한다.
 

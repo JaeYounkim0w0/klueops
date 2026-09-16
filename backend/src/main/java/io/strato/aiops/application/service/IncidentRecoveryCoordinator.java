@@ -32,10 +32,12 @@ public class IncidentRecoveryCoordinator {
 
     private final OperationsRepositoryPort operationsRepository;
 
+    /** IncidentRecoveryCoordinator 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public IncidentRecoveryCoordinator(OperationsRepositoryPort operationsRepository) {
         this.operationsRepository = operationsRepository;
     }
 
+    /** IncidentRecoveryCoordinator의 reconcile 처리에 필요한 업무 로직을 수행한다. */
     public List<RecoveryNotification> reconcile(Cluster cluster,
                                                 List<KubernetesResourceSnapshot> resources,
                                                 String actor) {
@@ -64,6 +66,7 @@ public class IncidentRecoveryCoordinator {
         return List.copyOf(notifications);
     }
 
+    /** IncidentRecoveryCoordinator의 view 처리에 필요한 업무 로직을 수행한다. */
     public IncidentRecovery view(Incident incident) {
         IncidentRecovery stored = operationsRepository.findIncidentRecovery(incident.id()).orElse(null);
         if (stored == null) {
@@ -75,10 +78,12 @@ public class IncidentRecoveryCoordinator {
                 stored.lastObservedStatus(), isAutoResolvable(incident));
     }
 
+    /** IncidentRecoveryCoordinator의 supports 처리 조건의 충족 여부를 판단한다. */
     public boolean supports(Incident incident) {
         return isAutoResolvable(incident);
     }
 
+    /** IncidentRecoveryCoordinator의 decide 처리에 필요한 업무 로직을 수행한다. */
     static RecoveryDecision decide(Incident incident,
                                    KubernetesResourceSnapshot resource,
                                    IncidentRecovery previous) {
@@ -105,6 +110,7 @@ public class IncidentRecoveryCoordinator {
                 reopen ? "INCIDENT_REOPENED" : null, note);
     }
 
+    /** IncidentRecoveryCoordinator의 persistDecision 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void persistDecision(Incident incident,
                                  KubernetesResourceSnapshot resource,
                                  RecoveryDecision decision,
@@ -130,11 +136,13 @@ public class IncidentRecoveryCoordinator {
         }
     }
 
+    /** IncidentRecoveryCoordinator의 isNewerThanIncident 처리 조건의 충족 여부를 판단한다. */
     private boolean isNewerThanIncident(KubernetesResourceSnapshot resource, Incident incident) {
         return resource != null && resource.collectedAt() != null
                 && resource.collectedAt().isAfter(incident.lastDetectedAt());
     }
 
+    /** IncidentRecoveryCoordinator의 isAutoResolvable 처리 조건의 충족 여부를 판단한다. */
     private static boolean isAutoResolvable(Incident incident) {
         if (incident.resourceKind() == null || incident.resourceName() == null) {
             return false;
@@ -150,6 +158,7 @@ public class IncidentRecoveryCoordinator {
                 || category.contains("IMAGE") || category.contains("APPLICATIONSTARTUP"));
     }
 
+    /** IncidentRecoveryCoordinator의 isRecoveryHealthy 처리 조건의 충족 여부를 판단한다. */
     private static boolean isRecoveryHealthy(KubernetesResourceSnapshot resource) {
         String kind = canonicalResourceKind(resource.resourceType());
         String status = defaultText(resource.status(), "").trim();
@@ -175,6 +184,7 @@ public class IncidentRecoveryCoordinator {
         return false;
     }
 
+    /** IncidentRecoveryCoordinator의 canonicalResourceKind 처리 조건의 충족 여부를 판단한다. */
     private static String canonicalResourceKind(String kind) {
         String normalized = normalizeToken(kind);
         return switch (normalized) {
@@ -190,6 +200,7 @@ public class IncidentRecoveryCoordinator {
         };
     }
 
+    /** IncidentRecoveryCoordinator의 withState 처리에 필요한 업무 로직을 수행한다. */
     private static Incident withState(Incident incident, IncidentState state, int reopenCount, String actor) {
         return new Incident(incident.id(), incident.fingerprint(), incident.clusterId(), incident.clusterName(),
                 incident.namespace(), incident.resourceKind(), incident.resourceName(), incident.category(),
@@ -198,14 +209,17 @@ public class IncidentRecoveryCoordinator {
                 incident.lastDetectedAt(), actor);
     }
 
+    /** IncidentRecoveryCoordinator의 resourceKey 처리에 필요한 업무 로직을 수행한다. */
     private static String resourceKey(String namespace, String kind, String name) {
         return defaultText(namespace, "") + "|" + kind + "|" + name;
     }
 
+    /** IncidentRecoveryCoordinator의 normalizeToken 처리 데이터를 필요한 표현으로 변환한다. */
     private static String normalizeToken(String value) {
         return value == null ? "" : value.replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
     }
 
+    /** IncidentRecoveryCoordinator의 cleanText 처리에 필요한 업무 로직을 수행한다. */
     private static String cleanText(String value, int maxLength) {
         if (value == null) {
             return null;
@@ -214,6 +228,7 @@ public class IncidentRecoveryCoordinator {
         return cleaned.length() <= maxLength ? cleaned : cleaned.substring(0, maxLength);
     }
 
+    /** IncidentRecoveryCoordinator의 defaultText 처리에 필요한 업무 로직을 수행한다. */
     private static String defaultText(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }

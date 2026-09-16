@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    /** OpenApiConfig의 klueOpsOpenApi 처리에 필요한 업무 로직을 수행한다. */
     @Bean
     public OpenAPI klueOpsOpenApi() {
         return new OpenAPI()

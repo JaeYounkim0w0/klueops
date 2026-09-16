@@ -24,6 +24,7 @@ const evaluationSummary = computed(() => ({
   pass: evaluations.value.filter((item) => item.result === 'PASS').length
 }));
 
+/** load 처리 결과를 조회해 반환한다. */
 async function load() {
   loading.value = true;
   error.value = '';
@@ -43,6 +44,7 @@ async function load() {
   }
 }
 
+/** evaluate 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 async function evaluate() {
   if (!clusterId.value) {
     error.value = '정책을 평가할 클러스터를 선택하세요.';
@@ -60,6 +62,7 @@ async function evaluate() {
   }
 }
 
+/** togglePolicy 처리 데이터를 화면 또는 API 표현으로 변환한다. */
 async function togglePolicy(policy: PolicyDefinitionResponse) {
   try {
     const updated = await api.updatePolicy(policy.id, !policy.enabled, policy.severity);
@@ -69,6 +72,7 @@ async function togglePolicy(policy: PolicyDefinitionResponse) {
   }
 }
 
+/** resultClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function resultClass(value: string) { return value.toLowerCase().replace('_', '-'); }
 
 watch([clusterId, resultFilter], load);

@@ -13,6 +13,7 @@ class DeterministicPerformanceScalingSectionBuilderTest {
     private final DeterministicPerformanceScalingSectionBuilder builder =
             new DeterministicPerformanceScalingSectionBuilder(new ObjectMapper());
 
+    /** DeterministicPerformanceScalingSectionBuilderTest의 buildsPerformanceAndScalingContractFromBoundedSignals 처리에 필요한 결과를 조합해 반환한다. */
     @Test
     void buildsPerformanceAndScalingContractFromBoundedSignals() {
         var input = new DeterministicPerformanceScalingSectionBuilder.Input(
@@ -37,6 +38,7 @@ class DeterministicPerformanceScalingSectionBuilderTest {
                 .isEqualTo("Pending pods=2, endpointReadyIssues=1.");
     }
 
+    /** DeterministicPerformanceScalingSectionBuilderTest의 suppliesSafeFallbackSignalsWhenNoBottleneckOrScaleCandidateExists 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void suppliesSafeFallbackSignalsWhenNoBottleneckOrScaleCandidateExists() {
         ObjectNode result = builder.build(new DeterministicPerformanceScalingSectionBuilder.Input(

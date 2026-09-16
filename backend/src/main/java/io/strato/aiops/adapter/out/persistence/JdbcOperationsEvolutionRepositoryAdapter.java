@@ -26,11 +26,13 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
+    /** JdbcOperationsEvolutionRepositoryAdapter 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public JdbcOperationsEvolutionRepositoryAdapter(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 saveWatchContinuity 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public WatchContinuity saveWatchContinuity(WatchContinuity value) {
         int updated = jdbcTemplate.update("""
@@ -51,17 +53,20 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
         return findWatchContinuity(value.clusterId()).orElseThrow();
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 findWatchContinuity 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<WatchContinuity> findWatchContinuity(UUID clusterId) {
         return first(jdbcTemplate.query("select * from watch_continuity where cluster_id=?",
                 this::watchContinuity, clusterId));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 findWatchContinuities 처리 결과를 조회해 반환한다. */
     @Override
     public List<WatchContinuity> findWatchContinuities() {
         return jdbcTemplate.query("select * from watch_continuity order by updated_at desc", this::watchContinuity);
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 saveNoisePolicy 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public SignalNoisePolicy saveNoisePolicy(SignalNoisePolicy value) {
         int updated = jdbcTemplate.update("""
@@ -83,11 +88,13 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
         return findNoisePolicy(value.id()).orElseThrow();
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 findNoisePolicy 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<SignalNoisePolicy> findNoisePolicy(UUID policyId) {
         return first(jdbcTemplate.query("select * from signal_noise_policies where id=?", this::noisePolicy, policyId));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 findNoisePolicies 처리 결과를 조회해 반환한다. */
     @Override
     public List<SignalNoisePolicy> findNoisePolicies() {
         return jdbcTemplate.query("""
@@ -96,11 +103,13 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
                 """, this::noisePolicy);
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 deleteNoisePolicy 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Override
     public void deleteNoisePolicy(UUID policyId) {
         jdbcTemplate.update("delete from signal_noise_policies where id=?", policyId);
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 saveRemediationObservation 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public RemediationObservation saveRemediationObservation(RemediationObservation value) {
         int updated = jdbcTemplate.update("""
@@ -122,12 +131,14 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
         return findRemediationObservation(value.id()).orElseThrow();
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 findRemediationObservation 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<RemediationObservation> findRemediationObservation(UUID observationId) {
         return first(jdbcTemplate.query("select * from remediation_observations where id=?",
                 this::remediationObservation, observationId));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 findRemediationObservations 처리 결과를 조회해 반환한다. */
     @Override
     public List<RemediationObservation> findRemediationObservations(UUID incidentId, String state, int limit) {
         StringBuilder sql = new StringBuilder("select * from remediation_observations where 1=1");
@@ -145,6 +156,7 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
         return jdbcTemplate.query(sql.toString(), this::remediationObservation, args.toArray());
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 saveReleaseGate 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public AiReleaseGate saveReleaseGate(AiReleaseGate value) {
         jdbcTemplate.update("""
@@ -160,12 +172,14 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
         return findReleaseGates(500).stream().filter(item -> item.id().equals(value.id())).findFirst().orElseThrow();
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 findReleaseGates 처리 결과를 조회해 반환한다. */
     @Override
     public List<AiReleaseGate> findReleaseGates(int limit) {
         return jdbcTemplate.query("select * from ai_release_gates order by evaluated_at desc limit ?",
                 this::releaseGate, Math.max(1, Math.min(limit, 100)));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 savePostmortem 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Override
     public IncidentPostmortem savePostmortem(IncidentPostmortem value) {
         int updated = jdbcTemplate.update("""
@@ -184,12 +198,14 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
         return findPostmortem(value.incidentId()).orElseThrow();
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 findPostmortem 처리 결과를 조회해 반환한다. */
     @Override
     public Optional<IncidentPostmortem> findPostmortem(UUID incidentId) {
         return first(jdbcTemplate.query("select * from incident_postmortems where incident_id=?",
                 this::postmortem, incidentId));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 watchContinuity 처리에 필요한 업무 로직을 수행한다. */
     private WatchContinuity watchContinuity(ResultSet rs, int row) throws SQLException {
         return new WatchContinuity(uuid(rs, "cluster_id"), rs.getString("pod_resource_version"),
                 rs.getString("event_resource_version"), rs.getString("continuity_state"),
@@ -197,6 +213,7 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
                 instant(rs, "updated_at"));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 noisePolicy 처리에 필요한 업무 로직을 수행한다. */
     private SignalNoisePolicy noisePolicy(ResultSet rs, int row) throws SQLException {
         return new SignalNoisePolicy(uuid(rs, "id"), rs.getString("name"), nullableUuid(rs, "cluster_id"),
                 rs.getString("namespace_pattern"), rs.getString("severity_floor"), rs.getInt("repeat_threshold"),
@@ -204,6 +221,7 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
                 rs.getBoolean("enabled"), rs.getString("updated_by"), instant(rs, "updated_at"));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 remediationObservation 처리에 필요한 업무 로직을 수행한다. */
     private RemediationObservation remediationObservation(ResultSet rs, int row) throws SQLException {
         return new RemediationObservation(uuid(rs, "id"), uuid(rs, "incident_id"),
                 nullableUuid(rs, "analysis_id"), nullableUuid(rs, "command_execution_id"), rs.getString("state"),
@@ -212,6 +230,7 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
                 rs.getString("rollback_candidate"), rs.getString("updated_by"), instant(rs, "updated_at"));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 releaseGate 처리에 필요한 업무 로직을 수행한다. */
     private AiReleaseGate releaseGate(ResultSet rs, int row) throws SQLException {
         return new AiReleaseGate(uuid(rs, "id"), rs.getString("candidate_version"),
                 rs.getString("baseline_version"), rs.getString("state"), rs.getDouble("regression_score"),
@@ -221,12 +240,14 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
                 strings(rs.getString("reasons_json")), instant(rs, "evaluated_at"), rs.getString("evaluated_by"));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 postmortem 처리에 필요한 업무 로직을 수행한다. */
     private IncidentPostmortem postmortem(ResultSet rs, int row) throws SQLException {
         return new IncidentPostmortem(uuid(rs, "incident_id"), rs.getString("title"), rs.getString("impact"),
                 rs.getString("root_cause"), rs.getString("resolution"), strings(rs.getString("evidence_json")),
                 strings(rs.getString("prevention_json")), instant(rs, "generated_at"), rs.getString("generated_by"));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 json 처리에 필요한 업무 로직을 수행한다. */
     private String json(List<String> values) {
         try {
             return objectMapper.writeValueAsString(values == null ? List.of() : values);
@@ -235,6 +256,7 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
         }
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 strings 처리에 필요한 업무 로직을 수행한다. */
     private List<String> strings(String value) {
         try {
             return value == null ? List.of() : objectMapper.readValue(value, new TypeReference<>() { });
@@ -243,24 +265,29 @@ public class JdbcOperationsEvolutionRepositoryAdapter implements OperationsEvolu
         }
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 uuid 처리에 필요한 업무 로직을 수행한다. */
     private UUID uuid(ResultSet rs, String column) throws SQLException {
         return rs.getObject(column, UUID.class);
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 nullableUuid 처리에 필요한 업무 로직을 수행한다. */
     private UUID nullableUuid(ResultSet rs, String column) throws SQLException {
         Object value = rs.getObject(column);
         return value == null ? null : value instanceof UUID id ? id : UUID.fromString(String.valueOf(value));
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 instant 처리에 필요한 업무 로직을 수행한다. */
     private Instant instant(ResultSet rs, String column) throws SQLException {
         Timestamp value = rs.getTimestamp(column);
         return value == null ? null : value.toInstant();
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 timestamp 처리에 필요한 업무 로직을 수행한다. */
     private Timestamp timestamp(Instant value) {
         return value == null ? null : Timestamp.from(value);
     }
 
+    /** JdbcOperationsEvolutionRepositoryAdapter의 first 처리에 필요한 업무 로직을 수행한다. */
     private <T> Optional<T> first(List<T> values) {
         return values.isEmpty() ? Optional.empty() : Optional.of(values.get(0));
     }

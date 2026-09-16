@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AsyncJobTest {
 
+    /** AsyncJobTest의 pendingJobCanMoveToRunningAndSucceeded 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void pendingJobCanMoveToRunningAndSucceeded() {
         AsyncJob job = AsyncJob.pending(AsyncJobType.CLUSTER_SYNC);
@@ -20,6 +21,7 @@ class AsyncJobTest {
         assertThat(job.completedAt()).isEqualTo(Instant.parse("2026-07-06T00:01:00Z"));
     }
 
+    /** AsyncJobTest의 activeJobCanBeMarkedTimedOutButTerminalJobIsPreserved 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void activeJobCanBeMarkedTimedOutButTerminalJobIsPreserved() {
         Instant timeoutAt = Instant.parse("2026-07-06T00:15:00Z");
@@ -39,5 +41,20 @@ class AsyncJobTest {
 
         assertThat(completed.status()).isEqualTo(AsyncJobStatus.SUCCEEDED);
         assertThat(completed.completedAt()).isEqualTo(Instant.parse("2026-07-06T00:01:00Z"));
+    }
+
+    /** AsyncJobTest의 workerFailureTerminatesPendingJobWithoutOverwritingTerminalResult 처리에 필요한 업무 로직을 수행한다. */
+    @Test
+    void workerFailureTerminatesPendingJobWithoutOverwritingTerminalResult() {
+        Instant failedAt = Instant.parse("2026-07-06T00:00:05Z");
+        AsyncJob pending = AsyncJob.pending(AsyncJobType.HELM_INSTALL);
+
+        assertThat(pending.markExecutionFailed(failedAt, "HELM_WORKER_FAILED", "worker failed")).isTrue();
+        assertThat(pending.status()).isEqualTo(AsyncJobStatus.FAILED);
+        assertThat(pending.errorCode()).isEqualTo("HELM_WORKER_FAILED");
+        assertThat(pending.completedAt()).isEqualTo(failedAt);
+
+        assertThat(pending.markExecutionFailed(failedAt.plusSeconds(1), "OTHER", "must not overwrite")).isFalse();
+        assertThat(pending.errorCode()).isEqualTo("HELM_WORKER_FAILED");
     }
 }

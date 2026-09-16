@@ -18,6 +18,7 @@ public class AiTrustCenterService {
     private final AnalysisRegressionService regressionService;
     private final OperationsEvolutionService evolutionService;
 
+    /** AiTrustCenterService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AiTrustCenterService(OperationsControlPlaneService operationsService,
                                 OperationsReadinessService readinessService,
                                 AnalysisRegressionService regressionService,
@@ -28,6 +29,7 @@ public class AiTrustCenterService {
         this.evolutionService = evolutionService;
     }
 
+    /** AiTrustCenterService의 snapshot 처리에 필요한 업무 로직을 수행한다. */
     public Snapshot snapshot() {
         AiQualitySummary quality = operationsService.getAiQuality();
         AiCalibrationSummary calibration = operationsService.getAiCalibration();
@@ -40,6 +42,7 @@ public class AiTrustCenterService {
                 List.copyOf(regressions), List.copyOf(gates));
     }
 
+    /** AiTrustCenterService의 state 처리에 필요한 업무 로직을 수행한다. */
     private String state(AiQualitySummary quality, AiCalibrationSummary calibration, AnalysisBenchmark benchmark,
                          List<RegressionRun> regressions, List<AiReleaseGate> gates) {
         if (quality.dangerousSuggestionCount() > 0

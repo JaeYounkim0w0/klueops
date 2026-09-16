@@ -62,6 +62,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- $_ := required "portal.commandRunner.tokenExistingSecret is required when command runner is enabled" .Values.portal.commandRunner.tokenExistingSecret -}}
 {{- end -}}
 {{- if .Values.global.productionMode -}}
+{{- if .Values.portal.security.credentialRevealEnabled -}}
+{{- fail "portal.security.credentialRevealEnabled must be false when global.productionMode=true" -}}
+{{- end -}}
 {{- $_ := required "portal.backend.image.digest is required when global.productionMode=true" .Values.portal.backend.image.digest -}}
 {{- $_ := required "portal.frontend.image.digest is required when global.productionMode=true" .Values.portal.frontend.image.digest -}}
 {{- if .Values.portal.commandRunner.enabled -}}

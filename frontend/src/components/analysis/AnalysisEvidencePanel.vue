@@ -9,10 +9,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{ copy: [command: string] }>();
 
+/** text 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function text(value: unknown, fallback = '-') {
   return displayText(value, fallback);
 }
 
+/** confidenceClass 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function confidenceClass(value: unknown) {
   const confidence = text(value, '').toUpperCase();
   return {

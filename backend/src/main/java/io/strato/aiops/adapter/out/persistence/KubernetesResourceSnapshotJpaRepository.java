@@ -10,31 +10,41 @@ import java.util.UUID;
 
 interface KubernetesResourceSnapshotJpaRepository extends JpaRepository<KubernetesResourceSnapshotEntity, UUID> {
 
+    /** KubernetesResourceSnapshotJpaRepository의 countBySyncJobId 처리 계약을 정의한다. */
     long countBySyncJobId(UUID syncJobId);
 
+    /** KubernetesResourceSnapshotJpaRepository의 findByClusterIdOrderByCollectedAtDesc 처리 결과를 조회해 반환한다. */
     Page<KubernetesResourceSnapshotEntity> findByClusterIdOrderByCollectedAtDesc(UUID clusterId, Pageable pageable);
 
+    /** KubernetesResourceSnapshotJpaRepository의 findByClusterIdAndNamespaceOrderByCollectedAtDesc 처리 결과를 조회해 반환한다. */
     Page<KubernetesResourceSnapshotEntity> findByClusterIdAndNamespaceOrderByCollectedAtDesc(
             UUID clusterId, String namespace, Pageable pageable);
 
+    /** KubernetesResourceSnapshotJpaRepository의 findByClusterIdAndResourceTypeOrderByCollectedAtDesc 처리 결과를 조회해 반환한다. */
     Page<KubernetesResourceSnapshotEntity> findByClusterIdAndResourceTypeOrderByCollectedAtDesc(
             UUID clusterId, String resourceType, Pageable pageable);
 
+    /** KubernetesResourceSnapshotJpaRepository의 findByClusterIdAndNamespaceAndResourceTypeOrderByCollectedAtDesc 처리 결과를 조회해 반환한다. */
     Page<KubernetesResourceSnapshotEntity> findByClusterIdAndNamespaceAndResourceTypeOrderByCollectedAtDesc(
             UUID clusterId, String namespace, String resourceType, Pageable pageable);
 
+    /** KubernetesResourceSnapshotJpaRepository의 findBySyncJobIdOrderByResourceTypeAscResourceNameAsc 처리 결과를 조회해 반환한다. */
     Page<KubernetesResourceSnapshotEntity> findBySyncJobIdOrderByResourceTypeAscResourceNameAsc(
             UUID syncJobId, Pageable pageable);
 
+    /** KubernetesResourceSnapshotJpaRepository의 findBySyncJobIdAndNamespaceOrderByResourceTypeAscResourceNameAsc 처리 결과를 조회해 반환한다. */
     Page<KubernetesResourceSnapshotEntity> findBySyncJobIdAndNamespaceOrderByResourceTypeAscResourceNameAsc(
             UUID syncJobId, String namespace, Pageable pageable);
 
+    /** KubernetesResourceSnapshotJpaRepository의 findBySyncJobIdAndResourceTypeOrderByResourceTypeAscResourceNameAsc 처리 결과를 조회해 반환한다. */
     Page<KubernetesResourceSnapshotEntity> findBySyncJobIdAndResourceTypeOrderByResourceTypeAscResourceNameAsc(
             UUID syncJobId, String resourceType, Pageable pageable);
 
+    /** KubernetesResourceSnapshotJpaRepository의 findBySyncJobIdAndNamespaceAndResourceTypeOrderByResourceTypeAscResourceNameAsc 처리 결과를 조회해 반환한다. */
     Page<KubernetesResourceSnapshotEntity> findBySyncJobIdAndNamespaceAndResourceTypeOrderByResourceTypeAscResourceNameAsc(
             UUID syncJobId, String namespace, String resourceType, Pageable pageable);
 
+    /** KubernetesResourceSnapshotJpaRepository의 countNamespacesBySyncJobId 처리 계약을 정의한다. */
     @Query("""
             select r.namespace, count(r) from KubernetesResourceSnapshotEntity r
             where r.syncJobId = :syncJobId and r.namespace is not null and r.namespace <> ''
@@ -42,6 +52,7 @@ interface KubernetesResourceSnapshotJpaRepository extends JpaRepository<Kubernet
             """)
     List<Object[]> countNamespacesBySyncJobId(UUID syncJobId);
 
+    /** KubernetesResourceSnapshotJpaRepository의 countResourceTypesBySyncJobId 처리 계약을 정의한다. */
     @Query("""
             select r.resourceType, count(r) from KubernetesResourceSnapshotEntity r
             where r.syncJobId = :syncJobId
@@ -49,6 +60,7 @@ interface KubernetesResourceSnapshotJpaRepository extends JpaRepository<Kubernet
             """)
     List<Object[]> countResourceTypesBySyncJobId(UUID syncJobId);
 
+    /** KubernetesResourceSnapshotJpaRepository의 countResourceTypesBySyncJobIdAndNamespace 처리 계약을 정의한다. */
     @Query("""
             select r.resourceType, count(r) from KubernetesResourceSnapshotEntity r
             where r.syncJobId = :syncJobId and r.namespace = :namespace
@@ -56,6 +68,7 @@ interface KubernetesResourceSnapshotJpaRepository extends JpaRepository<Kubernet
             """)
     List<Object[]> countResourceTypesBySyncJobIdAndNamespace(UUID syncJobId, String namespace);
 
+    /** KubernetesResourceSnapshotJpaRepository의 countProblemsBySyncJobId 처리 계약을 정의한다. */
     @Query("""
             select count(r) from KubernetesResourceSnapshotEntity r
             where r.syncJobId = :syncJobId
@@ -69,6 +82,7 @@ interface KubernetesResourceSnapshotJpaRepository extends JpaRepository<Kubernet
             """)
     long countProblemsBySyncJobId(UUID syncJobId);
 
+    /** KubernetesResourceSnapshotJpaRepository의 countProblemsBySyncJobIdAndNamespace 처리 계약을 정의한다. */
     @Query("""
             select count(r) from KubernetesResourceSnapshotEntity r
             where r.syncJobId = :syncJobId and r.namespace = :namespace
@@ -82,6 +96,7 @@ interface KubernetesResourceSnapshotJpaRepository extends JpaRepository<Kubernet
             """)
     long countProblemsBySyncJobIdAndNamespace(UUID syncJobId, String namespace);
 
+    /** KubernetesResourceSnapshotJpaRepository의 countProblemsBySyncJobIdAndResourceType 처리 계약을 정의한다. */
     @Query("""
             select count(r) from KubernetesResourceSnapshotEntity r
             where r.syncJobId = :syncJobId and r.resourceType = :resourceType
@@ -95,6 +110,7 @@ interface KubernetesResourceSnapshotJpaRepository extends JpaRepository<Kubernet
             """)
     long countProblemsBySyncJobIdAndResourceType(UUID syncJobId, String resourceType);
 
+    /** KubernetesResourceSnapshotJpaRepository의 countProblemsBySyncJobIdAndNamespaceAndResourceType 처리 계약을 정의한다. */
     @Query("""
             select count(r) from KubernetesResourceSnapshotEntity r
             where r.syncJobId = :syncJobId and r.namespace = :namespace and r.resourceType = :resourceType

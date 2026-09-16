@@ -69,6 +69,7 @@ public class ClusterController {
     private final boolean credentialRevealEnabled;
     private final IdentityAccessService identityAccessService;
 
+    /** ClusterController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ClusterController(RegisterClusterUseCase registerClusterUseCase, DeleteClusterUseCase deleteClusterUseCase, GetClusterUseCase getClusterUseCase,
                              GetClusterCredentialUseCase getClusterCredentialUseCase,
                              GetClusterRuntimeUseCase getClusterRuntimeUseCase,
@@ -95,6 +96,7 @@ public class ClusterController {
         this.credentialRevealEnabled = credentialRevealEnabled;
     }
 
+    /** ClusterController의 listClusters 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List Kubernetes clusters")
     @GetMapping
     public List<ClusterResponse> listClusters(@RequestParam(required = false) UUID tenantId,
@@ -107,18 +109,21 @@ public class ClusterController {
                 .toList();
     }
 
+    /** ClusterController의 isVisible 처리 조건의 충족 여부를 판단한다. */
     private boolean isVisible(Cluster cluster, ResolvedAccess access) {
         return access == null
                 || identityAccessService.hasPlatformScope(access, io.strato.aiops.domain.identity.Capability.CLUSTER_READ)
                 || identityAccessService.visibleClusterIds(access).contains(cluster.id());
     }
 
+    /** ClusterController의 getCluster 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Get Kubernetes cluster")
     @GetMapping("/{clusterId}")
     public ClusterResponse getCluster(@PathVariable UUID clusterId) {
         return ClusterResponse.from(getClusterUseCase.getCluster(clusterId));
     }
 
+    /** ClusterController의 getClusterCredential 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Get stored cluster credential")
     @GetMapping("/{clusterId}/credential")
     public ClusterCredentialResponse getClusterCredential(
@@ -137,6 +142,7 @@ public class ClusterController {
         ));
     }
 
+    /** ClusterController의 registerCluster 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Operation(summary = "Register Kubernetes cluster")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -148,6 +154,7 @@ public class ClusterController {
         return ClusterResponse.from(cluster);
     }
 
+    /** ClusterController의 testClusterConnection 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Test Kubernetes cluster connection")
     @PostMapping("/{clusterId}/connection-test")
     public ClusterConnectionTestResponse testClusterConnection(@PathVariable UUID clusterId, HttpServletRequest request) {
@@ -156,6 +163,7 @@ public class ClusterController {
         return ClusterConnectionTestResponse.from(testClusterConnectionUseCase.testClusterConnection(clusterId, actor, requestId));
     }
 
+    /** ClusterController의 deleteCluster 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Operation(summary = "Delete Kubernetes cluster registration")
     @DeleteMapping("/{clusterId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -165,6 +173,7 @@ public class ClusterController {
         deleteClusterUseCase.deleteCluster(clusterId, actor, requestId);
     }
 
+    /** ClusterController의 listNamespaces 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List namespaces from Kubernetes API")
     @GetMapping("/{clusterId}/namespaces")
     public List<KubernetesNamespaceResponse> listNamespaces(@PathVariable UUID clusterId) {
@@ -173,6 +182,7 @@ public class ClusterController {
                 .toList();
     }
 
+    /** ClusterController의 listNodes 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List nodes from Kubernetes API")
     @GetMapping("/{clusterId}/nodes")
     public List<KubernetesNodeResponse> listNodes(@PathVariable UUID clusterId) {
@@ -181,6 +191,7 @@ public class ClusterController {
                 .toList();
     }
 
+    /** ClusterController의 listResources 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List latest Kubernetes resource snapshots")
     @GetMapping("/{clusterId}/resources")
     public List<KubernetesResourceSnapshotResponse> listResources(
@@ -193,6 +204,7 @@ public class ClusterController {
                 .toList();
     }
 
+    /** ClusterController의 pageResources 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Page latest Kubernetes resource snapshots with inventory facets")
     @GetMapping("/{clusterId}/resources/page")
     public ClusterResourcePageResponse pageResources(
@@ -207,6 +219,7 @@ public class ClusterController {
         );
     }
 
+    /** ClusterController의 getResourceManifest 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Get live Kubernetes resource manifest")
     @GetMapping("/{clusterId}/resources/{resourceType}/{resourceName}/manifest")
     public KubernetesResourceManifestResponse getResourceManifest(
@@ -223,6 +236,7 @@ public class ClusterController {
         ));
     }
 
+    /** ClusterController의 listEvents 처리 결과를 조회해 반환한다. */
     @Operation(summary = "List latest Kubernetes event snapshots")
     @GetMapping("/{clusterId}/events")
     public List<KubernetesEventSnapshotResponse> listEvents(
@@ -234,6 +248,7 @@ public class ClusterController {
                 .toList();
     }
 
+    /** ClusterController의 getLatestSyncStatus 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Get latest cluster synchronization status")
     @GetMapping("/{clusterId}/sync-status")
     public ClusterSyncStatusResponse getLatestSyncStatus(@PathVariable UUID clusterId) {
@@ -242,6 +257,7 @@ public class ClusterController {
                 .orElseThrow(() -> new NoSuchElementException("Sync status not found: " + clusterId));
     }
 
+    /** ClusterController의 updateSyncSettings 처리 대상의 상태를 갱신한다. */
     @Operation(summary = "Update cluster synchronization settings")
     @PutMapping("/{clusterId}/sync-settings")
     public ClusterSyncSettingsResponse updateSyncSettings(
@@ -259,12 +275,14 @@ public class ClusterController {
         ));
     }
 
+    /** ClusterController의 getSyncSettings 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Get cluster synchronization settings")
     @GetMapping("/{clusterId}/sync-settings")
     public ClusterSyncSettingsResponse getSyncSettings(@PathVariable UUID clusterId) {
         return ClusterSyncSettingsResponse.from(getClusterSyncSettingsUseCase.getClusterSyncSettings(clusterId));
     }
 
+    /** ClusterController의 syncCluster 처리의 핵심 작업 흐름을 실행한다. */
     @Operation(summary = "Start cluster synchronization")
     @PostMapping("/{clusterId}/sync")
     @ResponseStatus(HttpStatus.ACCEPTED)
@@ -274,6 +292,7 @@ public class ClusterController {
         return new StartJobResponse(startClusterSyncUseCase.startClusterSync(clusterId, actor, requestId));
     }
 
+    /** ClusterController의 actor 처리에 필요한 업무 로직을 수행한다. */
     private String actor(HttpServletRequest request) {
         return request.getUserPrincipal() == null ? "anonymous" : request.getUserPrincipal().getName();
     }

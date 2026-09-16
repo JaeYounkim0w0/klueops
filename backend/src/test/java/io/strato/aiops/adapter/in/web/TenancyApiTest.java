@@ -23,6 +23,7 @@ class TenancyApiTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /** TenancyApiTest의 exposesDefaultTenantAndWorkspaceForMigratedData 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesDefaultTenantAndWorkspaceForMigratedData() throws Exception {
         mockMvc.perform(get("/api/tenants"))
@@ -34,6 +35,7 @@ class TenancyApiTest {
                 .andExpect(jsonPath("$[?(@.code == 'default')]", hasSize(1)));
     }
 
+    /** TenancyApiTest의 createsTenantWorkspaceAndFiltersClustersByPlacement 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Test
     void createsTenantWorkspaceAndFiltersClustersByPlacement() throws Exception {
         String tenantResponse = mockMvc.perform(post("/api/tenants")
@@ -84,6 +86,7 @@ class TenancyApiTest {
                 .andExpect(jsonPath("$[?(@.name == 'customer-a-dev')]", hasSize(0)));
     }
 
+    /** TenancyApiTest의 rejectsWorkspaceFromAnotherTenantDuringClusterRegistration 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void rejectsWorkspaceFromAnotherTenantDuringClusterRegistration() throws Exception {
         mockMvc.perform(post("/api/clusters")

@@ -19,14 +19,17 @@ public class OperationsEventStream {
     private final AtomicLong sequence = new AtomicLong();
     private final Supplier<SseEmitter> emitterFactory;
 
+    /** OperationsEventStream 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationsEventStream() {
         this(() -> new SseEmitter(STREAM_TIMEOUT_MS));
     }
 
+    /** OperationsEventStream 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     OperationsEventStream(Supplier<SseEmitter> emitterFactory) {
         this.emitterFactory = emitterFactory;
     }
 
+    /** OperationsEventStream의 subscribe 처리에 필요한 업무 로직을 수행한다. */
     public SseEmitter subscribe() {
         SseEmitter emitter = emitterFactory.get();
         emitters.add(emitter);
@@ -44,15 +47,18 @@ public class OperationsEventStream {
         return emitter;
     }
 
+    /** OperationsEventStream의 publish 처리 결과를 지정된 대상에 전달한다. */
     public void publish(String eventName, Object data) {
         emitters.forEach(emitter -> send(emitter, eventName, data));
     }
 
+    /** OperationsEventStream의 heartbeat 처리에 필요한 업무 로직을 수행한다. */
     @Scheduled(fixedDelay = 15000)
     public void heartbeat() {
         publish("heartbeat", Map.of("observedAt", Instant.now()));
     }
 
+    /** OperationsEventStream의 send 처리 결과를 지정된 대상에 전달한다. */
     private void send(SseEmitter emitter, String eventName, Object data) {
         try {
             emitter.send(SseEmitter.event()

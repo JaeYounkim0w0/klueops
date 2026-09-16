@@ -1,6 +1,6 @@
 # KlueOps Current Product Specification
 
-기준일: 2026-09-14
+기준일: 2026-09-15
 
 ## 1. 문서 목적
 
@@ -27,7 +27,7 @@
 - 변경 작업은 RBAC, 범위 고정, dry-run 또는 preview, 실행 이력, 사후 검증과 보수적 rollback 후보를 거친다.
 - UI는 초보자와 숙련자 모두가 같은 사실을 서로 다른 정보 밀도로 이해할 수 있게 구성한다.
 
-현재 범위에는 애플리케이션 GitOps 배포 자동화, Prometheus 기반 장기 시계열 분석과 사용자 인프라 자체의 HA 구축이 포함되지 않는다. 특정 고객 환경의 상용 인증이나 릴리스 승인은 프로젝트 목표가 아니다.
+현재 범위에는 자체 GitOps reconciliation, Prometheus 기반 장기 시계열 분석과 사용자 인프라 자체의 HA 구축이 포함되지 않는다. 대신 Tenant가 보유하거나 Artifact Hub에서 가져온 Helm Chart를 Custom Values로 대상 Cluster에 배포하고 수명주기를 운영하는 Application Delivery를 제공한다. 특정 고객 환경의 상용 인증이나 릴리스 승인은 프로젝트 목표가 아니다.
 
 ## 3. 실행 구조
 
@@ -49,7 +49,7 @@ PostgreSQL과 Ollama는 외부 서비스로 연결한다. 따라서 네 Deployme
 | Backend | Java 17, Spring Boot, Spring AI, Spring Security, Spring Session JDBC |
 | Kubernetes | Fabric8 Kubernetes Client, kubectl Command Runner |
 | AI | Ollama ChatModel, 관심사별 분할 요청, 결정론적 fallback |
-| Data | PostgreSQL 17, Spring Data JPA, Flyway V1~V28 |
+| Data | PostgreSQL 17, Spring Data JPA/JDBC, Flyway V1~V32 |
 | API | OpenAPI/Swagger, RFC 9457 Problem Detail, Orval 생성 client |
 | Frontend | Vue 3, TypeScript, Vite, PrimeVue, Vue I18n |
 | 인증 | OIDC BFF, Managed Keycloak 또는 외부 OIDC |
@@ -61,6 +61,8 @@ Backend는 헥사고날 아키텍처를 사용한다. 도메인·애플리케이
 
 ### 4.1 Dashboard와 공통 운영 UX
 
+- Phase 2 공통 제품 Shell은 짙은 navigation, 상단 Tenant/Workspace context bar, 전역 검색·알림과 반응형 모바일 drawer를 모든 인증 route에 적용한다.
+- 공통 semantic token으로 배경, surface, 글자, 상태색, radius, elevation과 keyboard focus를 관리해 화면별 시각 표현 차이를 줄인다.
 - 클러스터, Incident, 분석 Job과 운영 위험을 요약한다.
 - 전역 Job Dock에서 화면 이동 후에도 분석 및 동기화 진행 상태와 소요 시간을 확인한다.
 - 운영 통합 검색으로 클러스터, 리소스, Incident, 분석과 Runbook을 찾고 관련 화면으로 이동한다.
@@ -71,7 +73,8 @@ Backend는 헥사고날 아키텍처를 사용한다. 도메인·애플리케이
 
 - kubeconfig를 1순위로 등록하고 사용할 수 없을 때 ServiceAccount token 방식을 지원한다.
 - 등록 전/후 Kubernetes API 연결 검증과 상세 오류 확인을 제공한다.
-- credential은 AES-256-GCM으로 암호화하고 화면과 로그에서 마스킹한다.
+- credential은 AES-256-GCM으로 암호화하고 화면과 로그에서 기본 마스킹한다. 원문 보기는 `cluster:manage` 사용자와 로컬 검증 profile에만 허용하며 확인, 감사 기록과 60초 자동 마스킹을 적용하고 운영 mode에서는 배포 단계부터 차단한다.
+- 연결 확인은 API 인증과 기본 읽기를 검사하며 전체 동기화 권한을 의미하지 않는다. 클러스터 전체 동기화에는 workload, Pod, Service, storage, 정책과 Event 등 수집 대상에 대한 read-only `ClusterRole`이 필요하고 Namespace `RoleBinding`만으로는 부족하다.
 - 수동 동기화와 기본 5분 자동 동기화를 제공하며 클러스터별 중복 동기화를 차단한다.
 - DB에는 연결 정보, 동기화 상태와 제한된 안전 요약을 저장하고 상세 리소스는 Kubernetes API에서 실시간 조회한다.
 - 클러스터 상세에서 Namespace, workload, Pod, Service, Endpoint, Ingress, ConfigMap, Secret metadata, PVC, Job, CronJob, HPA, PDB, Quota, LimitRange, NetworkPolicy 등을 Namespace별로 탐색한다.
@@ -85,10 +88,11 @@ Namespace 및 Cluster 단위 분석을 지원한다. 수집은 최대 21개 Kube
 분석 파이프라인은 다음 순서로 동작한다.
 
 1. Kubernetes 상태, 관계, Event와 제한된 로그를 수집하고 Secret/민감정보를 제거한다.
-2. 포트 불일치, FailedMount, selector/endpoints, probe, requests/limits, replica, HPA/PDB 등은 결정론적 규칙으로 우선 판정한다.
-3. LLM context를 root cause, log analysis, performance/scaling, risk timeline, runbook/operations 관심사로 분할해 bounded 병렬 호출한다.
-4. section별 timeout, schema와 의미 품질을 검증하고 실패 section만 결정론적 fallback으로 대체한다.
-5. 근거 범위, context 크기, section latency, fallback과 전체 소요 시간을 결과에 기록한다.
+2. 현재 Ready/재시작/PVC 상태와 이벤트를 대조해 배포 초기에만 발생하고 이미 해소된 스케줄링·마운트 신호를 활성 장애에서 제외한다.
+3. 포트 불일치, FailedMount, selector/endpoints, probe, requests/limits, replica, HPA/PDB 등은 결정론적 규칙으로 우선 판정한다.
+4. LLM context를 root cause, log analysis, performance/scaling, risk timeline, runbook/operations 관심사로 분할해 bounded 병렬 호출한다.
+5. section별 timeout, schema와 의미 품질을 검증하고 실패 section만 결정론적 fallback으로 대체한다.
+6. 근거 범위, current-state reconciliation, context 크기, section latency, fallback과 전체 소요 시간을 결과에 기록한다.
 
 결과 화면은 다음 정보를 제공한다.
 
@@ -135,8 +139,11 @@ AI Trust Center는 평가 corpus, category별 정확도, 근거 coverage, halluc
 ### 4.6 AI Chat
 
 - 범용 상담과 Kubernetes 클러스터 상담을 분리한다.
-- 클러스터 상담은 선택한 Cluster/Namespace 및 언급된 리소스의 live Kubernetes context를 제한된 크기로 수집하고 근거 reference를 답변에 연결한다.
+- Namespace 또는 명시 리소스 상담은 live Kubernetes context를 수집하고, 전체 클러스터 상담은 최신 리소스별 중복을 제거한 bounded point-in-time snapshot을 사용한다. snapshot 답변은 수집 시각과 coverage 제한을 명시하고 현재 전체 클러스터가 정상이라고 단정하지 않는다.
+- 전체 클러스터 snapshot 상담은 모델 답변 앞에 근거 범위 고지를 시스템이 직접 추가해, 소형 로컬 모델이 지시를 누락하더라도 과거 snapshot을 현재 전체 상태로 오인하지 않게 한다.
+- AI Chat context는 최대 12,000자로 제한하며 전체 클러스터 기준 리소스 18건, 이벤트 10건을 문제 신호 우선으로 선별해 소형 로컬 모델의 첫 응답 지연을 줄인다.
 - Spring AI ChatMemory 기반 대화 문맥과 SSE streaming/heartbeat를 사용한다.
+- 첫 토큰 전에도 즉시 요청 접수 status를 전송하고 경과 시간과 heartbeat 수신 상태를 표시해 모델 대기와 연결 중단을 사용자가 구분할 수 있게 한다.
 - 대화 제목 변경, 즐겨찾기, 보관/복원과 영구 삭제를 제공한다.
 - 대화와 context reference는 사용자·Tenant·scope별로 격리한다.
 
@@ -147,11 +154,31 @@ AI Trust Center는 평가 corpus, category별 정확도, 근거 coverage, halluc
 - platform-admin, cluster-admin, operator, viewer capability를 API 서버에서 평가한다.
 - Tenant/Workspace 생성, 전역 scope 선택, Cluster placement와 접근 가능한 목록 필터링을 제공한다.
 - 사용자 관리, 운영 설정, reliability, 언어 설정과 접근 범위 화면을 제공한다.
+- 좌측 내비게이션은 `개요`, `운영 대응`, `인프라`, `Application Delivery`, `AI 운영`, `거버넌스`, `플랫폼 설정`, `개인 영역`으로 고정하며 capability가 없는 그룹은 제목과 항목을 함께 숨긴다.
+- 좌측의 `사용자 및 권한`은 Tenant Users & Access를 기본 진입점으로 사용하고 Platform Manager에게 플랫폼 계정 권한 화면 연결을 제공한다. 기존 두 접근 관리 URL은 호환성을 유지한다.
+
+### 4.8 Application Delivery와 AI Provider
+
+- Artifact Hub에서 Helm Chart를 검색해 정확한 버전을 Tenant Library로 가져오거나 `.tgz`, Helm Repository source를 등록한다.
+- Chart Library는 Chart 이름·Chart/App 버전과 함께 `제공사`를 별도 표시하고, Artifact Hub·직접 업로드 같은 `소스`와 구분한다. Artifact Hub import는 repository display name을 제공사 metadata로 보존하며, 기존 Chart는 저장된 repository 식별자를 fallback으로 사용하고 직접 업로드에서 확인할 수 없는 제공사는 `제공사 미확인`으로 표시한다.
+- Chart artifact는 digest와 함께 Tenant 범위로 보관하며 Custom은 암호화된 versioned Values Profile만 지원한다.
+- Tenant Admin과 Platform Manager는 exact confirmation 후 Chart를 Library에서 archive할 수 있다. 기존 배포·Release·Values 참조는 보존하며 동일 source/package를 다시 가져오면 복원한다.
+- Values Studio는 정확한 immutable Chart의 `values.yaml`과 선택형 `values.schema.json`을 읽어 Form/YAML 양방향 편집을 제공한다. Schema가 없거나 배열·민감 경로처럼 안전한 Form 표현이 어려운 값은 YAML 편집을 유지하며, 수동 Revision은 동일 Chart로 Helm 렌더링한 뒤 저장한다. Form/YAML은 `nodePort` 기본 범위 `30000-32767` 위반을 즉시 차단하고, Backend는 렌더링된 Service의 type과 port 계약을 Revision 저장·Target 조회·Preview에서 다시 검증한다.
+- AI Values 제안은 Chart 이름·package·제공사, Chart/App 버전, 요청과 현재 override에 관련된 실제 Values section·최상위 key·선택형 JSON Schema를 `helm-values.v10` bounded prompt로 사용한다. 특정 application/provider 전용 분기 없이 exact Chart artifact가 계약을 결정하며, 기본값이나 현재 override가 이미 요청을 만족하면 중복 key를 강제하지 않는다. 신규 Profile의 빈 override는 `{}`로 정규화한다. Kubernetes manifest, 지원하지 않는 중첩 path와 redaction marker를 거부하고 최대 3회 안에서 Helm 검증·오류 재피드백을 거친 YAML만 표시한다. Secret 값은 prompt에서 마스킹하고 결과에서 원래 값을 복원하되 `existingSecret` 같은 resource reference 이름은 유지한다.
+- 보유 Chart를 기본 진입점으로 선택하고 Values, Cluster/Namespace, `Cluster 내부`·`Chart에서 관리`·`KlueOps HTTPRoute`·`KlueOps Ingress`·`KlueOps TCPRoute` Exposure와 preview를 거쳐 Helm install을 실행한다. Target은 모든 Exposure 모드에서 현재 렌더링된 Service type, Service/Target/Node Port를 먼저 표시한다. HTTPRoute/TCPRoute는 listener protocol과 `allowedRoutes`를 확인하며 cross-namespace backend는 대상 Service namespace의 `ReferenceGrant`가 있을 때만 허용한다. Ingress는 동일 namespace HTTP Service만 연결한다. Preview와 실제 실행 직전에는 등록 Cluster credential의 대상 Namespace Helm Secret `get/list/create` 권한을 SSAR로 확인한다.
+- install/upgrade/rollback/uninstall은 비동기 Job과 ReleaseOperation으로 추적한다. worker는 metadata transaction commit 이후 bounded executor에서 시작하며 서로 다른 Release는 병렬 처리하고 동일 Application mutation은 DB lock으로 직렬화한다. uninstall은 PVC·DNS companion·TLS Secret 보존 여부를 명시하며 cleanup 실패는 exact confirmation을 거쳐 재시도한다. 큐 포화·worker 시작 실패는 즉시 terminal 실패로 기록하고 중단된 작업은 timeout 후 실패 상태로 복구한다.
+- Application 목록과 상세에서 배포에 사용한 Chart 이름·package·제공사/source·Chart/App version을 확인한다. 상세에서는 Helm 상태, workload/Pod health, Service·Ingress·HTTPRoute endpoint, 접근 범위, IP/Host, Service/Target/Node Port, `READY/APPLIED/DEGRADED` 상태와 operation history를 확인한다.
+- Tenant 기능 정책과 `TENANT_ADMIN`, `CLUSTER_ADMIN`, `OPERATOR`, `VIEWER` capability를 메뉴와 API에서 함께 평가한다. Platform Manager는 모든 Tenant 제품 권한을 가지되 대상 Kubernetes RBAC는 우회하지 않는다.
+- Users & Access에서 Tenant membership, pending invite, 역할/scope, OIDC Group Mapping과 안전한 offboarding을 관리한다.
+- AI Provider profile은 Ollama, OpenAI, Google GenAI, OpenAI-compatible 유형을 저장·검증하고 Tenant 목적별 routing을 제공한다. Credential은 암호화·마스킹하며 외부 전송은 명시적으로 허용한다.
+- Ollama 설치 모델을 동기화하고 승인 목록의 9B 이하 모델만 추가 대상으로 허용한다. 분석·상담·Helm Values 6개 고정 case를 실제 모델에 실행해 점수·샘플·평균 지연을 저장하고 gate를 통과한 모델만 Profile 기본값으로 승격한다. Tenant routing에서 사용 중인 모델은 삭제할 수 없으며 삭제에는 exact confirmation이 필요하다.
+- Repository Chart provenance는 운영자가 keyring을 설정하면 `helm pull --verify`로 검증하고, provenance가 없는 공개 Chart는 checksum 상태로 명시한다. 서명이 존재하지만 검증이 실패한 artifact는 Library import를 거부한다.
+- 모든 주요 route는 desktop/mobile 기준 이미지와 화면 예외 검사를 거치며 modal은 초점 진입·Tab 순환·종료 후 trigger 복귀 계약을 공통으로 적용한다.
 
 ## 5. 보안 구조
 
 - 브라우저는 OAuth token을 보관하지 않는 OIDC BFF를 사용한다.
-- 세션은 PostgreSQL에 저장하고 HttpOnly/SameSite/Secure cookie, CSRF, logout과 만료 복구를 제공한다.
+- 세션은 PostgreSQL에 저장하고 HttpOnly/SameSite/Secure cookie, CSRF, logout과 만료 복구를 제공한다. 만료 경고의 잔여 시간은 초 단위로 갱신하며 수동 연장 결과와 실패 사유를 즉시 반영하고 absolute timeout을 넘겨 연장하지 않는다.
 - 인증된 principal, capability와 object scope를 Backend에서 검증하며 Frontend 표시 여부를 권한 판단으로 신뢰하지 않는다.
 - 모든 credential과 PII는 로그, prompt, audit와 export에서 마스킹한다.
 - Managed Keycloak은 all-in-one 편의 프로필이며 인증 HA가 필요한 운영 환경은 외부 Keycloak/조직 IdP 연결을 권장한다.
@@ -168,8 +195,11 @@ AI Trust Center는 평가 corpus, category별 정확도, 근거 coverage, halluc
 | Pod log | 요청 시 조회/stream, DB 영구 저장 안 함 |
 | 분석/Incident/Runbook/명령/Audit | PostgreSQL 영속 저장 |
 | 사용자 session/tenant/scope | PostgreSQL 영속 저장 |
+| Chart artifact/metadata와 Values revision | Tenant 범위 PostgreSQL 저장, Values 암호화 |
+| Application/Release operation | Cluster 소유권에서 Tenant를 유도해 PostgreSQL 영속 저장 |
+| AI Provider credential/routing | 암호화된 profile과 Tenant 목적별 정책으로 저장 |
 
-Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway V1~V28이 schema 변경을 관리한다.
+Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway V1~V32가 schema 변경을 관리한다.
 
 ## 7. API와 개발 규칙
 
@@ -193,14 +223,14 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 
 ## 9. 현재 검증 기준
 
-2026-09-14 기준 최신 통합 증빙은 다음과 같다.
+2026-09-15 기준 최신 통합 증빙은 다음과 같다.
 
-- Backend: PostgreSQL 17 Testcontainers, Flyway V1~V28 포함 248 tests 통과
+- Backend: PostgreSQL 17 Testcontainers, Flyway V1~V32 포함 273 tests 통과
 - Command Runner: 5 tests 통과
-- Frontend: 26 files, 91 tests, typecheck와 production build 통과
+- Frontend: 28 files, 97 tests, typecheck와 production build 통과
 - OpenAPI runtime snapshot과 Orval generated client drift 통과
 - architecture, security, packaging, docs와 maintainability gate 통과
-- Docker Desktop Kubernetes Helm revision 55에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
+- Docker Desktop Kubernetes Helm revision 99에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
 - OIDC 관리자 사용자로 `dev-master/default`의 격리 Runner `kubectl get pods --field-selector=status.phase!=Running,status.phase!=Succeeded -o wide` 실행 성공, exit code `0`, 130ms
 - 로컬 Keycloak 네 역할과 두 Tenant object scope 격리 검증 통과
 - read API 30회/동시성 10 기준 p95 14ms, Backend/Keycloak 순차 재시작, 앱 DB Flyway migration 28건·Keycloak `aiops` Realm sentinel 격리 복원과 AI timeout fallback 증빙
@@ -213,6 +243,11 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - 공개 supply-chain workflow는 네 runtime container를 build·Trivy scan하고 runtime SBOM과 license gate를 실행한다. signed container workflow도 Command Runner를 포함한다. registry별 Cosign identity/issuer 검증은 자체 운영 배포자가 수행한다.
 - 월간 Dependabot 정책은 Backend/Command Runner Maven, Frontend npm과 GitHub Actions의 minor/patch version update를 ecosystem별 최대 1개 PR로 제한하며 Docker 일반 update와 모든 major update는 자동 생성하지 않는다. Security update와 주간 supply-chain scan은 계속 유지하고 자동 merge하지 않는다.
 - README의 Dashboard와 Kubernetes Console/Cook Book 화면은 별도 namespace의 실제 설치에서 캡처했으며 계정, cluster 식별자와 내부 주소를 공개용 값으로 마스킹했다. 문서 검증은 두 화면 asset의 존재를 확인한다.
+- Docker Desktop의 `aiops-system`에서 OIDC 로그인 후 Artifact Hub 검색, nginx Chart import, 암호화 Values 저장·재조회, preview의 Secret redaction, Namespace 생성, Helm install의 `1/1` workload health와 Service endpoint, uninstall, Users & Access, AI Provider 연결 검증과 Ollama model 동기화를 브라우저로 확인했다.
+- Phase 2 공통 제품 Shell을 로컬 Kubernetes Frontend 이미지에 반영하고 실제 OIDC 세션에서 Applications 상태 요약·목록·Runtime/Endpoint inspector, Dashboard, 모바일 navigation과 Application 배포 chooser를 브라우저로 확인했다.
+- CloudPirates nginx Chart `0.16.8`/App `1.31.5`에서 숫자 `targetPort` 수동 Values의 Schema 차단과 올바른 named port 수동 Preview를 확인했다. 같은 Chart에서 간단 요청은 replica 1, ClusterIP, HTTP port 80과 named `targetPort: "http"`를 1회에 생성해 Helm 검증을 통과했다. CloudPirates Redis Chart `0.35.0`/App `8.10.1`의 복잡 요청은 ClusterIP 6379, PVC 1Gi, CPU/Memory requests·limits, runAsNonRoot/RuntimeDefault, liveness/readiness와 `redis-credentials` existing Secret 참조를 생성했고 실제 Preview에서 Service, StatefulSet, PVC와 보안·probe 설정을 확인했다. `helm-values.v10`은 CloudPirates PostgreSQL Chart `0.20.5`/App `18.6.0`에서도 단순 ClusterIP 5432 요청과 PVC 2Gi, CPU/Memory requests·limits, 보안 context, probe, `postgres-credentials` existing Secret 복합 요청을 각각 1회에 생성하고 동일 Chart의 Helm 렌더링을 통과했다. 요청한 `seccompProfile`은 이 Chart Values 계약에 존재하지 않아 만들지 않았다. Kubernetes Deployment manifest 오출력과 지원하지 않는 `cluster.replicaCount` 경로는 재시도 전에 차단했다. Applications에서는 nginx의 immutable Chart 출처와 ClusterIP, Service/Target Port를 실제 OIDC 세션으로 확인했다. Chart Library 제거 modal의 권한별 노출, 보존 범위, exact confirmation과 취소 동작을 OIDC 세션에서 확인했다. Helm Secret 권한이 없는 Namespace는 Preview에서 거부 verb를 표시해 승인 전에 차단했다.
+- 2026-09-16 로컬 Helm revision 144에서 PostgreSQL Chart의 schema 118개 Form 필드와 YAML 왕복, HTTPRoute·Ingress·TCPRoute 선택 UI, TCP listener Gateway가 없을 때 Preview 차단을 OIDC 세션으로 확인했다. 설치된 `qwen2.5-coder:7b`에는 분석·상담·Helm Values 6-case 평가를 실제 실행해 6/6, 100점, 평균 1,324ms를 기록하고 기본 모델 승격과 routing 사용 중 삭제 비활성화를 확인했다. 전체 22개 route는 desktop/mobile 44개 snapshot과 modal focus 2개 계약을 예외 없이 통과했다.
+- PostgreSQL Chart `0.20.5` 배포 Job이 성공했지만 Applications가 최초 `DEPLOYING` snapshot에 머물던 상태 동기화 누락을 수정했다. 진행 중 Application이 있을 때만 2초 간격으로 목록을 직렬 갱신하고 terminal 전환 시 Revision·Runtime·History를 함께 갱신한 뒤 폴링을 중지한다. 로컬 Kubernetes에서 Helm `deployed`, Pod `1/1 Running`, 저장 상태 `RUNNING / revision 1`과 OIDC 브라우저의 동일 표시를 확인했다.
 
 검증 명령과 최신 로컬 품질 증적은 `docs/operations/release-candidate-checklist.md`를 따른다. 문서와 스크립트의 `release-candidate` 명칭은 기존 자동화 호환을 위해 유지하며 상용 릴리스 판정을 의미하지 않는다.
 
@@ -220,12 +255,12 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 
 | 관점 | 판정 |
 | --- | --- |
-| 기능 개발 | 핵심 Kubernetes 운영, AI 분석/상담, Incident, 안전 명령과 관리 UI 구현 완료 |
+| 기능 개발 | 핵심 Kubernetes 운영, AI 분석/상담, Incident, 안전 명령, Tenant 접근 관리와 Helm Application Delivery 구현 완료 |
 | 개발·데모 | 사용 가능 |
 | 내부 Pilot | 사용 가능, 실제 대상 cluster별 권한과 credential 확인 필요 |
 | 오픈소스 공개 | LICENSE, 저장소 위생, 기여 흐름, clean-clone 검증, 별도 namespace 신규 설치, 공개 CI, SBOM/license/risk 정책과 마스킹한 제품 화면 문서화 완료. 수정본이 없는 upstream runtime 취약점은 SEC-01로 공개 추적 중 |
 | 자체 운영 배포 | 사용자가 환경별 TLS, IdP, Secret, 백업과 HA 책임을 검증해야 함 |
 | 대형 cluster 보장 | 현재 제품 범위 아님. 사용자가 bounded 기준을 넘는 규모를 요구하면 별도 SLO와 검증 범위를 정해야 함 |
-| Prometheus/GitOps | 현재 프로젝트 범위 제외 |
+| Prometheus/자체 GitOps | 현재 프로젝트 범위 제외. Helm 기반 Application Delivery는 제공 |
 
 프로젝트 완성도는 고객 상용 `READY`나 특정 환경의 릴리스 승인으로 판정하지 않는다. 공개 저장소의 법적·보안적 기본 요건, 재현 가능한 설치, 문서와 기여 흐름을 우선한다. 각 사용자의 운영 환경에 필요한 TLS/DNS/IdP, Secret 관리, 백업·복구, 공급망 정책은 선택적 운영 지침으로 제공하며 프로젝트 공개를 차단하지 않는다. 남은 공개 준비와 개발 후보는 `remaining-development-items.md`에서 관리한다.

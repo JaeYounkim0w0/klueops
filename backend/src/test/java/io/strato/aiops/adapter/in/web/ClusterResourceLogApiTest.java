@@ -39,6 +39,7 @@ class ClusterResourceLogApiTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /** ClusterResourceLogApiTest의 listsPodsAndContainersThatBelongToAWorkload 처리 결과를 조회해 반환한다. */
     @Test
     void listsPodsAndContainersThatBelongToAWorkload() throws Exception {
         mockMvc.perform(get("/api/clusters/{clusterId}/resources/{resourceType}/{resourceName}/logs/targets",
@@ -51,6 +52,7 @@ class ClusterResourceLogApiTest {
                 .andExpect(jsonPath("$.pods[0].containers[0].restartCount").value(2));
     }
 
+    /** ClusterResourceLogApiTest의 returnsRecentLogsForTheExplicitPodAndContainerTarget 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsRecentLogsForTheExplicitPodAndContainerTarget() throws Exception {
         mockMvc.perform(get("/api/clusters/{clusterId}/resources/{resourceType}/{resourceName}/logs",
@@ -66,6 +68,7 @@ class ClusterResourceLogApiTest {
                 .andExpect(jsonPath("$.log").value("line one\nline two"));
     }
 
+    /** ClusterResourceLogApiTest의 streamsHeartbeatLogAndCompletionEvents 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void streamsHeartbeatLogAndCompletionEvents() throws Exception {
         MvcResult started = mockMvc.perform(get("/api/clusters/{clusterId}/resources/{resourceType}/{resourceName}/logs/stream",
@@ -89,10 +92,12 @@ class ClusterResourceLogApiTest {
     @TestConfiguration
     static class FakeLogUseCaseConfig {
 
+        /** FakeLogUseCaseConfig의 getClusterResourceLogsUseCase 처리 결과를 조회해 반환한다. */
         @Bean
         @Primary
         GetClusterResourceLogsUseCase getClusterResourceLogsUseCase() {
             return new GetClusterResourceLogsUseCase() {
+                /** 익명 구현체의 getTargets 처리 결과를 조회해 반환한다. */
                 @Override
                 public ClusterResourceLogTargetsResult getTargets(UUID clusterId, String namespace,
                                                                   String resourceType, String resourceName) {
@@ -103,6 +108,7 @@ class ClusterResourceLogApiTest {
                                     "app", true, 2, "RUNNING", false)))));
                 }
 
+                /** 익명 구현체의 getRecentLogs 처리 결과를 조회해 반환한다. */
                 @Override
                 public ClusterResourceLogResult getRecentLogs(UUID clusterId, String namespace, String resourceType,
                                                               String resourceName, String podName, String containerName,
@@ -111,6 +117,7 @@ class ClusterResourceLogApiTest {
                             containerName, tailLines, previous, "line one\nline two", false, Instant.now());
                 }
 
+                /** 익명 구현체의 streamLogs 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public ClusterResourceLogStreamResult streamLogs(UUID clusterId, String namespace, String resourceType,
                                                                  String resourceName, String podName, String containerName,

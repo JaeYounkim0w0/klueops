@@ -19,6 +19,7 @@ class JdbcRuntimeLeaseAdapterTest {
     @Autowired DataSource dataSource;
     @Autowired PlatformTransactionManager transactionManager;
 
+    /** JdbcRuntimeLeaseAdapterTest의 onlyOneOwnerHoldsALiveLeaseAndReleaseAllowsTakeover 처리에서 발생한 이벤트와 후속 동작을 처리한다. */
     @Test
     void onlyOneOwnerHoldsALiveLeaseAndReleaseAllowsTakeover() {
         var jdbc = new org.springframework.jdbc.core.JdbcTemplate(dataSource);

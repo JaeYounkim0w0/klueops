@@ -45,6 +45,7 @@ public class IncidentSignalCoordinator {
     private final ObjectMapper objectMapper;
     private final IncidentRecoveryCoordinator recoveryCoordinator;
 
+    /** IncidentSignalCoordinator 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public IncidentSignalCoordinator(OperationsRepositoryPort operationsRepository,
                                      AnalysisSessionRepositoryPort analysisRepository,
                                      KubernetesEventSnapshotRepositoryPort eventRepository,
@@ -57,6 +58,7 @@ public class IncidentSignalCoordinator {
         this.recoveryCoordinator = recoveryCoordinator;
     }
 
+    /** IncidentSignalCoordinator의 reconcile 처리에 필요한 업무 로직을 수행한다. */
     public List<IncidentNotification> reconcile(Cluster cluster, String actor) {
         List<IncidentNotification> notifications = new ArrayList<>();
         for (AnalysisSession analysis : analysisRepository.findRecent(cluster.id(), null, null, 50)) {
@@ -73,6 +75,7 @@ public class IncidentSignalCoordinator {
         return List.copyOf(notifications);
     }
 
+    /** IncidentSignalCoordinator의 promoteWatchSignal 처리에 필요한 업무 로직을 수행한다. */
     public IncidentPromotion promoteWatchSignal(Cluster cluster,
                                                 WatchSignal watchSignal,
                                                 String category,
@@ -89,6 +92,7 @@ public class IncidentSignalCoordinator {
         return new IncidentPromotion(result.incident(), result.notification());
     }
 
+    /** IncidentSignalCoordinator의 analysisSignals 처리에 필요한 업무 로직을 수행한다. */
     static List<IncidentSignal> analysisSignals(Cluster cluster, AnalysisSession analysis, ObjectMapper mapper) {
         if (analysis.resultJson() == null || analysis.resultJson().isBlank()) {
             return List.of();
@@ -118,6 +122,7 @@ public class IncidentSignalCoordinator {
         return List.copyOf(signals);
     }
 
+    /** IncidentSignalCoordinator의 eventSignal 처리에 필요한 업무 로직을 수행한다. */
     static IncidentSignal eventSignal(KubernetesEventSnapshot event) {
         String reason = normalizeToken(event.reason());
         int occurrences = event.count() == null ? 1 : event.count();
@@ -140,6 +145,7 @@ public class IncidentSignalCoordinator {
                 event.eventTime() == null ? event.collectedAt() : event.eventTime());
     }
 
+    /** IncidentSignalCoordinator의 upsert 처리에 필요한 업무 로직을 수행한다. */
     private IncidentUpsertResult upsert(Cluster cluster, IncidentSignal signal, String actor) {
         String incidentFingerprint = fingerprint(cluster.id(), signal.namespace(), signal.resourceKind(),
                 signal.resourceName(), signal.category(), signal.fingerprintReason());
@@ -196,12 +202,14 @@ public class IncidentSignalCoordinator {
         return new IncidentUpsertResult(saved, notification);
     }
 
+    /** IncidentSignalCoordinator의 addNotification 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addNotification(List<IncidentNotification> notifications, IncidentNotification notification) {
         if (notification != null) {
             notifications.add(notification);
         }
     }
 
+    /** IncidentSignalCoordinator의 eventCategory 처리에 필요한 업무 로직을 수행한다. */
     private static String eventCategory(String reason) {
         return switch (reason) {
             case "FAILEDMOUNT", "FAILEDBINDING" -> "STORAGE_CONFIG";
@@ -214,6 +222,7 @@ public class IncidentSignalCoordinator {
         };
     }
 
+    /** IncidentSignalCoordinator의 readTree 처리 결과를 조회해 반환한다. */
     private static JsonNode readTree(ObjectMapper mapper, String json) {
         try {
             return mapper.readTree(defaultText(json, "{}"));
@@ -222,6 +231,7 @@ public class IncidentSignalCoordinator {
         }
     }
 
+    /** IncidentSignalCoordinator의 array 처리에 필요한 업무 로직을 수행한다. */
     private static List<JsonNode> array(JsonNode root, String field) {
         JsonNode value = root.path(field);
         if (!value.isArray()) {
@@ -232,11 +242,13 @@ public class IncidentSignalCoordinator {
         return result;
     }
 
+    /** IncidentSignalCoordinator의 text 처리에 필요한 업무 로직을 수행한다. */
     private static String text(JsonNode node, String field, String fallback) {
         String value = node.path(field).asText(null);
         return value == null || value.isBlank() ? fallback : value;
     }
 
+    /** IncidentSignalCoordinator의 firstText 처리에 필요한 업무 로직을 수행한다. */
     private static String firstText(JsonNode node, String... fields) {
         for (String field : fields) {
             String value = node.path(field).asText(null);
@@ -247,6 +259,7 @@ public class IncidentSignalCoordinator {
         return null;
     }
 
+    /** IncidentSignalCoordinator의 extractResourceTarget 처리에 필요한 업무 로직을 수행한다. */
     private static ResourceTarget extractResourceTarget(JsonNode candidate, String title) {
         String kind = firstText(candidate, "targetKind", "resourceKind", "kind");
         String name = firstText(candidate, "targetName", "resourceName", "name");
@@ -263,12 +276,14 @@ public class IncidentSignalCoordinator {
                 : new ResourceTarget(kind, name);
     }
 
+    /** IncidentSignalCoordinator의 fingerprint 처리에 필요한 업무 로직을 수행한다. */
     private static String fingerprint(UUID clusterId, String namespace, String kind, String name,
                                       String category, String reason) {
         return hash(String.join("|", clusterId.toString(), normalizeToken(namespace), normalizeToken(kind),
                 normalizeToken(name), normalizeToken(category), normalizeToken(reason)));
     }
 
+    /** IncidentSignalCoordinator의 hash 처리 조건의 충족 여부를 판단한다. */
     private static String hash(String value) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
@@ -282,20 +297,24 @@ public class IncidentSignalCoordinator {
         }
     }
 
+    /** IncidentSignalCoordinator의 normalizeToken 처리 데이터를 필요한 표현으로 변환한다. */
     private static String normalizeToken(String value) {
         return value == null ? "" : value.replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
     }
 
+    /** IncidentSignalCoordinator의 normalizeSeverity 처리 데이터를 필요한 표현으로 변환한다. */
     private static String normalizeSeverity(String value) {
         String normalized = value == null || value.isBlank() ? null : value.trim().toUpperCase(Locale.ROOT);
         return normalized != null && Set.of("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO").contains(normalized)
                 ? normalized : "MEDIUM";
     }
 
+    /** IncidentSignalCoordinator의 maxSeverity 처리에 필요한 업무 로직을 수행한다. */
     private static String maxSeverity(String left, String right) {
         return severityScore(left) >= severityScore(right) ? left : right;
     }
 
+    /** IncidentSignalCoordinator의 severityScore 처리에 필요한 업무 로직을 수행한다. */
     private static int severityScore(String severity) {
         return switch (normalizeSeverity(severity)) {
             case "CRITICAL" -> 70;
@@ -306,6 +325,7 @@ public class IncidentSignalCoordinator {
         };
     }
 
+    /** IncidentSignalCoordinator의 cleanText 처리에 필요한 업무 로직을 수행한다. */
     private static String cleanText(String value, int maxLength) {
         if (value == null) {
             return null;
@@ -314,6 +334,7 @@ public class IncidentSignalCoordinator {
         return cleaned.length() <= maxLength ? cleaned : cleaned.substring(0, maxLength);
     }
 
+    /** IncidentSignalCoordinator의 defaultText 처리에 필요한 업무 로직을 수행한다. */
     private static String defaultText(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }

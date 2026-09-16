@@ -25,6 +25,7 @@ public record AnalysisCommandExecutionResponse(
         String createdBy,
         Instant createdAt
 ) {
+    /** AnalysisCommandExecutionResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
     public static AnalysisCommandExecutionResponse from(AnalysisCommandExecution execution) {
         return new AnalysisCommandExecutionResponse(execution.id(), execution.analysisId(), execution.clusterId(),
                 execution.namespace(), execution.command(), execution.safety(), execution.status(), execution.reason(),

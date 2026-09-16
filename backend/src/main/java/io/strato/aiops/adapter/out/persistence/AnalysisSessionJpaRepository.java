@@ -11,8 +11,10 @@ import java.util.UUID;
 
 interface AnalysisSessionJpaRepository extends JpaRepository<AnalysisSessionEntity, UUID> {
 
+    /** AnalysisSessionJpaRepository의 findByAsyncJobId 처리 결과를 조회해 반환한다. */
     Optional<AnalysisSessionEntity> findByAsyncJobId(UUID asyncJobId);
 
+    /** AnalysisSessionJpaRepository의 findRunningByScope 처리 결과를 조회해 반환한다. */
     @Query("""
             select session
             from AnalysisSessionEntity session
@@ -29,6 +31,7 @@ interface AnalysisSessionJpaRepository extends JpaRepository<AnalysisSessionEnti
             Pageable pageable
     );
 
+    /** AnalysisSessionJpaRepository의 findLatestSucceededByScope 처리 결과를 조회해 반환한다. */
     @Query("""
             select session
             from AnalysisSessionEntity session
@@ -45,6 +48,7 @@ interface AnalysisSessionJpaRepository extends JpaRepository<AnalysisSessionEnti
             Pageable pageable
     );
 
+    /** AnalysisSessionJpaRepository의 findRecentByScope 처리 결과를 조회해 반환한다. */
     @Query("""
             select session
             from AnalysisSessionEntity session

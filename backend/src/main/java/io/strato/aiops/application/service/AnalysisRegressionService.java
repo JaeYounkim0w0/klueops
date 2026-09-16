@@ -21,11 +21,13 @@ public class AnalysisRegressionService {
     private final AnalysisAssuranceRepositoryPort repository;
     private final AnalysisRegressionCorpus corpus;
 
+    /** AnalysisRegressionService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AnalysisRegressionService(AnalysisAssuranceRepositoryPort repository, AnalysisRegressionCorpus corpus) {
         this.repository = repository;
         this.corpus = corpus;
     }
 
+    /** AnalysisRegressionService의 run 처리의 핵심 작업 흐름을 실행한다. */
     public RegressionRun run(String actor) {
         UUID runId = UUID.randomUUID();
         Instant startedAt = Instant.now();
@@ -38,15 +40,18 @@ public class AnalysisRegressionService {
         return repository.saveRegressionRun(run);
     }
 
+    /** AnalysisRegressionService의 list 처리 결과를 조회해 반환한다. */
     public List<RegressionRun> list(int limit) {
         return repository.findRegressionRuns(limit);
     }
 
+    /** AnalysisRegressionService의 get 처리 결과를 조회해 반환한다. */
     public RegressionRun get(UUID runId) {
         return repository.findRegressionRun(runId)
                 .orElseThrow(() -> new NoSuchElementException("Regression run not found: " + runId));
     }
 
+    /** AnalysisRegressionService의 corpusProfile 처리에 필요한 업무 로직을 수행한다. */
     public CorpusProfile corpusProfile() {
         List<String> categories = corpus.fixtures().stream().map(AnalysisRegressionCorpus.Fixture::expectedCategory)
                 .distinct().sorted().toList();
@@ -55,6 +60,7 @@ public class AnalysisRegressionService {
                 (int) abstentionCases, true);
     }
 
+    /** AnalysisRegressionService의 latestContractEvaluation 처리에 필요한 업무 로직을 수행한다. */
     public AiEvaluationMetrics.Summary latestContractEvaluation() {
         List<RegressionRun> runs = repository.findRegressionRuns(1);
         if (runs.isEmpty()) return AiEvaluationMetrics.calculate(List.of());
@@ -70,6 +76,7 @@ public class AnalysisRegressionService {
         return AiEvaluationMetrics.calculate(outcomes);
     }
 
+    /** AnalysisRegressionService의 evaluate 처리에 필요한 업무 로직을 수행한다. */
     private RegressionCaseResult evaluate(UUID runId, AnalysisRegressionCorpus.Fixture fixture) {
         Instant startedAt = Instant.now();
         EvaluatedFinding finding = analyze(fixture);
@@ -91,6 +98,7 @@ public class AnalysisRegressionService {
                 List.copyOf(assertions), List.copyOf(failures), Duration.between(startedAt, Instant.now()).toMillis());
     }
 
+    /** AnalysisRegressionService의 analyze 처리의 핵심 작업 흐름을 실행한다. */
     private EvaluatedFinding analyze(AnalysisRegressionCorpus.Fixture fixture) {
         String signal = fixture.signal().toUpperCase(Locale.ROOT);
         String category;
@@ -151,6 +159,7 @@ public class AnalysisRegressionService {
                 readOnly, mutation, guarded, confidence);
     }
 
+    /** AnalysisRegressionService의 check 처리 입력과 현재 상태의 유효성을 검증한다. */
     private void check(String assertion, boolean passed, List<String> assertions, List<String> failures) {
         (passed ? assertions : failures).add(assertion);
     }

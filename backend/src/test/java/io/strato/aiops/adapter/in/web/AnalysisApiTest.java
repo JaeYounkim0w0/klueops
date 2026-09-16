@@ -49,6 +49,7 @@ class AnalysisApiTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /** AnalysisApiTest의 analyzesApplicationAndStoresAnalysisSession 처리의 핵심 작업 흐름을 실행한다. */
     @Test
     void analyzesApplicationAndStoresAnalysisSession() throws Exception {
         String clusterId = registerCluster("analysis-api-cluster-" + UUID.randomUUID());
@@ -77,6 +78,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$[0].id", notNullValue()));
     }
 
+    /** AnalysisApiTest의 analyzesNamespace 처리의 핵심 작업 흐름을 실행한다. */
     @Test
     void analyzesNamespace() throws Exception {
         String clusterId = registerCluster("namespace-analysis-cluster-" + UUID.randomUUID());
@@ -108,6 +110,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.resultJson", containsString("\"hasPrevious\":false")));
     }
 
+    /** AnalysisApiTest의 filtersAnalysisHistoryByClusterAndNamespace 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void filtersAnalysisHistoryByClusterAndNamespace() throws Exception {
         String firstClusterId = registerCluster("history-filter-cluster-a-" + UUID.randomUUID());
@@ -137,6 +140,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$[*].namespace", everyItem(org.hamcrest.Matchers.is("kube-system"))));
     }
 
+    /** AnalysisApiTest의 deletesAnalysisSession 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Test
     void deletesAnalysisSession() throws Exception {
         String clusterId = registerCluster("analysis-delete-cluster-" + UUID.randomUUID());
@@ -149,6 +153,7 @@ class AnalysisApiTest {
                 .andExpect(status().isNotFound());
     }
 
+    /** AnalysisApiTest의 comparesAnalysisWithPreviousSameScope 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void comparesAnalysisWithPreviousSameScope() throws Exception {
         String clusterId = registerCluster("namespace-analysis-compare-cluster-" + UUID.randomUUID());
@@ -167,6 +172,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.resultJson", containsString("\"reusedSections\":3")));
     }
 
+    /** AnalysisApiTest의 doesNotReuseNaturalLanguageSectionsAcrossLocales 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void doesNotReuseNaturalLanguageSectionsAcrossLocales() throws Exception {
         String clusterId = registerCluster("namespace-analysis-locale-cache-" + UUID.randomUUID());
@@ -185,6 +191,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.resultJson", containsString("\"reusedSections\":0")));
     }
 
+    /** AnalysisApiTest의 startsNamespaceAnalysisJobAndReturnsResultByJobId 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void startsNamespaceAnalysisJobAndReturnsResultByJobId() throws Exception {
         String clusterId = registerCluster("namespace-analysis-job-cluster-" + UUID.randomUUID());
@@ -210,6 +217,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.resultJson", containsString("test-analysis")));
     }
 
+    /** AnalysisApiTest의 analyzesCluster 처리의 핵심 작업 흐름을 실행한다. */
     @Test
     void analyzesCluster() throws Exception {
         String clusterId = registerCluster("cluster-analysis-cluster-" + UUID.randomUUID());
@@ -228,6 +236,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.resultJson", containsString("kubectl get pods -A")));
     }
 
+    /** AnalysisApiTest의 clusterAnalysisFallsBackToKubernetesEvidenceWhenAiTimesOut 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void clusterAnalysisFallsBackToKubernetesEvidenceWhenAiTimesOut() throws Exception {
         String clusterId = registerCluster("cluster-timeout-" + UUID.randomUUID());
@@ -243,6 +252,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.resultJson", containsString("cluster-sample-pod")));
     }
 
+    /** AnalysisApiTest의 clusterAnalysisFallsBackToKubernetesEvidenceWhenAiResponseIsInvalid 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void clusterAnalysisFallsBackToKubernetesEvidenceWhenAiResponseIsInvalid() throws Exception {
         String clusterId = registerCluster("cluster-invalid-response-" + UUID.randomUUID());
@@ -254,6 +264,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.resultJson", containsString("AI response did not satisfy the analysis schema")));
     }
 
+    /** AnalysisApiTest의 clusterAnalysisFallsBackWhenAiResponseHasNoOperationalContent 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void clusterAnalysisFallsBackWhenAiResponseHasNoOperationalContent() throws Exception {
         String clusterId = registerCluster("cluster-empty-response-" + UUID.randomUUID());
@@ -266,6 +277,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.resultJson", containsString("kubectl get events -A")));
     }
 
+    /** AnalysisApiTest의 returnsNamespaceDiagnosticsPreview 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsNamespaceDiagnosticsPreview() throws Exception {
         String clusterId = registerCluster("namespace-diagnostics-cluster-" + UUID.randomUUID());
@@ -288,6 +300,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.podLogSources[0].podName").value("sample-pod"));
     }
 
+    /** AnalysisApiTest의 returnsResourceLogsForAnalysisTroubleshooting 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void returnsResourceLogsForAnalysisTroubleshooting() throws Exception {
         String clusterId = registerCluster("resource-logs-cluster-" + UUID.randomUUID());
@@ -305,6 +318,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.containers[0].log", containsString("sample log")));
     }
 
+    /** AnalysisApiTest의 executesReadOnlyAnalysisCommandAndStoresResult 처리의 핵심 작업 흐름을 실행한다. */
     @Test
     void executesReadOnlyAnalysisCommandAndStoresResult() throws Exception {
         String clusterId = registerCluster("analysis-command-cluster-" + UUID.randomUUID());
@@ -330,6 +344,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$[0].status").value("SUCCEEDED"));
     }
 
+    /** AnalysisApiTest의 executesSupportedSafeMutationOnlyWithConfirmation 처리의 핵심 작업 흐름을 실행한다. */
     @Test
     void executesSupportedSafeMutationOnlyWithConfirmation() throws Exception {
         String clusterId = registerCluster("analysis-command-change-cluster-" + UUID.randomUUID());
@@ -380,6 +395,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.stdoutText", containsString("Deployment/sample-deployment")));
     }
 
+    /** AnalysisApiTest의 executesRollbackOnlyWhenRevisionGuardAndConfirmationPass 처리의 핵심 작업 흐름을 실행한다. */
     @Test
     void executesRollbackOnlyWhenRevisionGuardAndConfirmationPass() throws Exception {
         String clusterId = registerCluster("analysis-command-rollback-cluster-" + UUID.randomUUID());
@@ -413,6 +429,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.stdoutText", containsString("Deployment/sample-deployment")));
     }
 
+    /** AnalysisApiTest의 blocksRollbackWithoutExplicitRevisionAtPreview 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void blocksRollbackWithoutExplicitRevisionAtPreview() throws Exception {
         String clusterId = registerCluster("analysis-command-rollback-guard-cluster-" + UUID.randomUUID());
@@ -433,6 +450,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$.guardMessage", containsString("지원하지 않는 변경 명령")));
     }
 
+    /** AnalysisApiTest의 blocksMutatingAnalysisCommandAndPersistsWorkflowState 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void blocksMutatingAnalysisCommandAndPersistsWorkflowState() throws Exception {
         String clusterId = registerCluster("analysis-command-block-cluster-" + UUID.randomUUID());
@@ -469,6 +487,7 @@ class AnalysisApiTest {
                 .andExpect(jsonPath("$[0].status").value("INVESTIGATING"));
     }
 
+    /** AnalysisApiTest의 deployDockerApplication 처리에 필요한 업무 로직을 수행한다. */
     private String deployDockerApplication(String clusterId, String name) throws Exception {
         String response = mockMvc.perform(post("/api/applications/deploy/docker")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -487,6 +506,7 @@ class AnalysisApiTest {
         return JsonPath.read(response, "$.application.id");
     }
 
+    /** AnalysisApiTest의 registerCluster 처리에 필요한 데이터를 생성하거나 저장한다. */
     private String registerCluster(String name) throws Exception {
         String response = mockMvc.perform(post("/api/clusters")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -512,6 +532,7 @@ class AnalysisApiTest {
         return JsonPath.read(response, "$.id");
     }
 
+    /** AnalysisApiTest의 createNamespaceAnalysis 처리에 필요한 데이터를 생성하거나 저장한다. */
     private String createNamespaceAnalysis(String clusterId) throws Exception {
         String response = mockMvc.perform(post("/api/analysis/namespaces/{namespace}", "default")
                         .param("clusterId", clusterId))
@@ -522,6 +543,7 @@ class AnalysisApiTest {
         return JsonPath.read(response, "$.id");
     }
 
+    /** AnalysisApiTest의 waitForJob 처리에 필요한 업무 로직을 수행한다. */
     private void waitForJob(String jobId) throws Exception {
         for (int attempt = 0; attempt < 20; attempt++) {
             String response = mockMvc.perform(get("/api/jobs/{jobId}", jobId))
@@ -541,6 +563,7 @@ class AnalysisApiTest {
     @TestConfiguration
     static class FakeAiAnalysisConfig {
 
+        /** FakeAiAnalysisConfig의 aiAnalysisPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         AiAnalysisPort aiAnalysisPort() {
@@ -623,10 +646,12 @@ class AnalysisApiTest {
             };
         }
 
+        /** FakeAiAnalysisConfig의 kubernetesNamespaceDiagnosticsPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         KubernetesNamespaceDiagnosticsPort kubernetesNamespaceDiagnosticsPort() {
             return new KubernetesNamespaceDiagnosticsPort() {
+                /** 익명 구현체의 collectNamespaceDiagnostics 처리의 핵심 작업 흐름을 실행한다. */
                 @Override
                 public KubernetesNamespaceDiagnostics collectNamespaceDiagnostics(KubernetesConnectionCredential credential, String namespace) {
                     return new KubernetesNamespaceDiagnostics(
@@ -695,18 +720,21 @@ class AnalysisApiTest {
                     );
                 }
 
+                /** 익명 구현체의 collectPodLogs 처리의 핵심 작업 흐름을 실행한다. */
                 @Override
                 public KubernetesPodLogs collectPodLogs(KubernetesConnectionCredential credential, String namespace, String podName,
                                                         String containerName, int tailLines, boolean previous) {
                     return podLogs(namespace, podName, tailLines);
                 }
 
+                /** 익명 구현체의 collectResourceLogs 처리의 핵심 작업 흐름을 실행한다. */
                 @Override
                 public KubernetesPodLogs collectResourceLogs(KubernetesConnectionCredential credential, String namespace, String resourceType,
                                                              String resourceName, String containerName, int tailLines, boolean previous) {
                     return podLogs(namespace, resourceType + "/" + resourceName, tailLines);
                 }
 
+                /** 익명 구현체의 podLogs 처리에 필요한 업무 로직을 수행한다. */
                 private KubernetesPodLogs podLogs(String namespace, String podName, int tailLines) {
                     return new KubernetesPodLogs(
                             namespace,
@@ -719,16 +747,19 @@ class AnalysisApiTest {
             };
         }
 
+        /** FakeAiAnalysisConfig의 kubernetesMutationPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         KubernetesMutationPort kubernetesMutationPort() {
             return new KubernetesMutationPort() {
+                /** 익명 구현체의 canI 처리 조건의 충족 여부를 판단한다. */
                 @Override
                 public KubernetesAccessReviewResult canI(KubernetesConnectionCredential credential, String namespace, String verb,
                                                          String group, String resource, String subresource, String resourceName) {
                     return new KubernetesAccessReviewResult(true, verb, resource, subresource, namespace, "allowed");
                 }
 
+                /** 익명 구현체의 dryRunRolloutRestartDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public KubernetesMutationResult dryRunRolloutRestartDeployment(KubernetesConnectionCredential credential,
                                                                                 String namespace,
@@ -737,6 +768,7 @@ class AnalysisApiTest {
                             "generation=1", "generation=2 dryRun=true", Instant.now());
                 }
 
+                /** 익명 구현체의 rolloutRestartDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public KubernetesMutationResult rolloutRestartDeployment(KubernetesConnectionCredential credential, String namespace,
                                                                          String deploymentName) {
@@ -744,6 +776,7 @@ class AnalysisApiTest {
                             "generation=1", "generation=2 annotation=aiops.strato.io/restartedAt:now", Instant.now());
                 }
 
+                /** 익명 구현체의 dryRunScaleDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public KubernetesMutationResult dryRunScaleDeployment(KubernetesConnectionCredential credential, String namespace,
                                                                       String deploymentName, int replicas) {
@@ -751,6 +784,7 @@ class AnalysisApiTest {
                             "replicas=1", "replicas=" + replicas + " dryRun=true", Instant.now());
                 }
 
+                /** 익명 구현체의 scaleDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public KubernetesMutationResult scaleDeployment(KubernetesConnectionCredential credential, String namespace,
                                                                 String deploymentName, int replicas) {
@@ -758,6 +792,7 @@ class AnalysisApiTest {
                             "replicas=1", "replicas=" + replicas, Instant.now());
                 }
 
+                /** 익명 구현체의 listDeploymentRevisions 처리 결과를 조회해 반환한다. */
                 @Override
                 public List<KubernetesDeploymentRevision> listDeploymentRevisions(KubernetesConnectionCredential credential,
                                                                                   String namespace,
@@ -770,6 +805,7 @@ class AnalysisApiTest {
                     );
                 }
 
+                /** 익명 구현체의 previewRollbackDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public KubernetesRollbackPlan previewRollbackDeployment(KubernetesConnectionCredential credential,
                                                                         String namespace, String deploymentName,
@@ -782,6 +818,7 @@ class AnalysisApiTest {
                             Instant.now());
                 }
 
+                /** 익명 구현체의 rollbackDeployment 처리에 필요한 업무 로직을 수행한다. */
                 @Override
                 public KubernetesMutationResult rollbackDeployment(KubernetesConnectionCredential credential, String namespace,
                                                                    String deploymentName, Integer targetRevision) {
@@ -791,6 +828,7 @@ class AnalysisApiTest {
             };
         }
 
+        /** FakeAiAnalysisConfig의 kubernetesStateSyncPort 처리에 필요한 업무 로직을 수행한다. */
         @Bean
         @Primary
         KubernetesStateSyncPort kubernetesStateSyncPort() {

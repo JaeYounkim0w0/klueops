@@ -48,6 +48,11 @@ run_bootstrap() {
 run_bootstrap
 run_bootstrap
 
+# 이전 설치가 PostgreSQL 기본 INHERIT로 만든 최소 권한 role도 안전하게 NOINHERIT로 수렴해야 한다.
+docker exec "${PG_CONTAINER}" psql -v ON_ERROR_STOP=1 -U postgres -c \
+  'ALTER ROLE aiops_clean_app INHERIT' >/dev/null
+run_bootstrap
+
 owner="$(docker exec "${PG_CONTAINER}" psql -U postgres -At -F '|' -c \
   "select d.datname, r.rolname from pg_database d join pg_roles r on r.oid = d.datdba where d.datname = 'aiops_clean'")"
 [[ "${owner}" == "aiops_clean|aiops_clean_app" ]]

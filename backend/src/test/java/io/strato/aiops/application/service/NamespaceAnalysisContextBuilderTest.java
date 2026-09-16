@@ -13,6 +13,7 @@ class NamespaceAnalysisContextBuilderTest {
 
     private final NamespaceAnalysisContextBuilder builder = new NamespaceAnalysisContextBuilder();
 
+    /** NamespaceAnalysisContextBuilderTest의 writesStableScopeHeaderAndDiagnosticCountsBeforeSectionSignals 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void writesStableScopeHeaderAndDiagnosticCountsBeforeSectionSignals() {
         KubernetesNamespaceDiagnostics diagnostics = new KubernetesNamespaceDiagnostics(
@@ -25,10 +26,13 @@ class NamespaceAnalysisContextBuilderTest {
 
         assertThat(context).startsWith("analysisMode=namespace-sectioned\nsection=root-cause\n")
                 .contains("namespace=payments\napplicationName=checkout\n")
+                .contains("Current Ready/resource status is authoritative")
+                .contains("ResolvedTransient are historical context")
                 .contains("diagnosticCounts resources=1 events=0 podLogs=0 collectedAt=2026-09-03T00:00:00Z")
                 .endsWith("problemResourceSignals:\n- Pod/api Pending\n");
     }
 
+    /** NamespaceAnalysisContextBuilderTest의 exposesPartialCollectionWithoutClaimingCompleteCoverage 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void exposesPartialCollectionWithoutClaimingCompleteCoverage() {
         KubernetesNamespaceDiagnostics diagnostics = new KubernetesNamespaceDiagnostics(
@@ -46,6 +50,7 @@ class NamespaceAnalysisContextBuilderTest {
                 .contains("Do not claim complete namespace coverage");
     }
 
+    /** NamespaceAnalysisContextBuilderTest의 truncatesOversizedContextWithAnExplicitOriginalSizeMarker 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void truncatesOversizedContextWithAnExplicitOriginalSizeMarker() {
         KubernetesNamespaceDiagnostics diagnostics = new KubernetesNamespaceDiagnostics(

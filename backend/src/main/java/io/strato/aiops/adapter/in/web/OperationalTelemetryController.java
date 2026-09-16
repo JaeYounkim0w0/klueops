@@ -14,10 +14,12 @@ public class OperationalTelemetryController {
 
     private final OperationalTelemetry telemetry;
 
+    /** OperationalTelemetryController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationalTelemetryController(OperationalTelemetry telemetry) {
         this.telemetry = telemetry;
     }
 
+    /** OperationalTelemetryController의 snapshot 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get current backend instance operational telemetry snapshot")
     @GetMapping
     public OperationalTelemetry.Snapshot snapshot() {

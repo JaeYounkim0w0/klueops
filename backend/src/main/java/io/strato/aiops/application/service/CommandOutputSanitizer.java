@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class CommandOutputSanitizer {
+    /** CommandOutputSanitizer의 sanitize 처리에 필요한 업무 로직을 수행한다. */
     public String sanitize(String value) {
         if (value == null || value.isEmpty()) return "";
         return value

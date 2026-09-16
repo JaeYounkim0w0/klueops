@@ -15,11 +15,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class SessionAbsoluteLifetimeFilterTest {
 
+    /** SessionAbsoluteLifetimeFilterTest의 clearSecurityContext 처리 대상과 관련 상태를 안전하게 정리한다. */
     @AfterEach
     void clearSecurityContext() {
         SecurityContextHolder.clearContext();
     }
 
+    /** SessionAbsoluteLifetimeFilterTest의 invalidatesTheSessionAndAuthenticationAfterTheAbsoluteDeadline 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void invalidatesTheSessionAndAuthenticationAfterTheAbsoluteDeadline() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();

@@ -24,6 +24,7 @@ const eventNames = [
   'heartbeat'
 ];
 
+/** ensureConnected 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function ensureConnected() {
   if (source || typeof EventSource === 'undefined') return;
   source = new EventSource('/api/operations/events');
@@ -39,12 +40,14 @@ function ensureConnected() {
   }
 }
 
+/** subscribeOperationsFeed 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function subscribeOperationsFeed(subscriber: (event: OperationsFeedEvent) => void) {
   subscribers.add(subscriber);
   ensureConnected();
   return () => subscribers.delete(subscriber);
 }
 
+/** useOperationsFeedState 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 export function useOperationsFeedState() {
   ensureConnected();
   return {

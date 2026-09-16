@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 final class AnalysisCollectionDiagnosticsWriter {
 
+    /** AnalysisCollectionDiagnosticsWriter의 write 처리에 필요한 업무 로직을 수행한다. */
     void write(ObjectNode root, KubernetesNamespaceDiagnostics diagnostics) {
         if (diagnostics.collectionStages().isEmpty()) {
             return;
@@ -43,6 +44,7 @@ final class AnalysisCollectionDiagnosticsWriter {
         }
     }
 
+    /** AnalysisCollectionDiagnosticsWriter의 truncate 처리에 필요한 업무 로직을 수행한다. */
     private String truncate(String value, int maxLength) {
         return value.length() <= maxLength ? value : value.substring(0, maxLength) + "...";
     }

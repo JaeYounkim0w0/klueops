@@ -20,15 +20,18 @@ const expandedId = ref<string | null>(null);
 const visibleItems = computed(() => filterCommandCookbook(commandCookbookItems, category.value, query.value,
   (item) => `${t(`console.cookbookItems.${item.id}`)} ${t(`console.cookbookCategoryDescription.${item.category}`)}`));
 
+/** choose 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function choose(item: CommandCookbookItem) {
   if (isUnavailable(item)) return;
   emit('select', item);
 }
 
+/** isUnavailable 처리 조건의 충족 여부를 판단한다. */
 function isUnavailable(item: CommandCookbookItem) {
   return item.requirements?.some((requirement) => props.unavailableRequirements?.includes(requirement)) ?? false;
 }
 
+/** procedureItems 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function procedureItems(commandIds: string[]) {
   return commandIds.map((id) => commandCookbookItems.find((item) => item.id === id)).filter(Boolean) as CommandCookbookItem[];
 }

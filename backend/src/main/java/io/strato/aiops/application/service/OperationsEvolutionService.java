@@ -39,6 +39,7 @@ import java.util.UUID;
 public class OperationsEvolutionService {
     private RuntimeLeasePort runtimeLeasePort = RuntimeLeasePort.localOnly();
 
+    /** OperationsEvolutionService의 setRuntimeLeasePort 처리 대상의 상태를 갱신한다. */
     @org.springframework.beans.factory.annotation.Autowired
     void setRuntimeLeasePort(RuntimeLeasePort runtimeLeasePort) {
         this.runtimeLeasePort = runtimeLeasePort;
@@ -59,6 +60,7 @@ public class OperationsEvolutionService {
     private final OperationsEventStream eventStream;
     private final ObjectMapper objectMapper;
 
+    /** OperationsEvolutionService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public OperationsEvolutionService(
             OperationsEvolutionRepositoryPort repository,
             OperationsRepositoryPort operationsRepository,
@@ -81,14 +83,17 @@ public class OperationsEvolutionService {
         this.objectMapper = objectMapper;
     }
 
+    /** OperationsEvolutionService의 watchContinuities 처리에 필요한 업무 로직을 수행한다. */
     public List<WatchContinuity> watchContinuities() {
         return repository.findWatchContinuities();
     }
 
+    /** OperationsEvolutionService의 noisePolicies 처리에 필요한 업무 로직을 수행한다. */
     public List<SignalNoisePolicy> noisePolicies() {
         return repository.findNoisePolicies();
     }
 
+    /** OperationsEvolutionService의 saveNoisePolicy 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Transactional
     public SignalNoisePolicy saveNoisePolicy(UUID id, String name, UUID clusterId, String namespacePattern,
                                              String severityFloor, int repeatThreshold, Instant maintenanceStart,
@@ -108,6 +113,7 @@ public class OperationsEvolutionService {
         return saved;
     }
 
+    /** OperationsEvolutionService의 deleteNoisePolicy 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Transactional
     public void deleteNoisePolicy(UUID policyId, String actor, String requestId) {
         repository.findNoisePolicy(policyId)
@@ -117,6 +123,7 @@ public class OperationsEvolutionService {
         eventStream.publish("noise-policy", java.util.Map.of("id", policyId, "deleted", true));
     }
 
+    /** OperationsEvolutionService의 startObservation 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public RemediationObservation startObservation(UUID incidentId, UUID analysisId, UUID commandExecutionId,
                                                     int observationSeconds, String actor, String requestId) {
@@ -141,10 +148,12 @@ public class OperationsEvolutionService {
         return saved;
     }
 
+    /** OperationsEvolutionService의 observations 처리에 필요한 업무 로직을 수행한다. */
     public List<RemediationObservation> observations(UUID incidentId, String state, int limit) {
         return repository.findRemediationObservations(incidentId, normalize(state), limit);
     }
 
+    /** OperationsEvolutionService의 evaluateObservation 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public RemediationObservation evaluateObservation(UUID observationId, String actor, String requestId) {
         RemediationObservation current = repository.findRemediationObservation(observationId)
@@ -178,6 +187,7 @@ public class OperationsEvolutionService {
         return saved;
     }
 
+    /** OperationsEvolutionService의 cancelObservation 처리 조건의 충족 여부를 판단한다. */
     @Transactional
     public RemediationObservation cancelObservation(UUID observationId, String actor, String requestId) {
         RemediationObservation current = repository.findRemediationObservation(observationId)
@@ -192,6 +202,7 @@ public class OperationsEvolutionService {
         return saved;
     }
 
+    /** OperationsEvolutionService의 evaluateRunningObservations 처리에 필요한 업무 로직을 수행한다. */
     @Scheduled(fixedDelay = 15000)
     public void evaluateRunningObservations() {
         if (!runtimeLeasePort.acquireOrRenew("scheduler:remediation-observation", Duration.ofSeconds(45))) return;
@@ -204,6 +215,7 @@ public class OperationsEvolutionService {
         });
     }
 
+    /** OperationsEvolutionService의 evaluateReleaseGate 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public AiReleaseGate evaluateReleaseGate(String candidateVersion, String baselineVersion,
                                              double minimumRegressionScore, int minimumGroundTruthSamples,
@@ -235,10 +247,12 @@ public class OperationsEvolutionService {
         return saved;
     }
 
+    /** OperationsEvolutionService의 releaseGates 처리에 필요한 업무 로직을 수행한다. */
     public List<AiReleaseGate> releaseGates(int limit) {
         return repository.findReleaseGates(limit);
     }
 
+    /** OperationsEvolutionService의 generatePostmortem 처리에 필요한 업무 로직을 수행한다. */
     @Transactional
     public IncidentPostmortem generatePostmortem(UUID incidentId, String actor, String requestId) {
         IncidentDetail detail = operationsService.getIncident(incidentId);
@@ -265,21 +279,25 @@ public class OperationsEvolutionService {
         return saved;
     }
 
+    /** OperationsEvolutionService의 postmortem 처리에 필요한 업무 로직을 수행한다. */
     public IncidentPostmortem postmortem(UUID incidentId) {
         return repository.findPostmortem(incidentId)
                 .orElseThrow(() -> new NoSuchElementException("Incident postmortem not found: " + incidentId));
     }
 
+    /** OperationsEvolutionService의 requireIncident 처리 입력과 현재 상태의 유효성을 검증한다. */
     private Incident requireIncident(UUID incidentId) {
         return operationsRepository.findIncidentById(incidentId)
                 .orElseThrow(() -> new NoSuchElementException("Incident not found: " + incidentId));
     }
 
+    /** OperationsEvolutionService의 matchingSnapshot 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesResourceSnapshot matchingSnapshot(Incident incident) {
         return resourceRepository.findLatest(incident.clusterId(), incident.namespace(), incident.resourceKind(), 200)
                 .stream().filter(item -> item.resourceName().equals(incident.resourceName())).findFirst().orElse(null);
     }
 
+    /** OperationsEvolutionService의 unhealthy 처리에 필요한 업무 로직을 수행한다. */
     private boolean unhealthy(String status) {
         if (status == null || status.isBlank()) return true;
         String normalized = status.toUpperCase(Locale.ROOT);
@@ -291,6 +309,7 @@ public class OperationsEvolutionService {
         return false;
     }
 
+    /** OperationsEvolutionService의 recordObservationOutcome 처리에 필요한 업무 로직을 수행한다. */
     private void recordObservationOutcome(Incident incident, RemediationObservation observation, String actor) {
         if (!Set.of("SUCCEEDED", "FAILED", "INCONCLUSIVE").contains(observation.state())) return;
         IncidentState target = incident.state();
@@ -308,6 +327,7 @@ public class OperationsEvolutionService {
                 incident.state(), target, observation.conclusion(), actor, Instant.now()));
     }
 
+    /** OperationsEvolutionService의 snapshotJson 처리에 필요한 업무 로직을 수행한다. */
     private String snapshotJson(Incident incident, KubernetesResourceSnapshot snapshot) {
         try {
             return objectMapper.writeValueAsString(java.util.Map.of(
@@ -322,6 +342,7 @@ public class OperationsEvolutionService {
         }
     }
 
+    /** OperationsEvolutionService의 normalizeSeverity 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeSeverity(String value) {
         String normalized = normalize(value);
         if (!Set.of("LOW", "MEDIUM", "HIGH", "CRITICAL").contains(normalized)) {
@@ -330,23 +351,28 @@ public class OperationsEvolutionService {
         return normalized;
     }
 
+    /** OperationsEvolutionService의 normalize 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim().toUpperCase(Locale.ROOT);
     }
 
+    /** OperationsEvolutionService의 requireText 처리 입력과 현재 상태의 유효성을 검증한다. */
     private String requireText(String value, String name) {
         if (value == null || value.isBlank()) throw new IllegalArgumentException(name + " must not be blank");
         return value.trim();
     }
 
+    /** OperationsEvolutionService의 bounded 처리에 필요한 업무 로직을 수행한다. */
     private double bounded(double value) {
         return Math.max(0, Math.min(100, value));
     }
 
+    /** OperationsEvolutionService의 hasText 처리 조건의 충족 여부를 판단한다. */
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
     }
 
+    /** OperationsEvolutionService의 audit 처리에 필요한 업무 로직을 수행한다. */
     private void audit(String action, String targetType, String targetId, String actor, String requestId) {
         auditRepository.save(AuditLog.create(action, targetType, targetId, actor, requestId));
     }

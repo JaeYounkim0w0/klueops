@@ -19,10 +19,12 @@ public class ClusterReadinessController {
 
     private final ClusterReadinessUseCase useCase;
 
+    /** ClusterReadinessController 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public ClusterReadinessController(ClusterReadinessUseCase useCase) {
         this.useCase = useCase;
     }
 
+    /** ClusterReadinessController의 readiness 처리 결과를 조회해 반환한다. */
     @Operation(summary = "Get combined cluster operational readiness")
     @GetMapping("/readiness")
     public ClusterReadinessReport readiness(@PathVariable UUID clusterId,
@@ -32,6 +34,7 @@ public class ClusterReadinessController {
         return useCase.getReadiness(clusterId, namespace, targetVersion, refresh);
     }
 
+    /** ClusterReadinessController의 capabilities 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get Kubernetes credential capability matrix")
     @GetMapping("/capabilities")
     public ClusterReadinessReport.CapabilityMatrix capabilities(@PathVariable UUID clusterId,
@@ -40,6 +43,7 @@ public class ClusterReadinessController {
         return useCase.getReadiness(clusterId, namespace, null, refresh).capabilities();
     }
 
+    /** ClusterReadinessController의 credentialHealth 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get cluster credential health without exposing secrets")
     @GetMapping("/credential-health")
     public ClusterReadinessReport.CredentialHealth credentialHealth(@PathVariable UUID clusterId,
@@ -47,6 +51,7 @@ public class ClusterReadinessController {
         return useCase.getReadiness(clusterId, null, null, refresh).credential();
     }
 
+    /** ClusterReadinessController의 upgradeReadiness 처리에 필요한 업무 로직을 수행한다. */
     @Operation(summary = "Get Kubernetes upgrade readiness")
     @GetMapping("/upgrade-readiness")
     public ClusterReadinessReport.UpgradeReadiness upgradeReadiness(@PathVariable UUID clusterId,

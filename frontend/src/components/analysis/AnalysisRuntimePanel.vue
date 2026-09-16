@@ -10,10 +10,12 @@ const props = defineProps<{
 }>();
 const { t } = useI18n();
 
+/** text 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function text(value: unknown, fallback = '-') {
   return displayText(value, fallback);
 }
 
+/** number 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function number(value: unknown, fallback = '0') {
   return typeof value === 'number' && Number.isFinite(value) ? String(value) : displayText(value, fallback);
 }
@@ -25,6 +27,7 @@ const collection = computed(() => {
 
 const collectionStages = computed(() => arrayValue(collection.value.stages));
 
+/** collectionStatusClass 처리의 핵심 작업 흐름을 실행한다. */
 function collectionStatusClass(status: unknown) {
   const normalized = text(status, '').toUpperCase();
   if (normalized === 'COMPLETE' || normalized === 'SUCCEEDED') return 'is-success';

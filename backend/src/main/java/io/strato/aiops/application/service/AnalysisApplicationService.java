@@ -121,8 +121,10 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
     private final KubernetesPortTopologyAnalyzer kubernetesPortTopologyAnalyzer;
     private final AnalysisCollectionDiagnosticsWriter collectionDiagnosticsWriter;
     private final AnalysisLocalePolicy localePolicy;
+    private final KubernetesCurrentStateAnalysisGuard currentStateAnalysisGuard;
     private final AnalysisCommandEvidenceMerger commandEvidenceMerger;
 
+    /** AnalysisApplicationService 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
     public AnalysisApplicationService(ClusterRepositoryPort clusterRepositoryPort,
                                       ClusterCredentialRepositoryPort clusterCredentialRepositoryPort,
                                       ManagedApplicationRepositoryPort applicationRepositoryPort,
@@ -149,7 +151,8 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                                       KubernetesPerformanceSignalPolicy kubernetesPerformanceSignalPolicy,
                                       KubernetesPortTopologyAnalyzer kubernetesPortTopologyAnalyzer,
                                       AnalysisCollectionDiagnosticsWriter collectionDiagnosticsWriter,
-                                      AnalysisLocalePolicy localePolicy) {
+                                      AnalysisLocalePolicy localePolicy,
+                                      KubernetesCurrentStateAnalysisGuard currentStateAnalysisGuard) {
         this.clusterRepositoryPort = clusterRepositoryPort;
         this.clusterCredentialRepositoryPort = clusterCredentialRepositoryPort;
         this.applicationRepositoryPort = applicationRepositoryPort;
@@ -177,11 +180,13 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         this.kubernetesPortTopologyAnalyzer = kubernetesPortTopologyAnalyzer;
         this.collectionDiagnosticsWriter = collectionDiagnosticsWriter;
         this.localePolicy = localePolicy;
+        this.currentStateAnalysisGuard = currentStateAnalysisGuard;
         this.commandEvidenceMerger = new AnalysisCommandEvidenceMerger(objectMapper);
         this.analysisCommandExecutor = new AnalysisCommandExecutor(kubernetesMutationPort,
                 kubernetesNamespaceDiagnosticsPort, this::connectionCredential, this::collectNamespaceDiagnostics);
     }
 
+    /** AnalysisApplicationService의 analyzeApplication 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     @Transactional
     public AnalysisSession analyzeApplication(AnalyzeApplicationCommand command, String actor, String requestId) {
@@ -201,6 +206,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return analysisSession;
     }
 
+    /** AnalysisApplicationService의 analyzeNamespace 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     @Transactional
     public AnalysisSession analyzeNamespace(AnalyzeNamespaceCommand command, String actor, String requestId) {
@@ -219,6 +225,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return analysisSession;
     }
 
+    /** AnalysisApplicationService의 analyzeCluster 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     @Transactional
     public AnalysisSession analyzeCluster(AnalyzeClusterCommand command, String actor, String requestId) {
@@ -238,6 +245,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return analysisSession;
     }
 
+    /** AnalysisApplicationService의 startApplicationAnalysis 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public StartAnalysisJobResult startApplicationAnalysis(AnalyzeApplicationCommand command, String actor, String requestId) {
@@ -246,6 +254,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return startAnalysisJob(application.clusterId(), application.id(), application.namespace(), command.locale(), actor, requestId);
     }
 
+    /** AnalysisApplicationService의 startNamespaceAnalysis 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public StartAnalysisJobResult startNamespaceAnalysis(AnalyzeNamespaceCommand command, String actor, String requestId) {
@@ -253,6 +262,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return startAnalysisJob(command.clusterId(), null, command.namespace(), command.locale(), actor, requestId);
     }
 
+    /** AnalysisApplicationService의 startClusterAnalysis 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public StartAnalysisJobResult startClusterAnalysis(AnalyzeClusterCommand command, String actor, String requestId) {
@@ -260,6 +270,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return startAnalysisJob(command.clusterId(), null, null, command.locale(), actor, requestId);
     }
 
+    /** AnalysisApplicationService의 retryAnalysis 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional
     public StartAnalysisJobResult retryAnalysis(UUID analysisId, String actor, String requestId) {
@@ -277,6 +288,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return result;
     }
 
+    /** AnalysisApplicationService의 runAnalysisJob 처리의 핵심 작업 흐름을 실행한다. */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void runAnalysisJob(UUID asyncJobId) {
         AsyncJob asyncJob = asyncJobRepositoryPort.findById(asyncJobId)
@@ -340,12 +352,14 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 isJobCanceled 처리 조건의 충족 여부를 판단한다. */
     private boolean isJobCanceled(UUID asyncJobId) {
         return asyncJobRepositoryPort.findById(asyncJobId)
                 .map(job -> job.status() == AsyncJobStatus.CANCELED)
                 .orElse(false);
     }
 
+    /** AnalysisApplicationService의 startAnalysisJob 처리에 필요한 업무 로직을 수행한다. */
     private StartAnalysisJobResult startAnalysisJob(UUID clusterId, UUID applicationId, String namespace,
                                                      SupportedLocale locale, String actor, String requestId) {
         clusterRepositoryPort.lockById(clusterId);
@@ -378,6 +392,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return new StartAnalysisJobResult(job.id(), analysisSession.id());
     }
 
+    /** AnalysisApplicationService의 resubmitPendingAnalysisJob 처리에 필요한 업무 로직을 수행한다. */
     private void resubmitPendingAnalysisJob(UUID jobId, UUID analysisId, String actor, String requestId) {
         asyncJobRepositoryPort.findById(jobId)
                 .filter(job -> job.status() == AsyncJobStatus.PENDING
@@ -394,12 +409,14 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 });
     }
 
+    /** AnalysisApplicationService의 submitAnalysisAfterCommit 처리에 필요한 업무 로직을 수행한다. */
     private void submitAnalysisAfterCommit(UUID jobId) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             analysisExecutorPort.submitAnalysis(jobId);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /** 익명 구현체의 afterCommit 처리에 필요한 업무 로직을 수행한다. */
             @Override
             public void afterCommit() {
                 analysisExecutorPort.submitAnalysis(jobId);
@@ -407,6 +424,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         });
     }
 
+    /** AnalysisApplicationService의 executePendingAnalysis 처리의 핵심 작업 흐름을 실행한다. */
     private String executePendingAnalysis(AnalysisSession analysisSession) {
         SupportedLocale locale = SupportedLocale.fromAcceptLanguage(analysisSession.locale());
         if (analysisSession.applicationId() != null) {
@@ -421,6 +439,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return analyzeClusterWithFallback(cluster, buildClusterContext(cluster), locale);
     }
 
+    /** AnalysisApplicationService의 getAnalysisByJobId 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public AnalysisSession getAnalysisByJobId(UUID jobId) {
@@ -428,6 +447,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .orElseThrow(() -> new NoSuchElementException("Analysis not found for job: " + jobId));
     }
 
+    /** AnalysisApplicationService의 getAnalysis 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public AnalysisSession getAnalysis(UUID analysisId) {
@@ -435,6 +455,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .orElseThrow(() -> new NoSuchElementException("Analysis not found: " + analysisId));
     }
 
+    /** AnalysisApplicationService의 listHistory 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public List<AnalysisSession> listHistory(UUID clusterId, UUID applicationId, String namespace) {
@@ -444,6 +465,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return analysisSessionRepositoryPort.findRecent(clusterId, applicationId, normalizedNamespace(namespace), ANALYSIS_HISTORY_LIMIT);
     }
 
+    /** AnalysisApplicationService의 deleteAnalysis 처리 대상과 관련 상태를 안전하게 정리한다. */
     @Override
     @Transactional
     public void deleteAnalysis(UUID analysisId, String actor, String requestId) {
@@ -461,14 +483,17 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         ));
     }
 
+    /** AnalysisApplicationService의 getNamespaceDiagnostics 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public NamespaceDiagnosticsResult getNamespaceDiagnostics(UUID clusterId, String namespace) {
         requireCluster(clusterId);
-        KubernetesNamespaceDiagnostics diagnostics = collectNamespaceDiagnostics(clusterId, namespace);
+        KubernetesNamespaceDiagnostics diagnostics = currentStateAnalysisGuard.reconcile(
+                collectNamespaceDiagnostics(clusterId, namespace));
         return diagnosticsResult(clusterId, namespace, diagnostics);
     }
 
+    /** AnalysisApplicationService의 getPodLogs 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public PodLogsResult getPodLogs(UUID clusterId, String namespace, String podName, String containerName, int tailLines) {
@@ -479,6 +504,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return podLogsResult(clusterId, logs);
     }
 
+    /** AnalysisApplicationService의 getResourceLogs 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public PodLogsResult getResourceLogs(UUID clusterId, String namespace, String resourceType, String resourceName, String containerName, int tailLines) {
@@ -489,6 +515,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return podLogsResult(clusterId, logs);
     }
 
+    /** AnalysisApplicationService의 previewCommand 처리에 필요한 업무 로직을 수행한다. */
     @Override
     @Transactional(readOnly = true)
     public AnalysisCommandPreviewResult previewCommand(UUID analysisId, AnalysisCommandExecuteCommand command) {
@@ -500,6 +527,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 guard.dryRunPassed(), guard.rollbackGuardPassed(), guard.guardMessage(), guard.dryRunSummary());
     }
 
+    /** AnalysisApplicationService의 executeCommand 처리의 핵심 작업 흐름을 실행한다. */
     @Override
     public AnalysisCommandExecution executeCommand(UUID analysisId, AnalysisCommandExecuteCommand command, String actor,
                                                    String requestId) {
@@ -541,6 +569,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 listCommandExecutions 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public List<AnalysisCommandExecution> listCommandExecutions(UUID analysisId) {
@@ -552,6 +581,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 updateWorkflowState 처리 대상의 상태를 갱신한다. */
     @Override
     @Transactional
     public AnalysisWorkflowState updateWorkflowState(UUID analysisId, String issueGroupId,
@@ -570,6 +600,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return saved;
     }
 
+    /** AnalysisApplicationService의 listWorkflowStates 처리 결과를 조회해 반환한다. */
     @Override
     @Transactional(readOnly = true)
     public List<AnalysisWorkflowState> listWorkflowStates(UUID analysisId) {
@@ -577,6 +608,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return analysisWorkflowStateRepositoryPort.findByAnalysisId(analysisId);
     }
 
+    /** AnalysisApplicationService의 podLogsResult 처리에 필요한 업무 로직을 수행한다. */
     private PodLogsResult podLogsResult(UUID clusterId, KubernetesPodLogs logs) {
         return new PodLogsResult(
                 clusterId,
@@ -594,12 +626,14 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         );
     }
 
+    /** AnalysisApplicationService의 buildContext 처리에 필요한 결과를 조합해 반환한다. */
     private String buildContext(UUID clusterId, String namespace, String applicationName) {
         List<KubernetesResourceSnapshot> resources = resourceSnapshotRepositoryPort.findLatest(
                 clusterId, namespace, null, ANALYSIS_CONTEXT_RESOURCE_LIMIT);
         List<KubernetesEventSnapshot> events = eventSnapshotRepositoryPort.findLatest(
                 clusterId, namespace, ANALYSIS_CONTEXT_EVENT_LIMIT);
-        KubernetesNamespaceDiagnostics diagnostics = collectNamespaceDiagnostics(clusterId, namespace);
+        KubernetesNamespaceDiagnostics diagnostics = currentStateAnalysisGuard.reconcile(
+                collectNamespaceDiagnostics(clusterId, namespace));
 
         StringBuilder context = new StringBuilder(32768);
         context.append("clusterId=").append(clusterId).append('\n');
@@ -746,6 +780,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return limitContext(context.toString());
     }
 
+    /** AnalysisApplicationService의 buildClusterContext 처리에 필요한 결과를 조합해 반환한다. */
     private ClusterAnalysisContext buildClusterContext(Cluster cluster) {
         KubernetesStateInventory inventory = kubernetesStateSyncPort.collectClusterInventory(connectionCredential(cluster.id()));
         List<KubernetesResourceSnapshot.CollectedResource> resources = inventory.resources();
@@ -851,10 +886,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         );
     }
 
+    /** AnalysisApplicationService의 limitContext 처리에 필요한 업무 로직을 수행한다. */
     private String limitContext(String context) {
         return limitContext(context, maxAnalysisContextChars);
     }
 
+    /** AnalysisApplicationService의 limitContext 처리에 필요한 업무 로직을 수행한다. */
     private String limitContext(String context, int maxChars) {
         if (context.length() <= maxChars) {
             return context;
@@ -864,10 +901,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 + ", maxChars=" + maxChars + "]\n";
     }
 
+    /** AnalysisApplicationService의 analyzeNamespaceWithFallback 처리의 핵심 작업 흐름을 실행한다. */
     private String analyzeNamespaceWithFallback(UUID clusterId, String namespace, String applicationName,
                                                 SupportedLocale locale) {
         long startedNanos = System.nanoTime();
-        KubernetesNamespaceDiagnostics diagnostics = collectNamespaceDiagnostics(clusterId, namespace);
+        KubernetesNamespaceDiagnostics diagnostics = currentStateAnalysisGuard.reconcile(
+                collectNamespaceDiagnostics(clusterId, namespace));
         try {
             return analyzeNamespaceBySections(clusterId, namespace, applicationName, diagnostics, locale);
         } catch (RuntimeException exception) {
@@ -879,6 +918,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 analyzeNamespaceBySections 처리의 핵심 작업 흐름을 실행한다. */
     private String analyzeNamespaceBySections(UUID clusterId, String namespace, String applicationName,
                                               KubernetesNamespaceDiagnostics diagnostics, SupportedLocale locale) {
         long totalStartedNanos = System.nanoTime();
@@ -891,7 +931,8 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .orElse(objectMapper.createObjectNode())
                 : objectMapper.createObjectNode();
 
-        CompletableFuture<AnalysisSectionExecutor.Result> rca = sectionExecutor.executeOrReuse(
+        UUID tenantId = clusterRepositoryPort.findById(clusterId).orElseThrow().tenantId();
+        CompletableFuture<AnalysisSectionExecutor.Result> rca = sectionExecutor.executeOrReuse(tenantId,
                 "root-cause",
                 """
                         Return JSON with fields: summary, severity, riskScore, findings, rootCauses.
@@ -903,7 +944,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 reusableResult,
                 locale
         );
-        CompletableFuture<AnalysisSectionExecutor.Result> logs = sectionExecutor.executeOrReuse(
+        CompletableFuture<AnalysisSectionExecutor.Result> logs = sectionExecutor.executeOrReuse(tenantId,
                 "log-analysis",
                 """
                         Return JSON with field: logAnalysis.
@@ -915,7 +956,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 reusableResult,
                 locale
         );
-        CompletableFuture<AnalysisSectionExecutor.Result> runbookOps = sectionExecutor.executeOrReuse(
+        CompletableFuture<AnalysisSectionExecutor.Result> runbookOps = sectionExecutor.executeOrReuse(tenantId,
                 "runbook-operations",
                 """
                         Return JSON with fields: runbookActions, recommendations, operationsGuide, nextActions, verificationCommands.
@@ -985,6 +1026,8 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         enrichRunbookActions(root);
         root.set("commandSafety", commandSafety(root));
         root.set("analysisQuality", analysisQuality(root, diagnostics, issueGroups, actionRecommendations));
+        currentStateAnalysisGuard.enforce(root, diagnostics, locale, forecast.overallRisk(),
+                severityFromRiskScore(forecast.overallRisk()));
         try {
             return objectMapper.writeValueAsString(root);
         } catch (Exception exception) {
@@ -992,6 +1035,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 problemCards 처리에 필요한 업무 로직을 수행한다. */
     private ArrayNode problemCards(KubernetesNamespaceDiagnostics diagnostics) {
         ArrayNode cards = objectMapper.createArrayNode();
         diagnostics.resources().stream()
@@ -1015,6 +1059,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return cards;
     }
 
+    /** AnalysisApplicationService의 issueGroups 처리 조건의 충족 여부를 판단한다. */
     private ArrayNode issueGroups(KubernetesNamespaceDiagnostics diagnostics) {
         Map<String, IssueGroupAccumulator> groups = new LinkedHashMap<>();
         portMismatchSignals(diagnostics).forEach(signal -> {
@@ -1094,6 +1139,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return result;
     }
 
+    /** AnalysisApplicationService의 issueGroupFromPortMismatch 처리 조건의 충족 여부를 판단한다. */
     private IssueGroupAccumulator issueGroupFromPortMismatch(String key, PortMismatchSignal signal) {
         IssueGroupAccumulator group = new IssueGroupAccumulator(key);
         boolean startupSignal = isPortStartupSignal(signal);
@@ -1123,10 +1169,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return group;
     }
 
+    /** AnalysisApplicationService의 isPortStartupSignal 처리 조건의 충족 여부를 판단한다. */
     private boolean isPortStartupSignal(PortMismatchSignal signal) {
         return valueOrBlank(signal.serviceName()).isBlank() || "-".equals(signal.serviceName());
     }
 
+    /** AnalysisApplicationService의 representativePodName 처리에 필요한 업무 로직을 수행한다. */
     private String representativePodName(PortMismatchSignal signal) {
         return signal.matchedResources().stream()
                 .filter(resource -> resource.startsWith("Pod/"))
@@ -1135,6 +1183,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .orElse("-");
     }
 
+    /** AnalysisApplicationService의 portMismatchSignals 처리에 필요한 업무 로직을 수행한다. */
     private List<PortMismatchSignal> portMismatchSignals(KubernetesNamespaceDiagnostics diagnostics) {
         boolean hasPortStartupLog = diagnostics.podLogs().stream().anyMatch(this::isPortStartupLog);
         List<PortMismatchSignal> signals = new ArrayList<>(
@@ -1155,11 +1204,13 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return signals.stream().limit(12).toList();
     }
 
+    /** AnalysisApplicationService의 isPortStartupLog 처리 조건의 충족 여부를 판단한다. */
     private boolean isPortStartupLog(KubernetesNamespaceDiagnostics.DiagnosticPodLog log) {
         String category = logInsight(log).category();
         return "port-startup".equals(category) || "port-conflict".equals(category);
     }
 
+    /** AnalysisApplicationService의 logIntelligence 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode logIntelligence(KubernetesNamespaceDiagnostics diagnostics) {
         List<LogInsight> insights = logInsights(diagnostics);
         ObjectNode intelligence = objectMapper.createObjectNode();
@@ -1193,6 +1244,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return intelligence;
     }
 
+    /** AnalysisApplicationService의 appendLogIntelligenceAnalysis 처리에 필요한 업무 로직을 수행한다. */
     private void appendLogIntelligenceAnalysis(ObjectNode root, KubernetesNamespaceDiagnostics diagnostics) {
         ArrayNode logAnalysis = arrayField(root, "logAnalysis");
         List<String> existingKeys = new ArrayList<>();
@@ -1223,6 +1275,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 logSignalLabel 처리에 필요한 업무 로직을 수행한다. */
     private String logSignalLabel(LogInsight insight) {
         if ("HIGH".equals(insight.severity())) {
             return "ERROR";
@@ -1233,6 +1286,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "WARN";
     }
 
+    /** AnalysisApplicationService의 logInsights 처리에 필요한 업무 로직을 수행한다. */
     private List<LogInsight> logInsights(KubernetesNamespaceDiagnostics diagnostics) {
         return diagnostics.podLogs().stream()
                 .map(this::logInsight)
@@ -1243,6 +1297,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .toList();
     }
 
+    /** AnalysisApplicationService의 logInsight 처리에 필요한 업무 로직을 수행한다. */
     private LogInsight logInsight(KubernetesNamespaceDiagnostics.DiagnosticPodLog log) {
         List<LogInsight> candidates = valueOrBlank(log.log()).lines()
                 .map(String::trim)
@@ -1257,6 +1312,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return LogInsight.none(log);
     }
 
+    /** AnalysisApplicationService의 classifyLogLine 처리에 필요한 업무 로직을 수행한다. */
     private LogInsight classifyLogLine(KubernetesNamespaceDiagnostics.DiagnosticPodLog log, String line) {
         String lower = line.toLowerCase(Locale.ROOT);
         boolean previous = valueOrBlank(log.log()).toLowerCase(Locale.ROOT).contains("previous terminated container log");
@@ -1375,6 +1431,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return LogInsight.none(log);
     }
 
+    /** AnalysisApplicationService의 logInsight 처리에 필요한 업무 로직을 수행한다. */
     private LogInsight logInsight(KubernetesNamespaceDiagnostics.DiagnosticPodLog log, String category, String severity,
                                   int priority, String title, String signal, String operatorMeaning,
                                   String beginnerExplanation, String recommendedNextAction,
@@ -1385,6 +1442,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 matchedPatterns);
     }
 
+    /** AnalysisApplicationService의 logVerificationCommand 처리에 필요한 업무 로직을 수행한다. */
     private String logVerificationCommand(KubernetesNamespaceDiagnostics.DiagnosticPodLog log, boolean previous) {
         return "kubectl logs pod/" + valueOrBlank(log.podName())
                 + " -n " + valueOrBlank(log.namespace())
@@ -1393,6 +1451,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 + " --tail=500";
     }
 
+    /** AnalysisApplicationService의 logQualityGate 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode logQualityGate(LogInsight insight) {
         ObjectNode gate = objectMapper.createObjectNode();
         int score = switch (insight.category()) {
@@ -1421,6 +1480,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return gate;
     }
 
+    /** AnalysisApplicationService의 logActionCandidates 처리에 필요한 업무 로직을 수행한다. */
     private ArrayNode logActionCandidates(LogInsight insight) {
         ArrayNode candidates = objectMapper.createArrayNode();
         String pod = insight.podName().isBlank() ? "-" : insight.podName();
@@ -1508,6 +1568,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return candidates;
     }
 
+    /** AnalysisApplicationService의 addActionCandidate 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addActionCandidate(ArrayNode candidates, String priority, String actionType, String safetyLevel,
                                     String title, String rationale, String recommendedChange,
                                     List<String> preflightCommands, List<String> validationCommands,
@@ -1527,6 +1588,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         manifestHints.forEach(hints::add);
     }
 
+    /** AnalysisApplicationService의 actionRecommendations 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode actionRecommendations(KubernetesNamespaceDiagnostics diagnostics, ArrayNode issueGroups) {
         ObjectNode recommendations = objectMapper.createObjectNode();
         List<LogInsight> insights = logInsights(diagnostics);
@@ -1584,6 +1646,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return recommendations;
     }
 
+    /** AnalysisApplicationService의 appendActionRecommendationNextActions 처리에 필요한 업무 로직을 수행한다. */
     private void appendActionRecommendationNextActions(ObjectNode root, ObjectNode actionRecommendations) {
         ArrayNode nextActions = arrayField(root, "nextActions");
         int added = 0;
@@ -1601,6 +1664,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 analysisQuality 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode analysisQuality(ObjectNode root, KubernetesNamespaceDiagnostics diagnostics,
                                        ArrayNode issueGroups, ObjectNode actionRecommendations) {
         long problemResourceCount = diagnostics.resources().stream().filter(this::isProblemResource).count();
@@ -1650,6 +1714,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return quality;
     }
 
+    /** AnalysisApplicationService의 addQualityDimension 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addQualityDimension(ArrayNode dimensions, String name, int score, String explanation) {
         ObjectNode item = dimensions.addObject();
         item.put("name", name);
@@ -1658,6 +1723,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         item.put("explanation", explanation);
     }
 
+    /** AnalysisApplicationService의 remediationPlan 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode remediationPlan(KubernetesNamespaceDiagnostics diagnostics, ArrayNode issueGroups) {
         ObjectNode plan = objectMapper.createObjectNode();
         plan.put("summary", issueGroups.isEmpty()
@@ -1748,6 +1814,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return plan;
     }
 
+    /** AnalysisApplicationService의 addProblemResourceCard 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addProblemResourceCard(ArrayNode cards, KubernetesNamespaceDiagnostics diagnostics,
                                         KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         List<KubernetesNamespaceDiagnostics.DiagnosticEvent> matchingEvents = diagnostics.events().stream()
@@ -1776,6 +1843,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         putRelatedReferences(card, resource, matchingEvents);
     }
 
+    /** AnalysisApplicationService의 addWarningEventCard 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addWarningEventCard(ArrayNode cards, KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         ObjectNode card = cards.addObject();
         card.put("title", valueOrBlank(event.reason()) + " 반복 이벤트");
@@ -1799,6 +1867,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         putRelatedReferences(card, null, List.of(event));
     }
 
+    /** AnalysisApplicationService의 addLogSignalCard 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addLogSignalCard(ArrayNode cards, KubernetesNamespaceDiagnostics.DiagnosticPodLog log) {
         LogInsight insight = logInsight(log);
         ObjectNode card = cards.addObject();
@@ -1821,6 +1890,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         putBeforeAfterCommands(card, valueOrBlank(log.namespace()), "Pod", log.podName(), List.of());
     }
 
+    /** AnalysisApplicationService의 putConfidence 처리에 필요한 업무 로직을 수행한다. */
     private void putConfidence(ObjectNode card, KubernetesNamespaceDiagnostics.DiagnosticResource resource,
                                List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events,
                                List<KubernetesNamespaceDiagnostics.DiagnosticPodLog> logs) {
@@ -1845,6 +1915,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         card.put("confidenceReason", reason);
     }
 
+    /** AnalysisApplicationService의 putFixReadiness 처리에 필요한 업무 로직을 수행한다. */
     private void putFixReadiness(ObjectNode card, KubernetesNamespaceDiagnostics.DiagnosticResource resource,
                                  List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events) {
         String readiness = events.stream().anyMatch(this::isClearlyFixableEvent) ? "READY_TO_FIX"
@@ -1859,6 +1930,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         });
     }
 
+    /** AnalysisApplicationService의 putEvidenceTrace 처리에 필요한 업무 로직을 수행한다. */
     private void putEvidenceTrace(ObjectNode card, KubernetesNamespaceDiagnostics.DiagnosticResource resource,
                                   List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events,
                                   List<KubernetesNamespaceDiagnostics.DiagnosticPodLog> logs) {
@@ -1871,11 +1943,13 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 firstLogSignal(log.log())));
     }
 
+    /** AnalysisApplicationService의 putBeforeAfterCommands 처리에 필요한 업무 로직을 수행한다. */
     private void putBeforeAfterCommands(ObjectNode card, KubernetesNamespaceDiagnostics.DiagnosticResource resource,
                                         List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events) {
         putBeforeAfterCommands(card, valueOrBlank(resource.namespace()), resource.resourceType(), resource.resourceName(), events);
     }
 
+    /** AnalysisApplicationService의 putBeforeAfterCommands 처리에 필요한 업무 로직을 수행한다. */
     private void putBeforeAfterCommands(ObjectNode card, String namespace, String resourceKind, String resourceName,
                                         List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events) {
         String ns = namespace.isBlank() ? "${namespace}" : namespace;
@@ -1906,6 +1980,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 putRelatedReferences 처리에 필요한 업무 로직을 수행한다. */
     private void putRelatedReferences(ObjectNode card, KubernetesNamespaceDiagnostics.DiagnosticResource resource,
                                       List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events) {
         ArrayNode references = card.putArray("relatedReferences");
@@ -1926,6 +2001,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         events.forEach(event -> addReferencesFromEventMessage(references, event));
     }
 
+    /** AnalysisApplicationService의 enrichRootCauseEvidence 처리에 필요한 업무 로직을 수행한다. */
     private void enrichRootCauseEvidence(ObjectNode root, KubernetesNamespaceDiagnostics diagnostics) {
         JsonNode rootCauses = root.get("rootCauses");
         if (rootCauses == null || !rootCauses.isArray()) {
@@ -1957,6 +2033,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 issueGroupFromEvent 처리 조건의 충족 여부를 판단한다. */
     private IssueGroupAccumulator issueGroupFromEvent(String key, KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         IssueGroupAccumulator group = new IssueGroupAccumulator(key);
         group.category = issueCategoryFromEvent(event);
@@ -1971,6 +2048,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return group;
     }
 
+    /** AnalysisApplicationService의 issueGroupFromResource 처리 조건의 충족 여부를 판단한다. */
     private IssueGroupAccumulator issueGroupFromResource(String key, KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         IssueGroupAccumulator group = new IssueGroupAccumulator(key);
         group.category = categoryForResource(resource.resourceType());
@@ -1985,6 +2063,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return group;
     }
 
+    /** AnalysisApplicationService의 issueGroupFromLog 처리 조건의 충족 여부를 판단한다. */
     private IssueGroupAccumulator issueGroupFromLog(String key, KubernetesNamespaceDiagnostics.DiagnosticPodLog log) {
         LogInsight insight = logInsight(log);
         IssueGroupAccumulator group = new IssueGroupAccumulator(key);
@@ -2002,6 +2081,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return group;
     }
 
+    /** AnalysisApplicationService의 issueGroupJson 처리 조건의 충족 여부를 판단한다. */
     private ObjectNode issueGroupJson(IssueGroupAccumulator group, int index) {
         ObjectNode node = objectMapper.createObjectNode();
         node.put("issueGroupId", "IG-" + index);
@@ -2033,6 +2113,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return node;
     }
 
+    /** AnalysisApplicationService의 issueGroupKey 처리 조건의 충족 여부를 판단한다. */
     private String issueGroupKey(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         String reference = firstReferenceSignature(event.message());
@@ -2043,6 +2124,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 + "/" + valueOrBlank(event.involvedName()).toLowerCase();
     }
 
+    /** AnalysisApplicationService의 firstReferenceSignature 처리에 필요한 업무 로직을 수행한다. */
     private String firstReferenceSignature(String message) {
         String configMap = extractReferenceName(message, "configmap \"?([A-Za-z0-9_.-]+)\"?");
         if (!configMap.isBlank()) {
@@ -2059,12 +2141,14 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "";
     }
 
+    /** AnalysisApplicationService의 extractReferenceName 처리에 필요한 업무 로직을 수행한다. */
     private String extractReferenceName(String message, String regex) {
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(regex, java.util.regex.Pattern.CASE_INSENSITIVE)
                 .matcher(valueOrBlank(message));
         return matcher.find() ? matcher.group(1) : "";
     }
 
+    /** AnalysisApplicationService의 statusCategory 처리에 필요한 업무 로직을 수행한다. */
     private String statusCategory(String status) {
         String value = valueOrBlank(status).toLowerCase();
         if (value.contains("pending")) {
@@ -2082,6 +2166,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return value.isBlank() ? "unknown" : "unhealthy";
     }
 
+    /** AnalysisApplicationService의 issueCategoryFromEvent 처리 조건의 충족 여부를 판단한다. */
     private String issueCategoryFromEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         String message = valueOrBlank(event.message()).toLowerCase();
@@ -2101,6 +2186,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return eventCategory(event);
     }
 
+    /** AnalysisApplicationService의 categoryForResource 처리에 필요한 업무 로직을 수행한다. */
     private String categoryForResource(String resourceType) {
         return switch (valueOrBlank(resourceType)) {
             case "Pod", "Deployment", "ReplicaSet", "StatefulSet", "DaemonSet" -> "workload-health";
@@ -2111,6 +2197,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         };
     }
 
+    /** AnalysisApplicationService의 addPlanCommand 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addPlanCommand(ArrayNode commands, String label, String command, String why, boolean destructive) {
         ObjectNode item = commands.addObject();
         item.put("label", valueOrBlank(label));
@@ -2120,6 +2207,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         item.put("commandType", destructive ? "destructive" : "verification");
     }
 
+    /** AnalysisApplicationService의 highestSeverity 처리에 필요한 업무 로직을 수행한다. */
     private String highestSeverity(ArrayNode groups) {
         boolean hasCritical = false;
         boolean hasHigh = false;
@@ -2142,10 +2230,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "LOW";
     }
 
+    /** AnalysisApplicationService의 arraySize 처리에 필요한 업무 로직을 수행한다. */
     private int arraySize(JsonNode node) {
         return node != null && node.isArray() ? node.size() : 0;
     }
 
+    /** AnalysisApplicationService의 confidenceValidation 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode confidenceValidation(KubernetesNamespaceDiagnostics diagnostics, ArrayNode problemCards, ArrayNode issueGroups) {
         long problemResourceCount = diagnostics.resources().stream().filter(this::isProblemResource).count();
         long warningEventCount = diagnostics.events().stream().filter(this::isWarningEvent).count();
@@ -2198,6 +2288,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return validation;
     }
 
+    /** AnalysisApplicationService의 addConfidenceCheck 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addConfidenceCheck(ArrayNode checks, String name, String status, String explanation, String beginnerExplanation) {
         ObjectNode check = checks.addObject();
         check.put("name", name);
@@ -2206,6 +2297,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         check.put("beginnerExplanation", beginnerExplanation);
     }
 
+    /** AnalysisApplicationService의 evidenceLedger 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode evidenceLedger(KubernetesNamespaceDiagnostics diagnostics, ArrayNode issueGroups, ArrayNode problemCards) {
         ObjectNode ledger = objectMapper.createObjectNode();
         ledger.put("summary", "분석 판단에 사용된 사실과 추론을 분리해 표시합니다.");
@@ -2260,6 +2352,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return ledger;
     }
 
+    /** AnalysisApplicationService의 addEvidenceLedgerItem 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addEvidenceLedgerItem(ArrayNode items, int index, String type, String confidence, String source,
                                        String message, String beginnerExplanation, String verificationCommand) {
         ObjectNode item = items.addObject();
@@ -2272,6 +2365,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         item.put("verificationCommand", valueOrBlank(verificationCommand));
     }
 
+    /** AnalysisApplicationService의 confidenceForGroup 처리에 필요한 업무 로직을 수행한다. */
     private String confidenceForGroup(JsonNode group) {
         int score = group.path("score").asInt(0);
         int events = group.path("eventOccurrenceCount").asInt(0);
@@ -2285,6 +2379,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "LOW";
     }
 
+    /** AnalysisApplicationService의 eventNoiseReduction 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode eventNoiseReduction(KubernetesNamespaceDiagnostics diagnostics) {
         ObjectNode result = objectMapper.createObjectNode();
         List<KubernetesNamespaceDiagnostics.DiagnosticEvent> warnings = diagnostics.events().stream()
@@ -2324,6 +2419,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return result;
     }
 
+    /** AnalysisApplicationService의 eventMeaning 처리에 필요한 업무 로직을 수행한다. */
     private String eventMeaning(String reason, String message) {
         String value = (valueOrBlank(reason) + " " + valueOrBlank(message)).toLowerCase();
         if (value.contains("failedmount") || value.contains("configmap") || value.contains("secret") || value.contains("volume")) {
@@ -2341,6 +2437,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "반복 이벤트입니다. 같은 시간대 리소스 상태와 로그를 함께 확인하세요.";
     }
 
+    /** AnalysisApplicationService의 correlationMap 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode correlationMap(KubernetesNamespaceDiagnostics diagnostics, ArrayNode issueGroups) {
         ObjectNode map = objectMapper.createObjectNode();
         map.put("summary", "문제 리소스, 이벤트, 로그, 참조 리소스의 연결 관계를 구성했습니다.");
@@ -2389,6 +2486,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return map;
     }
 
+    /** AnalysisApplicationService의 namespaceFromDiagnostics 처리에 필요한 업무 로직을 수행한다. */
     private String namespaceFromDiagnostics(KubernetesNamespaceDiagnostics diagnostics) {
         return diagnostics.resources().stream()
                 .map(KubernetesNamespaceDiagnostics.DiagnosticResource::namespace)
@@ -2401,6 +2499,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                         .orElse("${namespace}"));
     }
 
+    /** AnalysisApplicationService의 addReferencesToCorrelation 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addReferencesToCorrelation(ArrayNode nodes, ArrayNode edges, Map<String, Boolean> seenNodes,
                                             Map<String, Boolean> seenEdges, String targetId,
                                             KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
@@ -2413,6 +2512,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 extractReferenceName(message, "(?:persistentvolumeclaim|pvc) \"?([A-Za-z0-9_.-]+)\"?"), event.reason());
     }
 
+    /** AnalysisApplicationService의 addReferenceToCorrelation 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addReferenceToCorrelation(ArrayNode nodes, ArrayNode edges, Map<String, Boolean> seenNodes,
                                            Map<String, Boolean> seenEdges, String fromId,
                                            String kind, String name, String reason) {
@@ -2424,6 +2524,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         addCorrelationEdge(edges, seenEdges, fromId, id, "REFERENCES", valueOrBlank(reason));
     }
 
+    /** AnalysisApplicationService의 addCorrelationNode 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addCorrelationNode(ArrayNode nodes, Map<String, Boolean> seen, String id, String type, String label,
                                     String detail, String severity) {
         String normalizedId = valueOrBlank(id);
@@ -2439,6 +2540,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         node.put("severity", valueOrBlank(severity));
     }
 
+    /** AnalysisApplicationService의 addCorrelationEdge 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addCorrelationEdge(ArrayNode edges, Map<String, Boolean> seen, String from, String to, String relation, String evidence) {
         String normalizedFrom = valueOrBlank(from);
         String normalizedTo = valueOrBlank(to);
@@ -2454,10 +2556,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         edge.put("evidence", truncate(evidence, 180));
     }
 
+    /** AnalysisApplicationService의 nodeId 처리에 필요한 업무 로직을 수행한다. */
     private String nodeId(String kind, String name) {
         return valueOrBlank(kind) + ":" + valueOrBlank(name);
     }
 
+    /** AnalysisApplicationService의 commandSafety 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode commandSafety(JsonNode root) {
         ObjectNode safety = objectMapper.createObjectNode();
         ArrayNode commands = safety.putArray("commands");
@@ -2485,6 +2589,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return safety;
     }
 
+    /** AnalysisApplicationService의 collectSafetyCommands 처리의 핵심 작업 흐름을 실행한다. */
     private void collectSafetyCommands(ArrayNode target, JsonNode source, String sourceName) {
         if (source == null || source.isMissingNode() || source.isNull()) {
             return;
@@ -2502,6 +2607,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 addSafetyCommand 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addSafetyCommand(ArrayNode commands, String sourceName, JsonNode item) {
         String command = item.isTextual() ? item.asText() : item.path("command").asText("");
         if (valueOrBlank(command).isBlank()) {
@@ -2518,6 +2624,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         node.put("beginnerExplanation", COMMAND_POLICY.beginnerExplanation(level));
     }
 
+    /** AnalysisApplicationService의 issueGroupDeepDives 처리 조건의 충족 여부를 판단한다. */
     private ArrayNode issueGroupDeepDives(KubernetesNamespaceDiagnostics diagnostics, ArrayNode issueGroups) {
         ArrayNode deepDives = objectMapper.createArrayNode();
         for (JsonNode group : issueGroups) {
@@ -2551,6 +2658,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return deepDives;
     }
 
+    /** AnalysisApplicationService의 deepDiveSummary 처리에 필요한 업무 로직을 수행한다. */
     private String deepDiveSummary(String category, String rootCause) {
         String normalized = valueOrBlank(category);
         if ("storage-config".equals(normalized)) {
@@ -2574,6 +2682,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return truncate(rootCause, 260);
     }
 
+    /** AnalysisApplicationService의 beginnerDeepDiveSummary 처리에 필요한 업무 로직을 수행한다. */
     private String beginnerDeepDiveSummary(String category) {
         return switch (valueOrBlank(category)) {
             case "storage-config" -> "Pod가 필요한 설정 파일이나 볼륨을 찾지 못하면 시작하지 못합니다. 이름과 namespace가 맞는지 먼저 확인하세요.";
@@ -2586,6 +2695,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         };
     }
 
+    /** AnalysisApplicationService의 addBaseDeepDiveChecks 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addBaseDeepDiveChecks(ArrayNode checks, String namespace, String resourceKind, String resourceName) {
         addDeepDiveCheck(checks, "상태 상세 확인", "VERIFY", "현재 condition, event, spec 참조를 확인합니다.",
                 describeCommand(resourceKind, resourceName).replace("${namespace}", namespace),
@@ -2597,6 +2707,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 addCategoryDeepDiveChecks 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addCategoryDeepDiveChecks(ArrayNode checks, String namespace, String category, String rootCause,
                                            String resourceKind, String resourceName) {
         String lowerCause = valueOrBlank(rootCause).toLowerCase();
@@ -2642,6 +2753,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 addDeepDiveCheck 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addDeepDiveCheck(ArrayNode checks, String title, String checkType, String objective, String command, String successCriteria) {
         ObjectNode check = checks.addObject();
         check.put("title", valueOrBlank(title));
@@ -2652,6 +2764,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         check.put("safetyLevel", COMMAND_POLICY.safetyLevel(command));
     }
 
+    /** AnalysisApplicationService의 actionWorkflow 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode actionWorkflow(ArrayNode issueGroups) {
         ObjectNode workflow = objectMapper.createObjectNode();
         workflow.put("summary", issueGroups.isEmpty()
@@ -2677,6 +2790,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return workflow;
     }
 
+    /** AnalysisApplicationService의 addWorkflowStatus 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addWorkflowStatus(ArrayNode statuses, String value, String label, String description) {
         ObjectNode status = statuses.addObject();
         status.put("value", value);
@@ -2684,6 +2798,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         status.put("description", description);
     }
 
+    /** AnalysisApplicationService의 conclusionValidation 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode conclusionValidation(ObjectNode root, ArrayNode issueGroups) {
         ObjectNode validation = objectMapper.createObjectNode();
         validation.put("summary", "Root Cause와 Issue Group이 실제 evidence로 검증 가능한지 분류했습니다.");
@@ -2734,6 +2849,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return validation;
     }
 
+    /** AnalysisApplicationService의 reanalysisPlan 처리에 필요한 업무 로직을 수행한다. */
     private ObjectNode reanalysisPlan(KubernetesNamespaceDiagnostics diagnostics, ArrayNode issueGroups) {
         ObjectNode plan = objectMapper.createObjectNode();
         plan.put("summary", "조치 전후로 같은 namespace를 재분석해 해결/지속/악화 여부를 비교합니다.");
@@ -2751,6 +2867,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return plan;
     }
 
+    /** AnalysisApplicationService의 addReanalysisOption 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addReanalysisOption(ArrayNode options, String value, String label, String description) {
         ObjectNode option = options.addObject();
         option.put("value", value);
@@ -2758,6 +2875,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         option.put("description", description);
     }
 
+    /** AnalysisApplicationService의 deterministicPerformanceScalingSection 처리에 필요한 업무 로직을 수행한다. */
     private AnalysisSectionExecutor.Result deterministicPerformanceScalingSection(KubernetesNamespaceDiagnostics diagnostics) {
         long startedNanos = System.nanoTime();
         DeterministicPerformanceScalingSectionBuilder.Input input = kubernetesPerformanceSignalPolicy.select(diagnostics);
@@ -2766,6 +2884,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return new AnalysisSectionExecutor.Result("performance-scaling", result, 0, elapsedMillis(startedNanos), null);
     }
 
+    /** AnalysisApplicationService의 deterministicRiskTimelineSection 처리에 필요한 업무 로직을 수행한다. */
     private AnalysisSectionExecutor.Result deterministicRiskTimelineSection(KubernetesNamespaceDiagnostics diagnostics) {
         long startedNanos = System.nanoTime();
         NamespaceDiagnosticsResult.RiskForecast forecast = riskForecast(diagnostics);
@@ -2774,6 +2893,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return new AnalysisSectionExecutor.Result("risk-timeline", result, 0, elapsedMillis(startedNanos), null);
     }
 
+    /** AnalysisApplicationService의 parseObject 처리 데이터를 필요한 표현으로 변환한다. */
     private ObjectNode parseObject(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
@@ -2786,6 +2906,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 putSingleCallAnalysisDiagnostics 처리에 필요한 업무 로직을 수행한다. */
     private void putSingleCallAnalysisDiagnostics(ObjectNode root, String mode, String scope, long startedNanos,
                                                   int contextChars, String failureReason) {
         analysisResultAssembler.writeSingleCallTelemetry(root, mode, scope, elapsedMillis(startedNanos),
@@ -2795,10 +2916,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 failureReason);
     }
 
+    /** AnalysisApplicationService의 elapsedMillis 처리에 필요한 업무 로직을 수행한다. */
     private long elapsedMillis(long startedNanos) {
         return Math.max(0, (System.nanoTime() - startedNanos) / NANOS_PER_MILLI);
     }
 
+    /** AnalysisApplicationService의 namespaceSectionContext 처리에 필요한 업무 로직을 수행한다. */
     private String namespaceSectionContext(UUID clusterId, String namespace, String applicationName,
                                            KubernetesNamespaceDiagnostics diagnostics, String sectionName) {
         int contextLimit = Math.min(maxAnalysisContextChars, 14_000);
@@ -2821,6 +2944,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 });
     }
 
+    /** AnalysisApplicationService의 appendRcaSignals 처리에 필요한 업무 로직을 수행한다. */
     private void appendRcaSignals(StringBuilder context, KubernetesNamespaceDiagnostics diagnostics, String applicationName) {
         context.append("problemResourceSignals:\n");
         diagnostics.resources().stream()
@@ -2841,6 +2965,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .forEach(log -> appendPodLog(context, log, 700));
     }
 
+    /** AnalysisApplicationService의 appendLogSignals 처리에 필요한 업무 로직을 수행한다. */
     private void appendLogSignals(StringBuilder context, KubernetesNamespaceDiagnostics diagnostics, String applicationName) {
         context.append("podLogs:\n");
         prioritizedPodLogs(diagnostics.podLogs()).stream()
@@ -2849,6 +2974,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .forEach(log -> appendPodLog(context, log, 1200));
     }
 
+    /** AnalysisApplicationService의 appendPerformanceScalingSignals 처리에 필요한 업무 로직을 수행한다. */
     private void appendPerformanceScalingSignals(StringBuilder context, KubernetesNamespaceDiagnostics diagnostics, String applicationName) {
         context.append("resourceKindCounts:\n");
         resourceKindCounts(diagnostics.resources()).forEach(kind -> context.append("- ")
@@ -2864,6 +2990,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .forEach(event -> appendEvent(context, event, 500));
     }
 
+    /** AnalysisApplicationService의 appendRiskTimelineSignals 처리에 필요한 업무 로직을 수행한다. */
     private void appendRiskTimelineSignals(StringBuilder context, KubernetesNamespaceDiagnostics diagnostics) {
         NamespaceDiagnosticsResult.RiskForecast forecast = riskForecast(diagnostics);
         context.append("riskForecastSeed overallRisk=").append(forecast.overallRisk())
@@ -2897,6 +3024,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                         .append('\n'));
     }
 
+    /** AnalysisApplicationService의 appendRunbookSignals 처리에 필요한 업무 로직을 수행한다. */
     private void appendRunbookSignals(StringBuilder context, KubernetesNamespaceDiagnostics diagnostics) {
         context.append("runbookSeed:\n");
         runbookActions(diagnostics).stream()
@@ -2917,6 +3045,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .forEach(event -> appendEvent(context, event, 400));
     }
 
+    /** AnalysisApplicationService의 analyzeClusterWithFallback 처리의 핵심 작업 흐름을 실행한다. */
     private String analyzeClusterWithFallback(Cluster cluster, ClusterAnalysisContext analysisContext,
                                               SupportedLocale locale) {
         long startedNanos = System.nanoTime();
@@ -2924,7 +3053,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         String riskPostureContext = clusterSectionContext(cluster, analysisContext, "cluster-risk-posture");
         String runbookContext = clusterSectionContext(cluster, analysisContext, "cluster-runbook-operations");
 
-        CompletableFuture<AnalysisSectionExecutor.Result> rootCause = sectionExecutor.execute(
+        CompletableFuture<AnalysisSectionExecutor.Result> rootCause = sectionExecutor.execute(cluster.tenantId(),
                 "cluster-root-cause",
                 """
                         Return JSON with fields: summary, severity, riskScore, findings, rootCauses, evidence.
@@ -2934,7 +3063,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                         """.formatted(localePolicy.instruction(locale)),
                 rootCauseContext
         );
-        CompletableFuture<AnalysisSectionExecutor.Result> riskPosture = sectionExecutor.execute(
+        CompletableFuture<AnalysisSectionExecutor.Result> riskPosture = sectionExecutor.execute(cluster.tenantId(),
                 "cluster-risk-posture",
                 """
                         Return JSON with fields: performance, scaling, riskForecast, changeTimeline.
@@ -2945,7 +3074,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                         """.formatted(localePolicy.instruction(locale)),
                 riskPostureContext
         );
-        CompletableFuture<AnalysisSectionExecutor.Result> runbook = sectionExecutor.execute(
+        CompletableFuture<AnalysisSectionExecutor.Result> runbook = sectionExecutor.execute(cluster.tenantId(),
                 "cluster-runbook-operations",
                 """
                         Return JSON with fields: runbookActions, recommendations, operationsGuide, nextActions, verificationCommands.
@@ -2980,6 +3109,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 clusterSectionContext 처리에 필요한 업무 로직을 수행한다. */
     private String clusterSectionContext(Cluster cluster, ClusterAnalysisContext analysisContext, String sectionName) {
         StringBuilder context = new StringBuilder(CLUSTER_SECTION_CONTEXT_CHAR_LIMIT);
         context.append("analysisMode=cluster-sectioned\n")
@@ -3029,6 +3159,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return limitContext(context.toString(), Math.min(maxAnalysisContextChars, CLUSTER_SECTION_CONTEXT_CHAR_LIMIT));
     }
 
+    /** AnalysisApplicationService의 isTimeoutFailure 처리 조건의 충족 여부를 판단한다. */
     private boolean isTimeoutFailure(Throwable throwable) {
         Throwable cursor = throwable;
         while (cursor != null) {
@@ -3044,6 +3175,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return false;
     }
 
+    /** AnalysisApplicationService의 namespaceTimeoutFallbackJson 처리에 필요한 업무 로직을 수행한다. */
     private String namespaceTimeoutFallbackJson(UUID clusterId, String namespace, String applicationName,
                                                 KubernetesNamespaceDiagnostics diagnostics, RuntimeException exception,
                                                 long startedNanos, SupportedLocale locale) {
@@ -3258,6 +3390,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 clusterFallbackJson 처리에 필요한 업무 로직을 수행한다. */
     private String clusterFallbackJson(Cluster cluster, ClusterAnalysisContext analysisContext, RuntimeException exception,
                                        long startedNanos, boolean timedOut) {
         List<KubernetesResourceSnapshot.CollectedResource> problemResources = analysisContext.resources().stream()
@@ -3399,22 +3532,13 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 severityFromRiskScore 처리에 필요한 업무 로직을 수행한다. */
     private String severityFromRiskScore(int riskScore) {
-        if (riskScore >= 80) {
-            return "CRITICAL";
-        }
-        if (riskScore >= 60) {
-            return "HIGH";
-        }
-        if (riskScore >= 30) {
-            return "MEDIUM";
-        }
-        if (riskScore > 0) {
-            return "LOW";
-        }
-        return "INFO";
+        // 동일한 riskScore가 화면과 분석 결과에서 서로 다른 등급으로 보이지 않도록 기준을 단일화한다.
+        return riskLevel(riskScore);
     }
 
+    /** AnalysisApplicationService의 addRunbook 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addRunbook(ArrayNode runbookActions, String priority, String title, String targetKind,
                             String targetName, String reason, String command, boolean destructive) {
         ObjectNode action = runbookActions.addObject();
@@ -3430,6 +3554,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         action.put("destructive", destructive);
     }
 
+    /** AnalysisApplicationService의 enrichRunbookActions 처리에 필요한 업무 로직을 수행한다. */
     private void enrichRunbookActions(ObjectNode root) {
         JsonNode runbookActions = root.get("runbookActions");
         if (runbookActions == null || !runbookActions.isArray()) {
@@ -3454,6 +3579,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         });
     }
 
+    /** AnalysisApplicationService의 runbookWhy 처리의 핵심 작업 흐름을 실행한다. */
     private String runbookWhy(String reason, String command) {
         String base = valueOrBlank(reason);
         if (!base.isBlank()) {
@@ -3472,6 +3598,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "분석 결과의 근거를 운영자가 직접 검증하기 위해 실행합니다.";
     }
 
+    /** AnalysisApplicationService의 prioritizedResources 처리에 필요한 업무 로직을 수행한다. */
     private List<KubernetesNamespaceDiagnostics.DiagnosticResource> prioritizedResources(
             List<KubernetesNamespaceDiagnostics.DiagnosticResource> resources
     ) {
@@ -3480,6 +3607,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .toList();
     }
 
+    /** AnalysisApplicationService의 prioritizedEvents 처리에 필요한 업무 로직을 수행한다. */
     private List<KubernetesNamespaceDiagnostics.DiagnosticEvent> prioritizedEvents(
             List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events
     ) {
@@ -3488,6 +3616,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .toList();
     }
 
+    /** AnalysisApplicationService의 prioritizedPodLogs 처리에 필요한 업무 로직을 수행한다. */
     private List<KubernetesNamespaceDiagnostics.DiagnosticPodLog> prioritizedPodLogs(
             List<KubernetesNamespaceDiagnostics.DiagnosticPodLog> podLogs
     ) {
@@ -3496,6 +3625,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .toList();
     }
 
+    /** AnalysisApplicationService의 appendResource 처리에 필요한 업무 로직을 수행한다. */
     private void appendResource(StringBuilder context, KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         context.append("- ")
                 .append(resource.resourceType()).append('/')
@@ -3505,6 +3635,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .append('\n');
     }
 
+    /** AnalysisApplicationService의 appendEvent 처리에 필요한 업무 로직을 수행한다. */
     private void appendEvent(StringBuilder context, KubernetesNamespaceDiagnostics.DiagnosticEvent event, int messageLimit) {
         context.append("- ")
                 .append(event.type()).append(' ')
@@ -3516,6 +3647,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .append('\n');
     }
 
+    /** AnalysisApplicationService의 appendPodLog 처리에 필요한 업무 로직을 수행한다. */
     private void appendPodLog(StringBuilder context, KubernetesNamespaceDiagnostics.DiagnosticPodLog log, int logLimit) {
         context.append("- Pod/")
                 .append(log.podName())
@@ -3525,14 +3657,17 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .append('\n');
     }
 
+    /** AnalysisApplicationService의 isHighSignalLog 처리 조건의 충족 여부를 판단한다. */
     private boolean isHighSignalLog(KubernetesNamespaceDiagnostics.DiagnosticPodLog log) {
         return logInsight(log).matched();
     }
 
+    /** AnalysisApplicationService의 collectNamespaceDiagnostics 처리의 핵심 작업 흐름을 실행한다. */
     private KubernetesNamespaceDiagnostics collectNamespaceDiagnostics(UUID clusterId, String namespace) {
         return kubernetesNamespaceDiagnosticsPort.collectNamespaceDiagnostics(connectionCredential(clusterId), namespace);
     }
 
+    /** AnalysisApplicationService의 diagnosticsResult 처리에 필요한 업무 로직을 수행한다. */
     private NamespaceDiagnosticsResult diagnosticsResult(UUID clusterId, String namespace, KubernetesNamespaceDiagnostics diagnostics) {
         return new NamespaceDiagnosticsResult(
                 clusterId,
@@ -3557,6 +3692,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         );
     }
 
+    /** AnalysisApplicationService의 resourceKindCounts 처리에 필요한 업무 로직을 수행한다. */
     private List<NamespaceDiagnosticsResult.ResourceKindCount> resourceKindCounts(
             List<KubernetesNamespaceDiagnostics.DiagnosticResource> resources
     ) {
@@ -3567,6 +3703,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return result;
     }
 
+    /** AnalysisApplicationService의 problemResources 처리에 필요한 업무 로직을 수행한다. */
     private List<NamespaceDiagnosticsResult.ResourceSignal> problemResources(
             List<KubernetesNamespaceDiagnostics.DiagnosticResource> resources
     ) {
@@ -3582,6 +3719,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .toList();
     }
 
+    /** AnalysisApplicationService의 healthScore 처리에 필요한 업무 로직을 수행한다. */
     private NamespaceDiagnosticsResult.HealthScore healthScore(KubernetesNamespaceDiagnostics diagnostics) {
         long problemResources = diagnostics.resources().stream().filter(this::isProblemResource).count();
         long warningEvents = diagnostics.events().stream().filter(this::isWarningEvent).count();
@@ -3605,6 +3743,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return new NamespaceDiagnosticsResult.HealthScore(availability, stability, performance, security, operability, overall);
     }
 
+    /** AnalysisApplicationService의 riskForecast 처리에 필요한 업무 로직을 수행한다. */
     private NamespaceDiagnosticsResult.RiskForecast riskForecast(KubernetesNamespaceDiagnostics diagnostics) {
         List<NamespaceDiagnosticsResult.RiskPrediction> predictions = new ArrayList<>();
         diagnostics.resources().stream()
@@ -3639,6 +3778,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return new NamespaceDiagnosticsResult.RiskForecast(overallRisk, riskLevel(overallRisk), "next 24h", summary, prioritized);
     }
 
+    /** AnalysisApplicationService의 changeTimeline 처리 대상의 상태를 갱신한다. */
     private List<NamespaceDiagnosticsResult.ChangeTimelineItem> changeTimeline(KubernetesNamespaceDiagnostics diagnostics) {
         List<NamespaceDiagnosticsResult.ChangeTimelineItem> items = new ArrayList<>();
         diagnostics.events().stream()
@@ -3690,6 +3830,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .toList();
     }
 
+    /** AnalysisApplicationService의 runbookActions 처리의 핵심 작업 흐름을 실행한다. */
     private List<NamespaceDiagnosticsResult.RunbookAction> runbookActions(KubernetesNamespaceDiagnostics diagnostics) {
         List<NamespaceDiagnosticsResult.RunbookAction> actions = new ArrayList<>();
         problemResources(diagnostics.resources()).stream()
@@ -3741,6 +3882,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return actions.stream().limit(20).toList();
     }
 
+    /** AnalysisApplicationService의 isChangeLikeEvent 처리 조건의 충족 여부를 판단한다. */
     private boolean isChangeLikeEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         return reason.contains("created")
@@ -3752,6 +3894,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 || reason.contains("successfuldelete");
     }
 
+    /** AnalysisApplicationService의 eventCategory 처리에 필요한 업무 로직을 수행한다. */
     private String eventCategory(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         if (reason.contains("failed") || reason.contains("backoff") || reason.contains("unhealthy")) {
@@ -3763,6 +3906,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "event";
     }
 
+    /** AnalysisApplicationService의 suspectedChange 처리에 필요한 업무 로직을 수행한다. */
     private String suspectedChange(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         if (reason.contains("unhealthy")) {
@@ -3783,6 +3927,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "이벤트 발생 시점 전후의 리소스 변경 여부 확인이 필요합니다.";
     }
 
+    /** AnalysisApplicationService의 priorityForSeverity 처리에 필요한 업무 로직을 수행한다. */
     private String priorityForSeverity(String status) {
         String value = valueOrBlank(status).toLowerCase();
         if (value.contains("crash") || value.contains("failed") || value.contains("error")) {
@@ -3794,6 +3939,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "P3";
     }
 
+    /** AnalysisApplicationService의 severityToPriority 처리에 필요한 업무 로직을 수행한다. */
     private String severityToPriority(String severity) {
         return switch (valueOrBlank(severity).toUpperCase(Locale.ROOT)) {
             case "CRITICAL", "HIGH" -> "P1";
@@ -3802,6 +3948,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         };
     }
 
+    /** AnalysisApplicationService의 resourceRiskPrediction 처리에 필요한 업무 로직을 수행한다. */
     private NamespaceDiagnosticsResult.RiskPrediction resourceRiskPrediction(
             KubernetesNamespaceDiagnostics.DiagnosticResource resource
     ) {
@@ -3832,6 +3979,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         );
     }
 
+    /** AnalysisApplicationService의 eventRiskPrediction 처리에 필요한 업무 로직을 수행한다. */
     private NamespaceDiagnosticsResult.RiskPrediction eventRiskPrediction(
             KubernetesNamespaceDiagnostics.DiagnosticEvent event
     ) {
@@ -3851,6 +3999,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         );
     }
 
+    /** AnalysisApplicationService의 logRiskPrediction 처리에 필요한 업무 로직을 수행한다. */
     private NamespaceDiagnosticsResult.RiskPrediction logRiskPrediction(
             KubernetesNamespaceDiagnostics.DiagnosticPodLog log
     ) {
@@ -3873,6 +4022,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         );
     }
 
+    /** AnalysisApplicationService의 addGovernanceRiskPredictions 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addGovernanceRiskPredictions(
             KubernetesNamespaceDiagnostics diagnostics,
             List<NamespaceDiagnosticsResult.RiskPrediction> predictions
@@ -3893,6 +4043,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 "업무 중요도에 맞춰 기본 deny와 필요한 allow 정책을 단계적으로 적용하세요.");
     }
 
+    /** AnalysisApplicationService의 addMissingKindPrediction 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addMissingKindPrediction(
             KubernetesNamespaceDiagnostics diagnostics,
             List<NamespaceDiagnosticsResult.RiskPrediction> predictions,
@@ -3920,6 +4071,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         ));
     }
 
+    /** AnalysisApplicationService의 addScalingRiskPredictions 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addScalingRiskPredictions(
             KubernetesNamespaceDiagnostics diagnostics,
             List<NamespaceDiagnosticsResult.RiskPrediction> predictions
@@ -3944,6 +4096,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         ));
     }
 
+    /** AnalysisApplicationService의 severityWeight 처리에 필요한 업무 로직을 수행한다. */
     private int severityWeight(String severity) {
         return switch (valueOrBlank(severity).toUpperCase()) {
             case "CRITICAL" -> 80;
@@ -3954,6 +4107,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         };
     }
 
+    /** AnalysisApplicationService의 riskLevel 처리에 필요한 업무 로직을 수행한다. */
     private String riskLevel(int riskScore) {
         if (riskScore >= 85) {
             return "CRITICAL";
@@ -3970,6 +4124,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "INFO";
     }
 
+    /** AnalysisApplicationService의 describeCommand 처리에 필요한 업무 로직을 수행한다. */
     private String describeCommand(String resourceKind, String resourceName) {
         if (valueOrBlank(resourceKind).isBlank() || valueOrBlank(resourceName).isBlank() || "-".equals(resourceName)) {
             return "kubectl get events -n ${namespace} --sort-by=.lastTimestamp";
@@ -3977,6 +4132,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "kubectl describe " + kubectlResourceName(resourceKind) + "/" + resourceName + " -n ${namespace}";
     }
 
+    /** AnalysisApplicationService의 kubectlResourceName 처리에 필요한 업무 로직을 수행한다. */
     private String kubectlResourceName(String resourceKind) {
         return switch (valueOrBlank(resourceKind)) {
             case "Pod" -> "pod";
@@ -3996,10 +4152,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         };
     }
 
+    /** AnalysisApplicationService의 score 처리에 필요한 업무 로직을 수행한다. */
     private int score(int value) {
         return Math.max(0, Math.min(100, value));
     }
 
+    /** AnalysisApplicationService의 evidenceSignals 처리에 필요한 업무 로직을 수행한다. */
     private List<NamespaceDiagnosticsResult.EvidenceSignal> evidenceSignals(KubernetesNamespaceDiagnostics diagnostics) {
         List<NamespaceDiagnosticsResult.EvidenceSignal> signals = new ArrayList<>();
         problemResources(diagnostics.resources()).forEach(resource -> signals.add(new NamespaceDiagnosticsResult.EvidenceSignal(
@@ -4023,6 +4181,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return signals.stream().limit(30).toList();
     }
 
+    /** AnalysisApplicationService의 firstLogSignal 처리에 필요한 업무 로직을 수행한다. */
     private String firstLogSignal(String log) {
         return valueOrBlank(log).lines()
                 .map(String::trim)
@@ -4049,6 +4208,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .orElse(truncate(valueOrBlank(log).replace('\n', ' '), 220));
     }
 
+    /** AnalysisApplicationService의 logSignalPriority 처리에 필요한 업무 로직을 수행한다. */
     private int logSignalPriority(String line) {
         String lower = valueOrBlank(line).toLowerCase(Locale.ROOT);
         if (lower.contains("emerg") || lower.contains("fatal") || lower.contains("panic")) {
@@ -4067,6 +4227,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return 4;
     }
 
+    /** AnalysisApplicationService의 warningEvents 처리에 필요한 업무 로직을 수행한다. */
     private List<NamespaceDiagnosticsResult.EventSignal> warningEvents(
             List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events
     ) {
@@ -4085,10 +4246,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .toList();
     }
 
+    /** AnalysisApplicationService의 isWarningEvent 처리 조건의 충족 여부를 판단한다. */
     private boolean isWarningEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         return "Warning".equalsIgnoreCase(event.type());
     }
 
+    /** AnalysisApplicationService의 isProblemResource 처리 조건의 충족 여부를 판단한다. */
     private boolean isProblemResource(KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         String status = valueOrBlank(resource.status()).toLowerCase();
         if (status.isBlank()) {
@@ -4103,6 +4266,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 || status.matches("\\d+/\\d+") && !status.startsWith(status.substring(status.indexOf('/') + 1) + "/");
     }
 
+    /** AnalysisApplicationService의 problemTitle 처리에 필요한 업무 로직을 수행한다. */
     private String problemTitle(KubernetesNamespaceDiagnostics.DiagnosticResource resource,
                                 List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events) {
         return events.stream()
@@ -4111,6 +4275,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .orElse(resource.resourceType() + "/" + resource.resourceName() + " 비정상 상태");
     }
 
+    /** AnalysisApplicationService의 problemSeverity 처리에 필요한 업무 로직을 수행한다. */
     private String problemSeverity(KubernetesNamespaceDiagnostics.DiagnosticResource resource,
                                    List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events) {
         String status = valueOrBlank(resource.status()).toLowerCase();
@@ -4124,6 +4289,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "LOW";
     }
 
+    /** AnalysisApplicationService의 rootCauseSummary 처리에 필요한 업무 로직을 수행한다. */
     private String rootCauseSummary(KubernetesNamespaceDiagnostics.DiagnosticResource resource,
                                     List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events) {
         return events.stream()
@@ -4132,6 +4298,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .orElse("Kubernetes status=" + valueOrBlank(resource.status()) + " 기준으로 비정상 상태가 감지되었습니다.");
     }
 
+    /** AnalysisApplicationService의 recommendedNextAction 처리에 필요한 업무 로직을 수행한다. */
     private String recommendedNextAction(KubernetesNamespaceDiagnostics.DiagnosticResource resource,
                                          List<KubernetesNamespaceDiagnostics.DiagnosticEvent> events) {
         return events.stream()
@@ -4140,11 +4307,13 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .orElse(performanceRecommendation(resource));
     }
 
+    /** AnalysisApplicationService의 eventMatchesResource 처리에 필요한 업무 로직을 수행한다. */
     private boolean eventMatchesResource(KubernetesNamespaceDiagnostics.DiagnosticEvent event, String resourceKind, String resourceName) {
         return valueOrBlank(event.involvedName()).equals(resourceName)
                 || valueOrBlank(event.involvedKind()).equals(resourceKind) && valueOrBlank(event.involvedName()).equals(resourceName);
     }
 
+    /** AnalysisApplicationService의 isClearlyFixableEvent 처리 조건의 충족 여부를 판단한다. */
     private boolean isClearlyFixableEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         String message = valueOrBlank(event.message()).toLowerCase();
@@ -4153,6 +4322,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 || message.contains("pvc") || message.contains("not found"));
     }
 
+    /** AnalysisApplicationService의 requiresVerificationEvent 처리 입력과 현재 상태의 유효성을 검증한다. */
     private boolean requiresVerificationEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         return reason.contains("failedscheduling")
@@ -4163,6 +4333,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 || reason.contains("failed");
     }
 
+    /** AnalysisApplicationService의 fixReadinessForEvent 처리에 필요한 업무 로직을 수행한다. */
     private String fixReadinessForEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         if (isClearlyFixableEvent(event)) {
             return "READY_TO_FIX";
@@ -4173,6 +4344,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "OBSERVE";
     }
 
+    /** AnalysisApplicationService의 fixReadinessReasonForEvent 처리에 필요한 업무 로직을 수행한다. */
     private String fixReadinessReasonForEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         return switch (fixReadinessForEvent(event)) {
             case "READY_TO_FIX" -> "이벤트 메시지에 구체적인 누락/불일치 대상이 포함되어 있습니다.";
@@ -4181,6 +4353,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         };
     }
 
+    /** AnalysisApplicationService의 addTrace 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addTrace(ArrayNode trace, String type, String source, String message) {
         ObjectNode item = trace.addObject();
         item.put("type", valueOrBlank(type));
@@ -4188,6 +4361,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         item.put("message", valueOrBlank(message));
     }
 
+    /** AnalysisApplicationService의 addCommand 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addCommand(ArrayNode commands, String label, String command, String why) {
         ObjectNode item = commands.addObject();
         item.put("label", valueOrBlank(label));
@@ -4195,6 +4369,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         item.put("why", valueOrBlank(why));
     }
 
+    /** AnalysisApplicationService의 addReference 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addReference(ArrayNode references, String kind, String name, String reason) {
         boolean exists = false;
         for (JsonNode reference : references) {
@@ -4213,6 +4388,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         item.put("reason", valueOrBlank(reason));
     }
 
+    /** AnalysisApplicationService의 addReferencesFromEventMessage 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addReferencesFromEventMessage(ArrayNode references, KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String message = valueOrBlank(event.message());
         addReferenceFromRegex(references, message, "ConfigMap", "configmap \"?([A-Za-z0-9_.-]+)\"?", valueOrBlank(event.reason()));
@@ -4220,6 +4396,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         addReferenceFromRegex(references, message, "PersistentVolumeClaim", "(?:persistentvolumeclaim|pvc) \"?([A-Za-z0-9_.-]+)\"?", valueOrBlank(event.reason()));
     }
 
+    /** AnalysisApplicationService의 addReferenceFromRegex 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addReferenceFromRegex(ArrayNode references, String message, String kind, String regex, String reason) {
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(regex, java.util.regex.Pattern.CASE_INSENSITIVE)
                 .matcher(valueOrBlank(message));
@@ -4228,6 +4405,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 safeReadTree 처리에 필요한 업무 로직을 수행한다. */
     private JsonNode safeReadTree(String json) {
         if (valueOrBlank(json).isBlank()) {
             return objectMapper.createObjectNode();
@@ -4239,6 +4417,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 findResourceForAnalysisNode 처리 결과를 조회해 반환한다. */
     private KubernetesNamespaceDiagnostics.DiagnosticResource findResourceForAnalysisNode(
             ObjectNode node,
             KubernetesNamespaceDiagnostics diagnostics
@@ -4261,14 +4440,17 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return null;
     }
 
+    /** AnalysisApplicationService의 hasResourceKind 처리 조건의 충족 여부를 판단한다. */
     private boolean hasResourceKind(KubernetesNamespaceDiagnostics diagnostics, String resourceKind) {
         return diagnostics.resources().stream().anyMatch(resource -> resourceKind.equals(resource.resourceType()));
     }
 
+    /** AnalysisApplicationService의 summaryContains 처리에 필요한 업무 로직을 수행한다. */
     private boolean summaryContains(KubernetesNamespaceDiagnostics.DiagnosticResource resource, String token) {
         return valueOrBlank(resource.summaryJson()).contains(token);
     }
 
+    /** AnalysisApplicationService의 isPerformanceRelevantResource 처리 조건의 충족 여부를 판단한다. */
     private boolean isPerformanceRelevantResource(KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         String type = valueOrBlank(resource.resourceType());
         String status = valueOrBlank(resource.status()).toLowerCase();
@@ -4282,6 +4464,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         };
     }
 
+    /** AnalysisApplicationService의 isPerformanceRelevantEvent 처리 조건의 충족 여부를 판단한다. */
     private boolean isPerformanceRelevantEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         return reason.contains("failedscheduling")
@@ -4293,6 +4476,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 || reason.contains("oom");
     }
 
+    /** AnalysisApplicationService의 addPerformanceBottleneck 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addPerformanceBottleneck(ArrayNode bottlenecks, KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         ObjectNode item = bottlenecks.addObject();
         item.put("resourceKind", resource.resourceType());
@@ -4302,6 +4486,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         item.putArray("evidence").add(truncate(resource.summaryJson(), 300));
     }
 
+    /** AnalysisApplicationService의 addPerformanceEventBottleneck 처리에 필요한 데이터를 생성하거나 저장한다. */
     private void addPerformanceEventBottleneck(ArrayNode bottlenecks, KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         ObjectNode item = bottlenecks.addObject();
         item.put("resourceKind", valueOrBlank(event.involvedKind()));
@@ -4311,6 +4496,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         item.putArray("evidence").add(truncate(event.message(), 300));
     }
 
+    /** AnalysisApplicationService의 performanceRecommendation 처리에 필요한 업무 로직을 수행한다. */
     private String performanceRecommendation(KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
         String type = valueOrBlank(resource.resourceType());
         String status = valueOrBlank(resource.status()).toLowerCase();
@@ -4332,6 +4518,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "관련 리소스 describe 결과와 이벤트를 확인해 성능 저하로 이어질 상태 신호인지 검증하세요.";
     }
 
+    /** AnalysisApplicationService의 performanceEventRecommendation 처리에 필요한 업무 로직을 수행한다. */
     private String performanceEventRecommendation(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
         String reason = valueOrBlank(event.reason()).toLowerCase();
         if (reason.contains("failedscheduling")) {
@@ -4349,12 +4536,14 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return "반복 이벤트의 involved resource를 describe하고 같은 시점의 Pod 로그를 확인하세요.";
     }
 
+    /** AnalysisApplicationService의 collectedResourceKindCounts 처리의 핵심 작업 흐름을 실행한다. */
     private Map<String, Integer> collectedResourceKindCounts(List<KubernetesResourceSnapshot.CollectedResource> resources) {
         Map<String, Integer> counts = new LinkedHashMap<>();
         resources.forEach(resource -> counts.merge(resource.resourceType(), 1, Integer::sum));
         return counts;
     }
 
+    /** AnalysisApplicationService의 namespaceHotspots 처리에 필요한 업무 로직을 수행한다. */
     private Map<String, String> namespaceHotspots(
             List<KubernetesResourceSnapshot.CollectedResource> resources,
             List<KubernetesEventSnapshot.CollectedEvent> events
@@ -4383,10 +4572,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                         LinkedHashMap::putAll);
     }
 
+    /** AnalysisApplicationService의 isWarningCollectedEvent 처리 조건의 충족 여부를 판단한다. */
     private boolean isWarningCollectedEvent(KubernetesEventSnapshot.CollectedEvent event) {
         return "Warning".equalsIgnoreCase(event.type());
     }
 
+    /** AnalysisApplicationService의 isProblemCollectedResource 처리 조건의 충족 여부를 판단한다. */
     private boolean isProblemCollectedResource(KubernetesResourceSnapshot.CollectedResource resource) {
         String status = valueOrBlank(resource.status()).toLowerCase();
         if (status.isBlank()) {
@@ -4401,6 +4592,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 || status.matches("\\d+/\\d+") && !status.startsWith(status.substring(status.indexOf('/') + 1) + "/");
     }
 
+    /** AnalysisApplicationService의 appendCollectedResource 처리에 필요한 업무 로직을 수행한다. */
     private void appendCollectedResource(StringBuilder context, KubernetesResourceSnapshot.CollectedResource resource) {
         context.append("- namespace=").append(valueOrCluster(resource.namespace()))
                 .append(' ').append(resource.resourceType()).append('/')
@@ -4410,6 +4602,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .append('\n');
     }
 
+    /** AnalysisApplicationService의 appendCollectedEvent 처리에 필요한 업무 로직을 수행한다. */
     private void appendCollectedEvent(StringBuilder context, KubernetesEventSnapshot.CollectedEvent event, int messageLimit) {
         context.append("- namespace=").append(valueOrCluster(event.namespace()))
                 .append(' ').append(valueOrBlank(event.type()))
@@ -4421,10 +4614,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                 .append('\n');
     }
 
+    /** AnalysisApplicationService의 valueOrCluster 처리에 필요한 업무 로직을 수행한다. */
     private String valueOrCluster(String namespace) {
         return valueOrBlank(namespace).isBlank() ? "_cluster" : namespace;
     }
 
+    /** AnalysisApplicationService의 normalizeResourceType 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeResourceType(String resourceType) {
         String value = valueOrBlank(resourceType).toLowerCase(Locale.ROOT);
         return switch (value) {
@@ -4447,6 +4642,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         };
     }
 
+    /** AnalysisApplicationService의 normalizeWorkflowStatus 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizeWorkflowStatus(String status) {
         String value = valueOrBlank(status).trim().toUpperCase(Locale.ROOT);
         return switch (value) {
@@ -4455,6 +4651,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         };
     }
 
+    /** AnalysisApplicationService의 requireText 처리 입력과 현재 상태의 유효성을 검증한다. */
     private String requireText(String value, String name) {
         String normalized = valueOrBlank(value).trim();
         if (normalized.isBlank()) {
@@ -4463,11 +4660,13 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return normalized;
     }
 
+    /** AnalysisApplicationService의 defaultNamespace 처리에 필요한 업무 로직을 수행한다. */
     private String defaultNamespace(String namespace) {
         String value = valueOrBlank(namespace).trim();
         return value.isBlank() ? "default" : value;
     }
 
+    /** AnalysisApplicationService의 requireCluster 처리 입력과 현재 상태의 유효성을 검증한다. */
     private Cluster requireCluster(UUID clusterId) {
         return clusterRepositoryPort.findById(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster not found: " + clusterId));
@@ -4481,12 +4680,14 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                               String operatorMeaning, String beginnerExplanation, String recommendedNextAction,
                               String verificationCommand, boolean previousLog, List<String> matchedPatterns) {
 
+        /** LogInsight의 none 처리에 필요한 업무 로직을 수행한다. */
         static LogInsight none(KubernetesNamespaceDiagnostics.DiagnosticPodLog log) {
             return new LogInsight(false, "none", "INFO", 1000, "", valueOrBlankStatic(log.namespace()),
                     valueOrBlankStatic(log.podName()), valueOrBlankStatic(log.containerName()), "",
                     "", "", "", "", false, List.of());
         }
 
+        /** LogInsight의 valueOrBlankStatic 처리에 필요한 업무 로직을 수행한다. */
         private static String valueOrBlankStatic(String value) {
             return value == null ? "" : value;
         }
@@ -4509,10 +4710,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         private final List<String> evidence = new ArrayList<>();
         private final List<IssueReference> relatedReferences = new ArrayList<>();
 
+        /** IssueGroupAccumulator 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private IssueGroupAccumulator(String key) {
             this.key = key;
         }
 
+        /** IssueGroupAccumulator의 matches 처리 조건의 충족 여부를 판단한다. */
         private boolean matches(String kind, String name) {
             String targetKind = valueOrBlank(kind);
             String targetName = valueOrBlank(name);
@@ -4525,6 +4728,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
             return affectedResources.stream().anyMatch(value -> value.equals(targetKind + "/" + targetName));
         }
 
+        /** IssueGroupAccumulator의 addEvent 처리에 필요한 데이터를 생성하거나 저장한다. */
         private void addEvent(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
             int count = event.count() == null ? 1 : Math.max(1, event.count());
             eventOccurrences += count;
@@ -4544,6 +4748,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
             addReferenceFromMessage(event.message(), valueOrBlank(event.reason()));
         }
 
+        /** IssueGroupAccumulator의 addResource 처리에 필요한 데이터를 생성하거나 저장한다. */
         private void addResource(KubernetesNamespaceDiagnostics.DiagnosticResource resource) {
             if (namespace.isBlank()) {
                 namespace = valueOrBlank(resource.namespace());
@@ -4560,6 +4765,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
                     + truncate(resource.summaryJson(), 180));
         }
 
+        /** IssueGroupAccumulator의 addLog 처리에 필요한 데이터를 생성하거나 저장한다. */
         private void addLog(KubernetesNamespaceDiagnostics.DiagnosticPodLog log) {
             LogInsight insight = logInsight(log);
             logSignals++;
@@ -4581,6 +4787,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
             }
         }
 
+        /** IssueGroupAccumulator의 addAffectedResource 처리에 필요한 데이터를 생성하거나 저장한다. */
         private void addAffectedResource(String kind, String name) {
             String resource = valueOrBlank(kind) + "/" + valueOrBlank(name);
             if (!"/".equals(resource) && affectedResources.stream().noneMatch(resource::equals)) {
@@ -4588,6 +4795,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
             }
         }
 
+        /** IssueGroupAccumulator의 addEvidence 처리에 필요한 데이터를 생성하거나 저장한다. */
         private void addEvidence(String value) {
             String normalized = truncate(value, 260);
             if (!normalized.isBlank() && evidence.stream().noneMatch(normalized::equals)) {
@@ -4595,6 +4803,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
             }
         }
 
+        /** IssueGroupAccumulator의 addReferenceFromMessage 처리에 필요한 데이터를 생성하거나 저장한다. */
         private void addReferenceFromMessage(String message, String reason) {
             String configMap = extractReferenceName(message, "configmap \"?([A-Za-z0-9_.-]+)\"?");
             if (!configMap.isBlank()) {
@@ -4610,6 +4819,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
             }
         }
 
+        /** IssueGroupAccumulator의 addReference 처리에 필요한 데이터를 생성하거나 저장한다. */
         private void addReference(String kind, String name, String reason) {
             String normalizedKind = valueOrBlank(kind);
             String normalizedName = valueOrBlank(name);
@@ -4623,6 +4833,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
             }
         }
 
+        /** IssueGroupAccumulator의 score 처리에 필요한 업무 로직을 수행한다. */
         private int score() {
             int severityScore = switch (valueOrBlank(severity).toUpperCase()) {
                 case "CRITICAL" -> 400;
@@ -4647,10 +4858,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         private int events;
         private int warningEvents;
 
+        /** NamespaceHotspot의 score 처리에 필요한 업무 로직을 수행한다. */
         private int score() {
             return problemResources * 10 + warningEvents * 6 + events;
         }
 
+        /** NamespaceHotspot의 summary 처리에 필요한 업무 로직을 수행한다. */
         private String summary() {
             return "resources=" + resources
                     + " problemResources=" + problemResources
@@ -4667,6 +4880,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         private int eventCount;
         private int occurrenceCount;
 
+        /** EventNoiseAccumulator 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
         private EventNoiseAccumulator(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
             this.reason = event.reason() == null ? "" : event.reason();
             this.targetKind = event.involvedKind() == null ? "" : event.involvedKind();
@@ -4674,15 +4888,18 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
             this.message = event.message() == null ? "" : event.message();
         }
 
+        /** EventNoiseAccumulator의 add 처리에 필요한 데이터를 생성하거나 저장한다. */
         private void add(KubernetesNamespaceDiagnostics.DiagnosticEvent event) {
             eventCount++;
             occurrenceCount += event.count() == null ? 1 : Math.max(1, event.count());
         }
 
+        /** EventNoiseAccumulator의 occurrenceCount 처리에 필요한 업무 로직을 수행한다. */
         private int occurrenceCount() {
             return occurrenceCount;
         }
 
+        /** EventNoiseAccumulator의 priority 처리에 필요한 업무 로직을 수행한다. */
         private String priority() {
             String value = (reason + " " + message).toLowerCase();
             if (occurrenceCount >= 10 || value.contains("failedmount") || value.contains("failedscheduling")
@@ -4695,6 +4912,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
             return "LOW";
         }
 
+        /** EventNoiseAccumulator의 priorityWeight 처리에 필요한 업무 로직을 수행한다. */
         private int priorityWeight() {
             return switch (priority()) {
                 case "HIGH" -> 300;
@@ -4704,10 +4922,12 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 audit 처리에 필요한 업무 로직을 수행한다. */
     private void audit(String action, UUID analysisId, String actor, String requestId) {
         auditLogRepositoryPort.save(AuditLog.create(action, "ANALYSIS", analysisId.toString(), actor, requestId));
     }
 
+    /** AnalysisApplicationService의 mergeCommandExecutionIntoAnalysis 처리에 필요한 업무 로직을 수행한다. */
     private void mergeCommandExecutionIntoAnalysis(AnalysisSession analysis, AnalysisCommandExecution execution,
                                                    AnalysisCommandParser.ParsedCommand parsed) {
         try {
@@ -4722,6 +4942,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 arrayField 처리에 필요한 업무 로직을 수행한다. */
     private ArrayNode arrayField(ObjectNode parent, String fieldName) {
         JsonNode existing = parent.get(fieldName);
         if (existing instanceof ArrayNode arrayNode) {
@@ -4732,6 +4953,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return created;
     }
 
+    /** AnalysisApplicationService의 persistCommandExecution 처리에 필요한 데이터를 생성하거나 저장한다. */
     private AnalysisCommandExecution persistCommandExecution(AnalysisCommandExecution execution) {
         try {
             return analysisCommandExecutionRepositoryPort.save(execution);
@@ -4740,6 +4962,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 auditCommand 처리에 필요한 업무 로직을 수행한다. */
     private void auditCommand(String action, UUID analysisId, String actor, String requestId) {
         try {
             audit(action, analysisId, actor, requestId);
@@ -4748,6 +4971,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 connectionCredential 처리에 필요한 업무 로직을 수행한다. */
     private KubernetesConnectionCredential connectionCredential(UUID clusterId) {
         EncryptedClusterCredential credential = clusterCredentialRepositoryPort.findByClusterId(clusterId)
                 .orElseThrow(() -> new NoSuchElementException("Cluster credential not found: " + clusterId));
@@ -4760,6 +4984,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return new KubernetesConnectionCredential(credential.credentialType(), plaintextPayload);
     }
 
+    /** AnalysisApplicationService의 truncate 처리에 필요한 업무 로직을 수행한다. */
     private String truncate(String value, int maxLength) {
         if (value == null || value.length() <= maxLength) {
             return value;
@@ -4767,15 +4992,18 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return value.substring(0, maxLength);
     }
 
+    /** AnalysisApplicationService의 valueOrBlank 처리에 필요한 업무 로직을 수행한다. */
     private String valueOrBlank(String value) {
         return value == null ? "" : value;
     }
 
+    /** AnalysisApplicationService의 withAnalysisComparison 처리에 필요한 업무 로직을 수행한다. */
     private String withAnalysisComparison(String resultJson, UUID clusterId, UUID applicationId, String namespace) {
         return analysisComparisonService.withComparison(resultJson,
                 analysisSessionRepositoryPort.findLatestSucceededByScope(clusterId, applicationId, namespace));
     }
 
+    /** AnalysisApplicationService의 resultSummary 처리에 필요한 업무 로직을 수행한다. */
     private String resultSummary(String resultJson) {
         try {
             JsonNode root = objectMapper.readTree(resultJson);
@@ -4790,6 +5018,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 schemaVersion 처리에 필요한 업무 로직을 수행한다. */
     private String schemaVersion(String resultJson) {
         try {
             JsonNode root = objectMapper.readTree(resultJson);
@@ -4800,6 +5029,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 failedAnalysisJson 처리에 필요한 업무 로직을 수행한다. */
     private String failedAnalysisJson(RuntimeException exception) {
         ObjectNode root = objectMapper.createObjectNode();
         root.put("schemaVersion", "analysis-result.v1");
@@ -4853,6 +5083,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         }
     }
 
+    /** AnalysisApplicationService의 errorCode 처리에 필요한 업무 로직을 수행한다. */
     private String errorCode(RuntimeException exception) {
         String name = exception.getClass().getSimpleName();
         if (name == null || name.isBlank()) {
@@ -4861,6 +5092,7 @@ public class AnalysisApplicationService implements AnalysisUseCase, GetNamespace
         return name.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase();
     }
 
+    /** AnalysisApplicationService의 normalizedNamespace 처리 데이터를 필요한 표현으로 변환한다. */
     private String normalizedNamespace(String namespace) {
         if (namespace == null || namespace.isBlank()) {
             return null;

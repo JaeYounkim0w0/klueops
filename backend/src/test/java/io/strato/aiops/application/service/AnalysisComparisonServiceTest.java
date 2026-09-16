@@ -15,6 +15,7 @@ class AnalysisComparisonServiceTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private final AnalysisComparisonService service = new AnalysisComparisonService(mapper);
 
+    /** AnalysisComparisonServiceTest의 createsBaselineWithoutPreviousAnalysis 처리에 필요한 데이터를 생성하거나 저장한다. */
     @Test
     void createsBaselineWithoutPreviousAnalysis() throws Exception {
         String result = service.withComparison("{\"riskScore\":42,\"severity\":\"MEDIUM\",\"issueGroups\":[]}", Optional.empty());
@@ -22,6 +23,7 @@ class AnalysisComparisonServiceTest {
         assertThat(mapper.readTree(result).path("analysisComparison").path("trend").asText()).isEqualTo("BASELINE");
     }
 
+    /** AnalysisComparisonServiceTest의 identifiesResolvedAndNewIssueGroups 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void identifiesResolvedAndNewIssueGroups() throws Exception {
         UUID clusterId = UUID.randomUUID();
@@ -38,6 +40,7 @@ class AnalysisComparisonServiceTest {
         assertThat(comparison.path("resolvedIssueGroups")).hasSize(1);
     }
 
+    /** AnalysisComparisonServiceTest의 carriesBoundedCommandVerificationAndEvidenceIntoReanalysis 처리에 필요한 업무 로직을 수행한다. */
     @Test
     void carriesBoundedCommandVerificationAndEvidenceIntoReanalysis() throws Exception {
         UUID clusterId = UUID.randomUUID();
