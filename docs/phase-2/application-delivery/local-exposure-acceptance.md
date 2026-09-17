@@ -1,6 +1,6 @@
 # Application Exposure 로컬 수용시험
 
-기준일: 2026-09-15
+기준일: 2026-09-17
 
 이 문서는 Phase 2 Application Delivery의 두 외부 노출 경로가 화면에만 존재하는 옵션이 아니라 실제 Kubernetes 리소스와 HTTP 트래픽으로 동작하는지 검증한 결과를 기록한다. 결론은 Chart Values가 생성한 Ingress와 KlueOps가 Service에 연결한 companion HTTPRoute 모두 로컬 Kubernetes에서 배포, 상태 수집과 HTTP 접근에 성공했다.
 

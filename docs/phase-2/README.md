@@ -1,10 +1,10 @@
 # KlueOps Phase 2
 
-기준일: 2026-09-15
+기준일: 2026-09-17
 
-이 디렉터리는 1차 KlueOps 제품 명세와 분리해 Phase 2의 설계, 구현 범위와 검증 기준을 관리한다. 2026-09-15에 핵심 vertical slice를 `feature/phase-2`에서 구현하고 로컬 Kubernetes 수용 검증을 수행했으며, 실제 구현 범위는 `docs/product/current-product-specification.md`와 함께 확인한다.
+이 디렉터리는 1차 KlueOps 제품 명세와 분리해 Phase 2의 설계, 구현 범위와 검증 기준을 보존한다. Phase 2 전체 구현과 로컬 Kubernetes 수용 검증은 완료됐고 2026-09-17 `main`에 squash 병합됐다. 현재 제품 동작은 `docs/product/current-product-specification.md`, 사용자 절차는 `docs/user-guide/`를 기준으로 확인한다.
 
-Phase 2의 첫 작업은 `P2-0 기존 제품 UI 현대화`다. Application Delivery 구현에 앞서 현재 KlueOps 전체 화면을 이 디렉터리의 HTML 시안 수준으로 정돈하고, 기존 기능·권한·API 동작을 유지한 상태에서 공통 design system, responsive/accessibility와 visual regression 기준을 확립한다.
+Phase 2의 첫 작업이었던 `P2-0 기존 제품 UI 현대화`는 완료됐다. 전체 인증 화면은 공통 design system, responsive/accessibility와 visual regression 기준을 사용한다.
 
 ## Application Delivery
 

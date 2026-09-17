@@ -1,8 +1,8 @@
 # Phase 2 Application Delivery Architecture
 
-기준일: 2026-09-15
+기준일: 2026-09-17
 
-상태: 승인된 Phase 2 bounded context와 UI 구현 완료, OCI/S3 저장 adapter·자동 DNS/TLS만 후속
+상태: Phase 2 bounded context와 UI 구현·main 병합 완료, OCI/S3 저장 adapter·자동 DNS/TLS만 후속
 
 구현 기준선은 PostgreSQL metadata/artifact 저장, Backend 내부 Application Delivery port/service/adapter, 임시 kubeconfig를 사용하는 제한된 Helm CLI 실행, Chart-managed route 검증, Service 기반 HTTPRoute·Ingress·TCPRoute companion, ReferenceGrant/allowedRoutes preflight, Async Job과 ReleaseOperation 복구다. OCI/Object Storage와 DNS/TLS Provider는 실제 확장 조건이 생길 때 적용한다.
 

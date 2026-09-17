@@ -1,6 +1,6 @@
 # KlueOps Current Product Specification
 
-기준일: 2026-09-15
+기준일: 2026-09-17
 
 ## 1. 문서 목적
 
@@ -61,7 +61,7 @@ Backend는 헥사고날 아키텍처를 사용한다. 도메인·애플리케이
 
 ### 4.1 Dashboard와 공통 운영 UX
 
-- Phase 2 공통 제품 Shell은 짙은 navigation, 상단 Tenant/Workspace context bar, 전역 검색·알림과 반응형 모바일 drawer를 모든 인증 route에 적용한다.
+- 공통 제품 Shell은 업무 영역별 navigation, Tenant와 업무 그룹 context bar, 전역 검색·알림과 반응형 모바일 drawer를 모든 인증 route에 적용한다.
 - 공통 semantic token으로 배경, surface, 글자, 상태색, radius, elevation과 keyboard focus를 관리해 화면별 시각 표현 차이를 줄인다.
 - 클러스터, Incident, 분석 Job과 운영 위험을 요약한다.
 - 전역 Job Dock에서 화면 이동 후에도 분석 및 동기화 진행 상태와 소요 시간을 확인한다.
@@ -154,8 +154,8 @@ AI Trust Center는 평가 corpus, category별 정확도, 근거 coverage, halluc
 - platform-admin, cluster-admin, operator, viewer capability를 API 서버에서 평가한다.
 - Tenant/Workspace 생성, 전역 scope 선택, Cluster placement와 접근 가능한 목록 필터링을 제공한다.
 - 사용자 관리, 운영 설정, reliability, 언어 설정과 접근 범위 화면을 제공한다.
-- 좌측 내비게이션은 `개요`, `운영 대응`, `인프라`, `Application Delivery`, `AI 운영`, `거버넌스`, `플랫폼 설정`, `개인 영역`으로 고정하며 capability가 없는 그룹은 제목과 항목을 함께 숨긴다.
-- 좌측의 `사용자 및 권한`은 Tenant Users & Access를 기본 진입점으로 사용하고 Platform Manager에게 플랫폼 계정 권한 화면 연결을 제공한다. 기존 두 접근 관리 URL은 호환성을 유지한다.
+- 업무 navigation은 `개요`, `운영 대응`, `인프라`, `Application Delivery`, `AI 운영`, `거버넌스`, `플랫폼 설정`, `개인 영역`으로 구성하며 capability가 없는 그룹은 제목과 항목을 함께 숨긴다.
+- `사용자 및 권한`은 Tenant Users & Access를 기본 진입점으로 사용하고 Platform Manager에게 플랫폼 계정 권한 화면 연결을 제공한다. 기존 두 접근 관리 URL은 호환성을 유지한다.
 
 ### 4.8 Application Delivery와 AI Provider
 
@@ -223,14 +223,14 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 
 ## 9. 현재 검증 기준
 
-2026-09-15 기준 최신 통합 증빙은 다음과 같다.
+2026-09-17 기준 최신 통합 증빙은 다음과 같다.
 
-- Backend: PostgreSQL 17 Testcontainers, Flyway V1~V32 포함 273 tests 통과
+- Backend: PostgreSQL 17 Testcontainers와 Flyway를 포함한 317 tests 통과
 - Command Runner: 5 tests 통과
-- Frontend: 28 files, 97 tests, typecheck와 production build 통과
+- Frontend: 127 tests, typecheck와 production build 통과
 - OpenAPI runtime snapshot과 Orval generated client drift 통과
 - architecture, security, packaging, docs와 maintainability gate 통과
-- Docker Desktop Kubernetes Helm revision 99에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
+- Docker Desktop Kubernetes Helm revision 153에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
 - OIDC 관리자 사용자로 `dev-master/default`의 격리 Runner `kubectl get pods --field-selector=status.phase!=Running,status.phase!=Succeeded -o wide` 실행 성공, exit code `0`, 130ms
 - 로컬 Keycloak 네 역할과 두 Tenant object scope 격리 검증 통과
 - read API 30회/동시성 10 기준 p95 14ms, Backend/Keycloak 순차 재시작, 앱 DB Flyway migration 28건·Keycloak `aiops` Realm sentinel 격리 복원과 AI timeout fallback 증빙
@@ -242,11 +242,13 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - Backend 186개, Command Runner 46개, Frontend production 19개 component의 CycloneDX SBOM에서 license 누락 0건과 allowlist 정책 통과를 확인했다. Frontend production dependency는 High 0/Critical 0이며 개발 도구의 알려진 취약점은 runtime과 분리해 `docs/security/dependency-policy.md`에 공개한다.
 - 공개 supply-chain workflow는 네 runtime container를 build·Trivy scan하고 runtime SBOM과 license gate를 실행한다. signed container workflow도 Command Runner를 포함한다. registry별 Cosign identity/issuer 검증은 자체 운영 배포자가 수행한다.
 - 월간 Dependabot 정책은 Backend/Command Runner Maven, Frontend npm과 GitHub Actions의 minor/patch version update를 ecosystem별 최대 1개 PR로 제한하며 Docker 일반 update와 모든 major update는 자동 생성하지 않는다. Security update와 주간 supply-chain scan은 계속 유지하고 자동 merge하지 않는다.
-- README의 Dashboard와 Kubernetes Console/Cook Book 화면은 별도 namespace의 실제 설치에서 캡처했으며 계정, cluster 식별자와 내부 주소를 공개용 값으로 마스킹했다. 문서 검증은 두 화면 asset의 존재를 확인한다.
+- README와 운영 가이드의 제품 화면은 실제 OIDC 로그인 세션에서 캡처했으며 계정, cluster 식별자와 내부 주소를 공개용 예시 값으로 바꿨다. 운영 가이드는 21개 메뉴 최초 화면과 상세 페이지, 탭, 팝업을 포함한 54개 화면을 사용하며 문서 검증은 대표 화면 asset과 DOCX 생성 소스의 존재를 확인한다.
 - Docker Desktop의 `aiops-system`에서 OIDC 로그인 후 Artifact Hub 검색, nginx Chart import, 암호화 Values 저장·재조회, preview의 Secret redaction, Namespace 생성, Helm install의 `1/1` workload health와 Service endpoint, uninstall, Users & Access, AI Provider 연결 검증과 Ollama model 동기화를 브라우저로 확인했다.
 - Phase 2 공통 제품 Shell을 로컬 Kubernetes Frontend 이미지에 반영하고 실제 OIDC 세션에서 Applications 상태 요약·목록·Runtime/Endpoint inspector, Dashboard, 모바일 navigation과 Application 배포 chooser를 브라우저로 확인했다.
 - CloudPirates nginx Chart `0.16.8`/App `1.31.5`에서 숫자 `targetPort` 수동 Values의 Schema 차단과 올바른 named port 수동 Preview를 확인했다. 같은 Chart에서 간단 요청은 replica 1, ClusterIP, HTTP port 80과 named `targetPort: "http"`를 1회에 생성해 Helm 검증을 통과했다. CloudPirates Redis Chart `0.35.0`/App `8.10.1`의 복잡 요청은 ClusterIP 6379, PVC 1Gi, CPU/Memory requests·limits, runAsNonRoot/RuntimeDefault, liveness/readiness와 `redis-credentials` existing Secret 참조를 생성했고 실제 Preview에서 Service, StatefulSet, PVC와 보안·probe 설정을 확인했다. `helm-values.v10`은 CloudPirates PostgreSQL Chart `0.20.5`/App `18.6.0`에서도 단순 ClusterIP 5432 요청과 PVC 2Gi, CPU/Memory requests·limits, 보안 context, probe, `postgres-credentials` existing Secret 복합 요청을 각각 1회에 생성하고 동일 Chart의 Helm 렌더링을 통과했다. 요청한 `seccompProfile`은 이 Chart Values 계약에 존재하지 않아 만들지 않았다. Kubernetes Deployment manifest 오출력과 지원하지 않는 `cluster.replicaCount` 경로는 재시도 전에 차단했다. Applications에서는 nginx의 immutable Chart 출처와 ClusterIP, Service/Target Port를 실제 OIDC 세션으로 확인했다. Chart Library 제거 modal의 권한별 노출, 보존 범위, exact confirmation과 취소 동작을 OIDC 세션에서 확인했다. Helm Secret 권한이 없는 Namespace는 Preview에서 거부 verb를 표시해 승인 전에 차단했다.
 - 2026-09-16 로컬 Helm revision 144에서 PostgreSQL Chart의 schema 118개 Form 필드와 YAML 왕복, HTTPRoute·Ingress·TCPRoute 선택 UI, TCP listener Gateway가 없을 때 Preview 차단을 OIDC 세션으로 확인했다. 설치된 `qwen2.5-coder:7b`에는 분석·상담·Helm Values 6-case 평가를 실제 실행해 6/6, 100점, 평균 1,324ms를 기록하고 기본 모델 승격과 routing 사용 중 삭제 비활성화를 확인했다. 전체 22개 route는 desktop/mobile 44개 snapshot과 modal focus 2개 계약을 예외 없이 통과했다.
+- 2026-09-17 Phase 2 전체 구현을 `main`에 squash 병합하고 Backend 317개, Frontend 127개 테스트, typecheck와 production build를 통과했다. 로컬 Kubernetes Helm revision 153에서 네 Deployment가 Ready로 수렴했고 실제 OIDC 로그인 후 Dashboard, Applications 목록과 상세, 배포 시작 흐름을 다시 확인했다.
+- 현재 제품의 21개 메뉴 최초 화면과 33개 상세 페이지·탭·팝업을 실제 로그인 세션에서 재검증해 공개 가능한 예시 값으로 캡처했으며, 역할·업무 흐름·하위 기능 절차와 문제 해결을 포함한 운영 가이드 DOCX를 전면 갱신했다.
 - PostgreSQL Chart `0.20.5` 배포 Job이 성공했지만 Applications가 최초 `DEPLOYING` snapshot에 머물던 상태 동기화 누락을 수정했다. 진행 중 Application이 있을 때만 2초 간격으로 목록을 직렬 갱신하고 terminal 전환 시 Revision·Runtime·History를 함께 갱신한 뒤 폴링을 중지한다. 로컬 Kubernetes에서 Helm `deployed`, Pod `1/1 Running`, 저장 상태 `RUNNING / revision 1`과 OIDC 브라우저의 동일 표시를 확인했다.
 
 검증 명령과 최신 로컬 품질 증적은 `docs/operations/release-candidate-checklist.md`를 따른다. 문서와 스크립트의 `release-candidate` 명칭은 기존 자동화 호환을 위해 유지하며 상용 릴리스 판정을 의미하지 않는다.

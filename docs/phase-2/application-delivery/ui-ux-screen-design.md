@@ -1,6 +1,6 @@
 # Phase 2 Application Delivery UI/UX Screen Design
 
-기준일: 2026-09-15
+기준일: 2026-09-17
 
 상태: HTML 시안, P2-0 공통 제품 UI, 전체 정적 route visual regression과 modal 접근성 gate 구현 완료
 
@@ -36,7 +36,7 @@ Tenant별 메뉴는 선택한 Tenant/Workspace의 effective capability와 Tenant
 ### 실제 제품 적용 결과
 
 - `App.vue`의 전체 layout을 짙은 고정 navigation과 상단 context bar를 갖는 공통 product shell로 변경했다.
-- Tenant/Workspace selector는 좌측 메뉴 내부가 아니라 모든 화면에서 범위를 먼저 확인할 수 있는 상단 bar에 배치했다.
+- Tenant와 업무 그룹 selector는 모든 화면에서 작업 범위를 먼저 확인할 수 있는 공통 context bar에 배치했다.
 - 운영 통합 검색과 알림은 상단 전역 action으로 제공하고, 모바일에서는 메뉴 button과 overlay navigation으로 전환한다.
 - semantic color, surface, radius, elevation과 focus token은 `frontend/src/styles/base.css`, 공통 shell 규칙은 `frontend/src/styles/product-shell.css`가 소유한다.
 - Applications는 요약 지표, 검색·상태 필터가 있는 목록, 선택 Application의 Runtime·Endpoint·최근 작업 inspector로 구성했다. 모바일에서는 inspector를 목록보다 먼저 보여 즉시 상태와 위험 작업을 확인한다.
@@ -317,7 +317,7 @@ Credential은 저장 후 재표시하지 않고 교체와 삭제만 제공한다
 - 메뉴는 Tenant Feature와 현재 scope effective capability의 교집합이며 직접 URL/API도 같은 정책을 검사한다.
 - OIDC Group Mapping은 `issuer + group → Tenant + Role + Scope`를 명시적으로 연결하며 Group 이름만으로 전역 권한을 추측하지 않는다.
 
-상단 Tenant selector는 Platform Manager에게 전체 Tenant를, Tenant 역할 사용자에게 membership이 있는 Tenant만 표시한다. Tenant 변경 시 구성원 목록, Access Preview, Feature와 좌측 메뉴를 한 access revision으로 다시 불러오며 이전 Tenant 데이터는 즉시 비운다.
+Tenant selector는 Platform Manager에게 전체 Tenant를, Tenant 역할 사용자에게 membership이 있는 Tenant만 표시한다. Tenant 변경 시 구성원 목록, Access Preview, Feature와 업무 navigation을 한 access revision으로 다시 불러오며 이전 Tenant 데이터는 즉시 비운다.
 
 | 역할 | Users & Access에서 가능한 동작 | 숨김/차단 동작 |
 | --- | --- | --- |

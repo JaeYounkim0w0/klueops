@@ -1,6 +1,6 @@
 # Phase 2 AI Provider and Model Strategy
 
-기준일: 2026-09-15
+기준일: 2026-09-17
 
 상태: Provider profile·연결 검증·목적별 routing·Ollama 9B 제한 모델 관리 구현, 기본 모델 승격 평가는 후속
 

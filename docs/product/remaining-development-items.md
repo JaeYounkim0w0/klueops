@@ -83,7 +83,7 @@ Command Runner의 kubectl 1.34.11과 Keycloak 26.7.3 image에는 프로젝트가
 
 완료 기준: 인증된 gateway, 전송 크기/시간 제한, malware 검사 정책, path traversal 차단, cancel/감사와 UX 설계가 승인될 때만 구현한다.
 
-## 5. Phase 2 이후 선택 연동 및 유보 기능
+## 5. Phase 2 완료 후 선택 연동 및 유보 기능
 
 | 항목 | 현재 결정 | 착수 조건 |
 | --- | --- | --- |
@@ -101,6 +101,8 @@ Application Delivery 핵심 흐름은 구현됐으며 다음은 고급 확장 �
 - 자동 DNS/TLS Provider: Route 생성과 분리해 Provider·credential·갱신 책임이 확정될 때 적용
 
 2026-09-16 완료: schema Form/YAML 양방향 편집, provenance 검증, allowedRoutes/ReferenceGrant, companion Ingress/TCPRoute, 선택형 uninstall/cleanup retry, 9B 이하 모델 평가·승격/삭제 보호, 전 route 시각 회귀와 modal 접근성 gate.
+
+2026-09-17 완료: Phase 2 전체 구현을 `main`에 squash 병합하고 로컬 Kubernetes Helm revision 153으로 재배포했다. Backend 317개와 Frontend 127개 테스트, typecheck, production build, 실제 OIDC 로그인 스모크를 통과했다. Phase 2는 종료됐으며 이 절의 항목은 독립 후속 기능으로만 검토한다.
 
 ## 6. 다음 권장 실행 순서
 

@@ -15,6 +15,7 @@
 9. [문서 관리 규칙](development/documentation-standards.md)
 10. [대규모 cluster 부하·soak 시험](development/large-cluster-soak.md)
 11. [의존성·라이선스 정책](security/dependency-policy.md)
+12. [전체 운영 가이드](user-guide/K8s-AI-Ops-Platform-menu-guide.docx)
 
 ## 문서 그룹
 
@@ -28,7 +29,7 @@
 | `operations/` | 설치, 배포, 복구와 선택적 환경 검증 절차 |
 | `security/` | 인증, 권한, Secret, masking과 보안 검증 |
 | `adr/` | 되돌리기 어려운 기술 결정과 그 근거 |
-| `user-guide/` | 운영자용 Word 가이드와 생성 소스 |
+| `user-guide/` | 실제 로그인 화면 54개와 상세 페이지·탭·팝업 흐름을 포함한 운영자용 Word 가이드, 캡처·생성 소스 |
 
 ## 설치와 운영 검증
 
@@ -37,7 +38,7 @@
 - 외부 접근: [Public URL and Client Access](operations/public-url-and-client-access.md)
 - 통합 품질 검증: [Release Candidate Checklist](operations/release-candidate-checklist.md). 파일명과 스크립트명은 기존 자동화 호환을 위해 유지한다.
 - 제품 준비 실행: [Product Readiness Runbook](operations/product-readiness-runbook.md)
-- 사용자 안내서: [User Guide](user-guide/README.md)
+- 사용자 안내서: [User Guide](user-guide/README.md)와 [전체 운영 가이드](user-guide/K8s-AI-Ops-Platform-menu-guide.docx)
 - 의존성·라이선스·취약점: [Dependency and License Policy](security/dependency-policy.md)
 
 저장소 공개와 외부 기여 규칙은 루트 `SECURITY.md`, `CONTRIBUTING.md`를 함께 따른다. 이 프로젝트는 고객 상용 릴리스 승인을 목표로 하지 않으며, 루트 `LICENSE`가 확정돼야 오픈소스 저장소로 공개할 수 있다.

@@ -6,7 +6,7 @@
 [![Supply chain](https://github.com/JaeYounkim0w0/klueops/actions/workflows/supply-chain.yml/badge.svg)](https://github.com/JaeYounkim0w0/klueops/actions/workflows/supply-chain.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-KlueOps는 Kubernetes 상태·이벤트·로그·구성 근거를 먼저 수집하고, 결정론적 진단과 AI 설명을 결합해 운영자가 안전하게 확인하고 조치하도록 돕는 오픈소스 운영 플랫폼입니다. 특정 고객의 상용 릴리스 인증이 아니라 누구나 검토하고 자신의 환경에서 재현·확장할 수 있는 프로젝트를 목표로 합니다.
+KlueOps는 Kubernetes 상태·이벤트·로그·구성 근거를 먼저 수집하고, 결정론적 진단과 AI 설명을 결합해 운영자가 안전하게 확인하고 조치하도록 돕는 오픈소스 운영 플랫폼입니다. Tenant별 Helm Chart 탐색·보관, Custom Values 검증과 Application 배포·운영도 하나의 증빙 흐름으로 제공합니다. 특정 고객의 상용 릴리스 인증이 아니라 누구나 검토하고 자신의 환경에서 재현·확장할 수 있는 프로젝트를 목표로 합니다.
 
 ## 주요 기능
 
@@ -15,7 +15,10 @@ KlueOps는 Kubernetes 상태·이벤트·로그·구성 근거를 먼저 수집�
 - Incident, Triage Queue, Runbook, 변경 timeline과 운영 증빙 관리
 - RBAC, 범위 고정, preview/dry-run, 사후 검증과 audit을 적용한 kubectl 콘솔
 - 39개 단일 점검 명령과 증상별 절차를 제공하는 Kubernetes Cook Book
+- Artifact Hub 검색, Tenant Chart Library, schema Form/YAML과 AI 기반 Custom Values
+- Helm install, upgrade, rollback, uninstall과 Service·Ingress·HTTPRoute·TCP 접근 경로 운영
 - OIDC BFF, Tenant/Workspace/Cluster/Namespace 계층 권한과 credential 암호화
+- Local Ollama 및 선택형 외부 LLM Provider, 용도별 모델 routing과 9B 이하 로컬 모델 관리
 - 한국어·영어 UI, AI Chat, 분석 비교와 운영자 feedback
 
 ## 제품 화면
@@ -24,7 +27,19 @@ KlueOps는 Kubernetes 상태·이벤트·로그·구성 근거를 먼저 수집�
 
 클러스터 상태, 열린 Incident, 정책 위반, AI 분석과 진행 중인 작업을 한 화면에서 확인하고 우선 대응할 항목으로 이동합니다.
 
-![KlueOps 운영 Dashboard](docs/assets/screenshots/dashboard.png)
+![KlueOps 운영 Dashboard](docs/user-guide/screenshots/01-dashboard.png)
+
+### Application Delivery
+
+Tenant가 보유하거나 Artifact Hub에서 가져온 Helm Chart를 exact version으로 관리하고, Custom Values와 대상 Cluster·Namespace를 검증한 뒤 비동기로 배포합니다. 배포 후 Chart 정보, workload, Service port, NodePort와 Route 상태를 함께 확인합니다.
+
+![KlueOps Application Delivery](docs/user-guide/screenshots/06-applications.png)
+
+### AI Analysis
+
+선택한 Cluster 또는 Namespace의 수집 범위, Kubernetes 근거, 원인, 위험, Runbook과 검증 명령을 함께 제공합니다. Partial 수집과 fallback도 결과에서 명시합니다.
+
+![KlueOps AI Analysis](docs/user-guide/screenshots/10-ai-analysis.png)
 
 ### Kubernetes Console과 Cook Book
 
@@ -32,7 +47,7 @@ KlueOps는 Kubernetes 상태·이벤트·로그·구성 근거를 먼저 수집�
 
 ![KlueOps Kubernetes Console과 Cook Book](docs/assets/screenshots/kubernetes-console-cookbook.png)
 
-화면은 Docker Desktop의 격리된 인수 환경에서 직접 검증한 결과이며 계정, 클러스터 식별자와 내부 주소는 공개용 값으로 마스킹했습니다. 상단의 보안 경고는 HTTP 기반 로컬 프로필임을 나타내며, 자체 운영 환경에서는 TLS와 Secure session cookie를 구성해야 합니다.
+화면은 Docker Desktop의 격리된 인수 환경에서 실제 OIDC 로그인 후 검증한 결과이며 계정, 클러스터 식별자와 내부 주소는 공개용 예시 값으로 바꿨습니다. 로컬 프로필의 운영 안전 경고는 의도적으로 유지했으며, 자체 운영 환경에서는 TLS와 Secure session cookie를 구성해야 합니다. 21개 메뉴 최초 화면과 상세 페이지·탭·팝업을 포함한 54개 화면의 절차는 [KlueOps 운영 가이드](docs/user-guide/K8s-AI-Ops-Platform-menu-guide.docx)에서 확인할 수 있습니다.
 
 ## 실행 구조
 
@@ -72,7 +87,7 @@ kubectl config current-context
 ./scripts/init/all-in-one.sh --dry-run
 ```
 
-2026-09-14에 공개 GitHub 저장소의 새 clone에서 Backend 248개 테스트, Frontend 91개 테스트·production build와 전체 Helm dry-run을 재현했습니다. 이어 별도 namespace에 실제 설치해 로그인, cluster 등록과 Cook Book 명령 실행까지 확인했습니다.
+2026-09-17 `main` 기준으로 Backend 317개 테스트, Frontend 127개 테스트, typecheck, production build와 오픈소스 위생 검사를 통과했습니다. 로컬 Kubernetes Helm revision 153에서 네 Deployment가 Ready로 수렴했고 실제 OIDC 로그인 후 Dashboard, Applications 상세와 배포 시작 흐름을 다시 확인했습니다.
 
 ## 로컬 Kubernetes 설치
 
@@ -103,11 +118,13 @@ Managed Keycloak은 로컬·평가 편의를 위한 단일 replica 프로필입�
 - [전체 문서 안내](docs/README.md)
 - [아키텍처 개요](docs/architecture/overview.md)
 - [사용자 가이드](docs/user-guide/README.md)
+- [화면별 전체 운영 가이드](docs/user-guide/K8s-AI-Ops-Platform-menu-guide.docx)
+- [Application Delivery 설계와 완료 범위](docs/phase-2/README.md)
 - [Kubernetes Cook Book 설계](docs/features/cluster-command-console/README.md)
 - [보안 정책](SECURITY.md)
 - [의존성·라이선스 정책](docs/security/dependency-policy.md)
 
-Prometheus 장기 시계열, GitOps 애플리케이션 배포, 사용자 인프라의 HA/DR과 특정 환경의 운영 인증은 현재 핵심 범위가 아닙니다. AI 출력은 조언이며 Kubernetes 근거, RBAC, command safety와 audit이 최종 판단 기준입니다.
+Prometheus 장기 시계열, Argo CD·Flux 같은 자체 GitOps reconciliation, 사용자 인프라의 HA/DR과 특정 환경의 운영 인증은 현재 핵심 범위가 아닙니다. KlueOps는 명시적인 Helm Application 수명주기를 제공하며 외부 GitOps Controller를 대체하지 않습니다. AI 출력은 조언이며 Kubernetes 근거, RBAC, command safety와 audit이 최종 판단 기준입니다.
 
 ## 기여
 

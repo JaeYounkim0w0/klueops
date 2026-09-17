@@ -1,12 +1,12 @@
 # Phase 2 Application Delivery Product Requirements
 
-기준일: 2026-09-15
+기준일: 2026-09-17
 
-상태: 승인된 Phase 2 범위 구현 완료, OCI/S3 artifact adapter와 자동 DNS/TLS Provider는 후속
+상태: Phase 2 구현·수용 검증·main 병합 완료, OCI/S3 artifact adapter와 자동 DNS/TLS Provider는 후속
 
 ## 구현 기준선
 
-2026-09-15 `feature/phase-2` 기준으로 Tenant별 Artifact Hub 검색·가져오기, Chart Library와 Source, 암호화된 Values revision, 대상 Cluster/Namespace 선택과 Namespace 생성, Helm preview/install/upgrade/rollback/uninstall, Application runtime·Service·Ingress·HTTPRoute 조회, Tenant 역할·메뉴 기능 정책·사용자 membership/offboarding, Ollama 및 외부 Provider profile·목적별 routing을 구현했다. P2-0은 짙은 공통 navigation shell, 상단 Tenant/Workspace context bar, semantic visual token과 전역 responsive surface로 실제 제품에 적용했다. Applications는 상태 요약, 검색·상태 필터 목록과 선택 상세 panel 구조로 시안의 정보 위계를 반영했다. 실제 OIDC 로그인 후 검색부터 배포·상태 확인·삭제까지 로컬 Kubernetes에서 검증했으며, Chart Values가 생성한 Ingress와 KlueOps가 Service에 연결한 companion HTTPRoute는 각각 실제 HTTP 응답까지 확인했다.
+Tenant별 Artifact Hub 검색·가져오기, Chart Library와 Source, 암호화된 Values revision, 대상 Cluster/Namespace 선택과 Namespace 생성, Helm preview/install/upgrade/rollback/uninstall, Application runtime·Service·Ingress·HTTPRoute 조회, Tenant 역할·기능 정책·사용자 membership/offboarding, Ollama 및 외부 Provider profile·목적별 routing을 구현했다. P2-0 공통 navigation shell, Tenant와 업무 그룹 context, semantic visual token과 responsive surface도 실제 제품에 적용했다. 실제 OIDC 로그인 후 검색부터 배포·상태 확인·삭제까지 로컬 Kubernetes에서 검증했으며, Chart Values가 생성한 Ingress와 KlueOps companion HTTPRoute는 각각 실제 HTTP 응답까지 확인했다. 2026-09-17 `main` 병합과 로컬 Helm revision 153 재배포를 완료했다.
 
 다음 항목은 설계를 유지하지만 이번 핵심 구현 완료 범위에는 포함하지 않는다.
 

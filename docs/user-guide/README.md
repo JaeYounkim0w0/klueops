@@ -1,79 +1,79 @@
-# 사용자 매뉴얼
+# KlueOps 사용자 가이드
 
-사용자 매뉴얼은 초보 운영자와 숙련 운영자가 같은 화면에서 필요한 깊이로 작업할 수 있도록 구성한다.
+이 디렉터리는 현재 `main` 브랜치와 실제 로컬 Kubernetes 설치를 기준으로 한 운영자 문서를 관리한다. 화면 위치를 기준으로 설명하지 않고, 운영자가 수행하려는 업무와 Tenant, 업무 그룹, Cluster, Namespace 범위를 기준으로 안내한다.
 
-## 시작 순서
+## 전체 운영 가이드
 
-1. 로그인 후 상단 컨텍스트 바에서 Tenant와 Workspace를 확인한다. 좁은 화면에서는 왼쪽 위 메뉴 버튼으로 짙은 내비게이션을 연다.
-2. `Clusters`에서 대상 클러스터의 연결 상태와 마지막 동기화 시각을 확인한다. 연결 확인 성공은 전체 동기화 RBAC 충족을 의미하지 않으므로 첫 동기화 결과도 확인한다.
-3. 클러스터 상세에서 Namespace와 리소스를 선택한다.
-4. Kubernetes 콘솔이 필요하면 대상 Cluster와 Namespace가 잠겼는지 확인한 뒤 조회 명령부터 실행한다.
-   명령이 익숙하지 않으면 `Cook Book`에서 점검 목적을 검색하고 범위와 요구 조건을 확인한 뒤 명령 작업 공간으로 가져온다.
-5. 문제가 있으면 `Analysis`에서 범위를 고정하고 분석을 실행한다.
-6. 결과의 Kubernetes 근거, 로그, Event, 명령 안전도를 순서대로 확인한다.
-7. `콘솔에서 검증`으로 명령과 원본 분석을 연결하고 실행 결과를 확인한다.
-8. 변경 명령은 먼저 검증 또는 dry-run을 실행하고, 결과를 확인한 뒤 조치한다.
-9. 조치 후 같은 범위를 재분석해 상태가 개선됐는지 확인한다.
+[KlueOps 운영 가이드](./K8s-AI-Ops-Platform-menu-guide.docx)는 실제 OIDC 로그인 후 캡처한 54개 화면을 사용한다. 21개 메뉴 최초 화면뿐 아니라 독립 상세 페이지, 탭, 팝업과 하위 작업 흐름까지 다음 범위로 설명한다.
 
-## 메뉴 안내
+- 역할과 Tenant 범위, 공통 운영 흐름
+- Dashboard, 실시간 운영 판단, Fleet Command와 Incident 처리
+- 클러스터 등록, 연결·동기화, resource 조회와 명령 안전
+- Artifact Hub 검색, Chart Library, Custom Values와 Helm Application 배포
+- AI Analysis, AI Chat, Runbook과 AI 신뢰도 검토
+- Policy, Audit, 운영 신뢰성, Runtime과 보관 정책
+- Local Ollama·외부 LLM Provider, 사용자·역할·Tenant 관리
+- Fleet 추세·검증 랩, Incident 생성과 7개 상세 탭
+- 클러스터 등록·준비도·리소스 상세·Kubernetes 콘솔
+- Values Studio·AI 도우미·배포 Wizard와 Chart 업로드·제거
+- AI 분석 초보자·숙련자 상세, Runbook 편집과 정책 이력
+- Provider Profile, 사용자 초대, OIDC Group Mapping과 기능 정책
+- 상태와 오류 해석, 실무 문제 해결 체크리스트
 
-짙은 좌측 내비게이션은 `개요`, `운영 대응`, `인프라`, `Application Delivery`, `AI 운영`, `거버넌스`, `플랫폼 설정`, `개인 영역`으로 업무를 구분하며 현재 메뉴를 파란 표시선으로 보여준다. 권한이 없는 그룹은 제목과 메뉴를 함께 숨기고, 운영 통합 검색과 알림은 상단에서 항상 사용할 수 있다.
+화면에는 개인 계정, 실제 클러스터 식별자와 내부 주소 대신 공개 가능한 예시 값이 표시된다. 로컬 HTTP 설치의 운영 안전 경고는 의도적으로 유지해 실제 운영 환경에서 TLS와 Secure cookie가 필요함을 보여준다.
 
-| 메뉴 | 주요 용도 |
+## 권장 운영 흐름
+
+1. 로그인 후 현재 Tenant와 업무 그룹을 확인한다.
+2. Dashboard와 실시간 운영 판단에서 대응 우선순위를 정한다.
+3. 대상 클러스터의 마지막 동기화 시각과 현재 resource 상태를 확인한다.
+4. AI Analysis 또는 Runbook에서 수집 범위, 근거와 검증 순서를 확인한다.
+5. 명령 작업 공간에서는 조회 명령부터 실행하고 변경은 Preview 또는 dry run을 거친다.
+6. 조치 후 같은 범위를 재분석하고 Incident와 Audit에 결과가 연결됐는지 확인한다.
+
+## Helm Application 배포
+
+1. Chart Library에서 검증된 Chart를 선택한다. 필요한 Chart가 없으면 Discover, Sources 또는 tgz 가져오기를 사용한다.
+2. Values Profile을 만들고 YAML 또는 schema Form으로 override를 저장한다. 빈 입력은 빈 object로 처리하고 exact Chart의 Helm render를 통과해야 한다.
+3. AI Values 제안은 선택한 Chart의 제공사, Chart와 App 버전, values와 schema 골격을 사용한다. 비밀번호나 token 대신 기존 Secret 이름을 요청한다.
+4. Cluster와 Namespace를 선택하고 Helm release Secret의 `get/list/create` 권한을 확인한다.
+5. HTTPRoute는 렌더링된 Service의 `spec.ports[].port`와 Ready Gateway를 사용한다. `targetPort`나 `nodePort`를 HTTPRoute backend port로 사용하지 않는다.
+6. PostgreSQL과 Redis 같은 TCP 서비스는 port-forward, NodePort, LoadBalancer 또는 TCPRoute를 사용한다.
+7. Preview와 정확한 확인 절차를 거쳐 비동기 배포를 시작하고 Applications에서 최종 상태, Runtime, endpoint와 History를 확인한다.
+
+Application Delivery는 Argo CD나 Flux를 설치하거나 Git repository를 지속 동기화하는 GitOps Controller가 아니다. KlueOps가 관리하는 Helm Release의 명시적 install, upgrade, rollback과 uninstall을 제공한다.
+
+## 화면 상태 해석
+
+| 상태 | 의미 |
 | --- | --- |
-| Dashboard | 여러 클러스터의 운영 우선순위와 진행 중인 Job 확인 |
-| Clusters | 클러스터 등록, 연결 확인, 동기화, Namespace/리소스 조회 |
-| Kubernetes Console | 선택 Cluster에서 kubectl 조회·변경·Pod TTY 실행과 이력 확인 |
-| Applications | Tenant Chart 검색·보관, Custom Values, Helm 배포와 Application 수명주기 관리 |
-| AI Analysis | Namespace 또는 Cluster 범위의 원인·로그·성능·위험·Runbook 분석 |
-| AI Chat | 일반 상담 또는 선택한 Kubernetes 리소스 기반 상담 |
-| Incidents | 반복 장애, 담당자, 상태, 영향 범위와 타임라인 관리 |
-| Runbooks | 검증 명령, 안전한 조치, 예상 결과와 복구 절차 관리 |
-| 거버넌스 | Policies, Audit, Watch와 운영 신뢰성 확인 |
-| 플랫폼 설정 | 사용자·OIDC Group, Tenant/Workspace, AI Provider·모델과 시스템 설정 관리 |
-| 사용자 및 권한 | Tenant 구성원·그룹·기능 정책 관리, Platform Manager의 플랫폼 계정 권한 화면 연결 |
+| `Loading` | 최신 데이터를 조회 중이다. 장시간 유지되면 API와 session 상태를 확인한다. |
+| `Empty` | 현재 범위에 표시할 데이터가 없다. 화면의 시작 행동을 수행한다. |
+| `Partial` | 일부 Kubernetes 또는 AI source만 완료됐다. 실패 source와 confidence를 확인한다. |
+| `Fallback` | AI 대신 Kubernetes 근거와 결정론적 규칙으로 결과를 생성했다. |
+| `Blocked` | 권한, 안전 정책 또는 필수 환경조건 때문에 실행하지 않았다. |
+| `Degraded` | Route 또는 resource 참조가 수락·해결되지 않았다. 유효한 접근 경로로 취급하지 않는다. |
 
-## Helm Application 배포 시작
+## 문서 재생성
 
-1. `Applications > Chart Library`에서 보유 Chart를 선택한다. 각 카드의 `제공사`는 Chart를 발행·관리하는 주체이고 `소스`는 Artifact Hub 또는 직접 업로드 같은 유입 경로다. 필요한 Chart가 없으면 `Discover`에서 검색해 현재 Tenant로 가져오거나 Source/.tgz를 등록한다. 직접 업로드처럼 metadata만으로 제공사를 확인할 수 없으면 `제공사 미확인`으로 표시한다. Tenant Admin 또는 Platform Manager는 불필요한 Chart의 `제거`를 선택하고 `source/package`를 정확히 입력해 Library에서 숨길 수 있다. 기존 배포·Release·Values 이력은 유지되며 동일 Chart를 다시 가져오면 복원된다.
-2. Values Profile을 생성하고 YAML을 저장한다. 새 Profile은 빈 override `{}`에서 시작하며 수동 YAML도 해당 Chart로 Helm 렌더링을 통과해야 저장된다. `nodePort`는 Service type이 `NodePort` 또는 `LoadBalancer`일 때 Kubernetes 기본 범위 `30000-32767`에서 지정한다. 범위를 벗어나면 편집 화면에서 즉시 오류가 표시되고 Revision 저장이 차단되며, Backend도 렌더링된 Service를 다시 검증한다. `AI로 Values 제안`은 특정 제품용 예시가 아니라 선택한 exact Chart의 제공사, Chart/App 버전과 요청에 관련된 실제 Values/Schema 골격을 기준으로 요청을 반영하고, 구조 검사와 Helm 검증이 끝난 결과만 보여준다. 기본값이 이미 요청을 만족하면 불필요한 중복 override는 생략할 수 있다. 간단 요청뿐 아니라 persistence, resource, security context, probe, existing Secret 같은 복합 요청도 한 문장으로 설명할 수 있다. Chart 정보와 검증 횟수를 확인하고 제안을 검토한 뒤 적용한다. 비밀번호·token 본문은 쓰지 말고 사전에 만든 Secret 이름을 `existingSecret`으로 요청한다.
-3. `배포`에서 권한이 있는 Cluster와 기존 Namespace를 선택한다. 새 Namespace는 capability가 있을 때만 생성한다. Target의 `현재 Values로 렌더링되는 Service`에서 Service type, Service/Target Port와 선택형 Node Port가 의도한 값인지 먼저 확인한다. Preview는 등록 Cluster credential이 대상 Namespace의 Helm release Secret을 `get/list/create`할 수 있는지 검사하며, 부족하면 승인 전에 차단하고 필요한 권한을 표시한다.
-4. 노출 방식은 `Cluster 내부`, `Chart에서 관리`, `KlueOps HTTPRoute` 중에서 고른다. Chart의 Values가 Ingress/HTTPRoute를 지원하면 `Chart에서 관리`를 선택한다. `KlueOps HTTPRoute`는 렌더링된 HTTP Service/Port와 대상 Cluster의 READY Gateway를 목록에서 고른 뒤 hostname/path를 입력한다. Service Port는 `spec.ports[].port`이며 `targetPort`나 `nodePort`가 아니다. PostgreSQL·Redis처럼 HTTP가 아닌 TCP 서비스는 HTTPRoute 대상이 아니며 port-forward, NodePort, LoadBalancer 또는 TCP listener가 준비된 TCPRoute를 사용한다.
-5. HTTPRoute 목록이 비어 있으면 Cluster Admin이 Gateway API CRD, Gateway Controller와 HTTP/HTTPS listener가 있는 Gateway를 준비했는지 `kubectl get gatewayclass`, `kubectl get gateway -A`로 확인한다. 다른 Namespace의 Gateway를 사용할 때는 Listener `allowedRoutes`가 Application Namespace를 허용해야 한다. 등록한 Cluster credential에도 Gateway 및 대상 Namespace `get/list` 읽기 권한이 필요하다. KlueOps가 이를 자동 설치하지 않는다. 나중에 설치했다면 `다시 조회`하고, 먼저 내부용으로 배포했다면 Application Upgrade에서 노출을 추가한다.
-6. Preview에서 렌더링 결과와 경고를 확인한다. `Chart에서 관리`는 렌더 결과에 Ingress 또는 HTTPRoute가 실제 포함되어야 한다. 정확한 확인 문구를 입력해 실행한다.
-7. Applications 목록에서 배포에 사용한 Helm Chart와 Chart/App 버전을 확인한다. `DEPLOYING`, `UPGRADING`, `ROLLING_BACK`, `UNINSTALLING` 상태가 하나라도 있으면 화면이 완료·실패까지 자동 갱신되며, 완료 후 Revision·Runtime·History도 함께 바뀐다. Application을 선택하면 Chart package·제공사/source, workload/Pod, Service·Ingress·HTTPRoute 접근 URL과 endpoint 상태, IP/Host, Service/Target/Node Port, History가 표시된다. `클러스터 내부` 주소는 Cluster 안에서만 접근할 수 있다. HTTP/HTTPS endpoint만 브라우저 링크로 제공하며 PostgreSQL 같은 `tcp://` endpoint는 전용 client 또는 port-forward 접속 정보를 표시한다. `READY`는 Route 조건이 수락된 상태, `APPLIED`는 적용 후 조건 판정 중, `DEGRADED`는 거부되었거나 참조가 해결되지 않은 상태이며 클릭 가능한 URL로 취급하지 않는다. 종료된 Application에는 upgrade, rollback, uninstall을 다시 실행할 수 없다.
-
-### 로컬 PostgreSQL 접속 예시
-
-ClusterIP의 `*.svc.cluster.local` 주소는 Cluster 내부 DNS이므로 로컬 PC의 `hosts`에 `127.0.0.1`로 매핑하지 않는다. 개발 환경에서는 다음처럼 포트 포워딩한 뒤 PostgreSQL client에서 host `127.0.0.1`, port `15432`, database/user `postgres`, SSL mode `disable`로 접속한다.
+화면 변경 후 비밀번호를 파일에 기록하지 않고 환경 변수로 전달해 캡처한다.
 
 ```bash
-kubectl -n docker-desktop-postgres port-forward service/postgres 15432:5432
-PGPASSWORD='<password>' psql "host=127.0.0.1 port=15432 user=postgres dbname=postgres sslmode=disable"
+AIOPS_GUIDE_USERNAME='<username>' \
+AIOPS_GUIDE_PASSWORD='<password>' \
+node docs/user-guide/capture_product_screenshots.mjs
 ```
 
-HTTPRoute 상태가 `DEGRADED`면 무시하지 않는다. `Accepted=False` 또는 `ResolvedRefs=False`라는 뜻으로 해당 URL은 유효한 접근 경로가 아니다. 특히 PostgreSQL Service에 만든 HTTPRoute는 프로토콜 자체가 맞지 않으므로 제거하고 위 TCP 접근 방식 중 하나를 선택한다.
+Word 가이드를 생성하고 번들 LibreOffice에서 한글 글꼴 경로를 명시해 검증한다.
 
-Application Delivery는 Argo CD/Flux를 설치하거나 Git 저장소를 지속 동기화하는 GitOps Controller가 아니다. KlueOps가 관리하는 Helm Release의 명시적 install, upgrade, rollback과 uninstall을 제공한다.
+```bash
+PY='/path/to/workspace-dependencies/python/bin/python3'
+export FONTCONFIG_FILE="$PWD/docs/user-guide/fontconfig.xml"
 
-Application 제거는 exact confirmation 후 비동기 Job으로 실행된다. Job Center가 서버 상태를 자동 갱신하며 성공하면 배포 목록과 상세 정보가 함께 사라진다. 공유 Namespace와 Tenant Chart Library는 유지되고, 실패한 경우에만 Application이 남아 원인을 확인하고 다시 처리할 수 있다. Phase 2 적용 전에 이미 `UNINSTALLED`로 남아 있던 Application metadata도 database migration에서 한 번 정리한다.
+"$PY" docs/user-guide/update_menu_guide.py
+"$PY" /path/to/documents-skill/render_docx.py \
+  docs/user-guide/K8s-AI-Ops-Platform-menu-guide.docx \
+  --output_dir /tmp/klueops-guide-render
+```
 
-## 화면의 공통 상태
-
-- `Loading`: 최신 데이터를 조회하는 중이다.
-- `Empty`: 오류가 아니라 현재 범위에 표시할 데이터가 없는 상태다. 화면의 다음 행동을 따른다.
-- `Partial`: 일부 Kubernetes 또는 AI 섹션만 완료됐다. 완료된 근거와 실패 원인을 구분해 확인한다.
-- `Fallback`: AI 응답 대신 Kubernetes API 근거로 안전하게 생성된 결과다.
-- `Blocked`: 권한, 안전 정책, 필수 환경조건 때문에 실행하지 않았다.
-
-## AI Analysis 수집 품질 확인
-
-분석 결과의 `Analysis Runtime`에서 `Kubernetes 정보 수집` 상태를 먼저 확인한다. `Partial`이면 성공·실패·건너뜀 source 수와 source별 지연 및 오류를 펼쳐 확인한다. 부분 수집 결과의 confidence는 제한되므로, 실패 source가 현재 장애와 관련 있다면 credential, Kubernetes API 연결, 권한을 복구한 뒤 같은 범위를 재분석한다. 수집된 근거와 deterministic fallback은 사용할 수 있지만 이를 전체 리소스가 정상이라는 의미로 해석하지 않는다.
-
-## 상세 매뉴얼
-
-시각 중심 메뉴 설명과 흐름도는 [KlueOps 메뉴 가이드](./K8s-AI-Ops-Platform-menu-guide.docx)를 함께 제공한다. 설치·배포 담당자는 `docs/operations/initial-installation.md`와 `docs/operations/deployment.md`를 사용한다. DOCX 파일명은 기존 배포 경로 호환성을 위해 유지한다.
-
-Word 가이드의 반복 가능한 내용 및 글꼴 보정은 `update_menu_guide.py`가 관리한다. 화면과 운영 절차를 변경한 뒤 이 스크립트를 실행하고 `render_docx.py`로 전체 페이지를 검수한다.
-
-원문 리소스명, Pod 상태, Event reason, 로그, kubectl 명령은 정확성을 위해 원문을 유지하고, 제목과 설명만 선택한 언어로 번역한다.
+DOCX 파일명은 기존 배포 경로 호환성을 위해 유지한다. 설치와 배포 담당자는 [최초 설치](../operations/initial-installation.md), [변경 배포](../operations/component-deployment.md), [OIDC와 보안 구성](../security/operations/keycloak-and-security-configuration.md)을 함께 사용한다.

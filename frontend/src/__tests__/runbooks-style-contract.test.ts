@@ -11,4 +11,12 @@ describe('runbook library visual contract', () => {
     expect(styleSource).toMatch(/\.runbook-library-title\s*\{[\s\S]*?color:\s*#182230/);
     expect(styleSource).toMatch(/\.runbook-library-summary\s*\{[\s\S]*?color:\s*#344054/);
   });
+
+  it('uses the shared modal surface and header for runbook dialogs', () => {
+    expect(viewSource).toContain('class="modal-panel runbook-editor-modal"');
+    expect(viewSource).toContain('aria-labelledby="runbook-editor-title"');
+    expect(viewSource).toContain('class="modal-panel runbook-version-modal"');
+    expect(viewSource).toContain('aria-labelledby="runbook-version-title"');
+    expect(viewSource.match(/<header class="modal-header">/g)).toHaveLength(2);
+  });
 });
