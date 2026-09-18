@@ -1,5 +1,9 @@
 # Phase 2 Application Delivery Product Requirements
 
+## Values 도우미 추가 요구사항 2026-09-17
+
+자연어 요청과 선택한 Chart의 원본 Values·주석·선택형 Schema를 공통 프롬프트로 처리한다. 기본 Values가 없는 신규 Chart는 편입하지 않는다. 대형 자료는 주소 기반 추가 조회를 지원하며 기존 Values에 변경만 합성한다. 보충 질문, 변경 비교, YAML·Chart 경로·Helm lint/template 검증을 제공한다. Cluster에 실제로 배포된 뒤의 권한·스케줄링·PVC·Pod·Service·Route 상태 검증은 배포 Job이 담당한다. 상세 요구사항과 현재 검증 상태는 [Values 도우미 고도화](values-assistant-redesign.md)를 따른다. 구형 동기 API도 동일 엔진을 사용한다.
+
 기준일: 2026-09-17
 
 상태: Phase 2 구현·수용 검증·main 병합 완료, OCI/S3 artifact adapter와 자동 DNS/TLS Provider는 후속
@@ -217,21 +221,22 @@ Application은 KlueOps가 배포한 Helm Release만 대상으로 하며 Cluster�
 
 ## 7. Custom Values와 AI Assistant
 
-AI는 배포자가 아니라 Values 제안자다. `helm-values.v10` prompt는 현재 편집 중인 Custom Values를 기준으로 정확한 Chart 이름, package, 제공사/source, Chart version과 App version을 고정한다. 특정 application 이름이나 제공사 전용 구조를 prompt에 하드코딩하지 않고 immutable Chart의 실제 `values.yaml`과 선택형 `values.schema.json`에서 사용자 요청과 현재 override에 관련된 section 및 사용 가능한 최상위 key를 추출해 bounded context로 전달한다. 요청 관련 root key는 참고 정보이며 exact default 또는 현재 Values가 이미 요청을 만족하면 중복 override를 강제하지 않는다. Chart reference의 주석과 설명은 신뢰하지 않는 data로 취급한다.
+AI는 배포자가 아니라 Values 제안자다. `helm-values.grounded.v2`는 Chart별 분기 없이 런타임의 정확한 archive와 요청을 사용한다. 원문·주석·Schema·dependency·정적 템플릿 경로를 참조하며 임의의 전체 기본값 재작성 대신 요청한 변경을 기존 설정에 합성한다. 공통 생성 엔진, 편입 조건, 참조 조회와 보안은 [고도화 설계](values-assistant-redesign.md)를 따른다.
 
-API는 실제 Helm 렌더링을 통과한 완전한 Custom Values YAML과 검증 metadata를 다음 provider-neutral 계약으로 반환한다.
+API는 실제 Helm 렌더링을 통과한 완전한 Custom Values YAML과 검증 metadata를 다음 provider-neutral 계약으로 반환한다. 이 계약은 정적 Values 검증 결과만 표현하며 Kubernetes 배포 상태를 포함하지 않는다.
 
 ```json
 {
   "valuesYaml": "replicaCount: 3\nservice:\n  type: ClusterIP\n",
-  "promptVersion": "helm-values.v10",
+  "promptVersion": "helm-values.grounded.v2",
   "validationStatus": "HELM_TEMPLATE_VALIDATED",
   "attempts": 1,
   "chartName": "nginx",
   "providerName": "cloudpirates-nginx",
   "chartVersion": "0.16.8",
   "applicationVersion": "1.31.5",
-  "schemaIncluded": true
+  "schemaIncluded": true,
+  "warnings": []
 }
 ```
 
@@ -239,8 +244,13 @@ API는 실제 Helm 렌더링을 통과한 완전한 Custom Values YAML과 검증
 - Secret value, Kubernetes credential, ConfigMap 원문과 인증서는 prompt에 포함하지 않는다.
 - LLM은 현재 Custom Values의 관련 없는 key를 보존하고 사용자 요청에 필요한 override만 변경한다. 범용 기본 key나 다른 Chart 버전의 구조를 추측하지 않는다.
 - 신규 Profile처럼 현재 Custom Values가 비어 있으면 API가 이를 빈 Helm override인 `{}`로 정규화해 AI 제안을 허용한다.
-- Kubernetes manifest 형태(`apiVersion`, `kind`, resource `metadata/spec`), exact Chart에 없는 중첩 Values path, 새 redaction marker와 요청한 필수 section 누락은 `helm template` 전후의 결정론적 검사에서 거부한다.
-- 구조 검사, schema validation 또는 `helm template`이 실패하면 masked·bounded 오류를 재피드백해 최대 3회까지 수정 제안을 생성한다. 모두 실패하면 결과를 반환하거나 적용하지 않는다.
+- 중복 경로와 parent/child 충돌은 차단한다. 모델이 생성한 경로를 임의로 이동·삭제해 부분 성공으로 처리하지 않는다.
+- 미지원 경로와 Kubernetes manifest 오출력은 차단한다. 렌더된 Service의 type, port/nodePort 범위, clusterIP IPv4/IPv6/None 및 headless 조합도 검사한다.
+- 요청 의도는 모델이 반환한 Values 경로·값과 원본 Chart의 Schema·렌더링 결과를 기준으로 검토한다. 모델이 이해하지 못한 요청은 보충 질문으로 돌려보내며, 사용자 diff 검토는 필수다. 실제 Cluster 적용 결과는 배포 Job에서 별도로 검증한다.
+- 신규 평문 credential과 근거 없이 만든 Secret 이름은 차단한다. 사용자가 비밀번호를 입력하면 모델 전송 전에 지원되는 인증 방식과 기존 Secret 참조를 요청한다. 기존 민감값은 보존하되 부분 제거로 전체 요청을 성공 처리하지 않는다.
+- Ollama 호출은 입력 크기에 따라 4K/8K/16K context와 출력 예산을 동적으로 정한다. 운영 로그에는 prompt·Values·Secret 원문 없이 목적, provider/model, 추정 입력 token, context/output 예산과 latency만 기록한다.
+- Kubernetes manifest 형태(`apiVersion`, `kind`, `metadata` 조합), exact Chart에 없는 중첩 Values path와 새 redaction marker를 거부한다. 변경 요구사항에는 경로 매핑이 필요하며 유지 조건에는 변경을 강제하지 않는다.
+- YAML 구조·Chart 경로·Helm lint/template가 실패하면 안전한 Chart 근거로 최대 2회 교정한다. 추가 자료 조회를 포함한 모델 호출은 최대 5회이다. 계속 실패하면 YAML을 적용하지 않는다. Kubernetes 권한·admission·스케줄링·PVC·Pod·Service·Route 검증은 최종 배포 Job에서 수행하고 실패 시 그 Job의 이벤트와 원인을 표시한다.
 - 수동 YAML도 Revision 저장 전에 같은 Chart artifact로 렌더링하며, AI 실패와 무관하게 수동 편집은 계속 사용할 수 있다.
 - Secret value 유사 key는 AI prompt에서 `***REDACTED***`로 치환하고, 검증된 결과를 반환할 때 원래 Custom Values의 값을 서버에서 복원한다. `existingSecret`처럼 Secret resource 이름만 참조하는 key는 실제 값을 노출하지 않으므로 정확한 Chart 계약 작성을 위해 보존한다.
 - 사용자가 diff를 승인하기 전에는 Values Profile revision을 만들지 않는다.

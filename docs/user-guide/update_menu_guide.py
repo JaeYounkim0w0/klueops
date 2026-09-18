@@ -49,7 +49,7 @@ SCREENS = [
      "Uninstall 성공 시 Application 메타데이터도 제거되며 실패했을 때만 원인 확인을 위해 남습니다."),
     ("Application Delivery", "Chart Library", "07-chart-library.png",
      "현재 Tenant가 검증하고 보관한 Helm Chart와 버전을 관리하고 배포 흐름을 시작합니다.",
-     ["Chart 이름, 제공사, source와 버전을 확인한 뒤 Values Profile을 선택하거나 새로 만듭니다.", "직접 업로드한 tgz는 안전 검사와 metadata 확인을 거쳐 저장합니다.", "불필요한 Chart 제거는 새 배포에서 숨기는 작업이며 기존 Release와 Values 이력은 유지됩니다."],
+     ["Chart 이름, 제공사, source와 버전을 확인한 뒤 Values Profile을 선택하거나 새로 만듭니다.", "tgz는 안전 검사와 metadata 확인을 거칩니다. 비어 있지 않은 기본 values.yaml이 있어야 편입합니다.", "불필요한 Chart 제거는 새 배포에서 숨기는 작업이며 기존 Release와 Values 이력은 유지됩니다."],
      "동일 Chart 이름이라도 repository와 제공사, exact version이 다를 수 있습니다."),
     ("Application Delivery", "Discover", "08-discover.png",
      "Artifact Hub에서 Helm Chart를 검색하고 exact version을 현재 Tenant의 Chart Library로 가져옵니다.",
@@ -153,8 +153,8 @@ SUBPAGES = {
          ["기존 Profile을 선택하거나 이름과 설명을 입력해 새 Profile을 만듭니다.", "Form 또는 YAML 방식으로 override만 수정합니다.", "Helm render 검증을 통과한 revision을 저장하고 Target 단계로 이동합니다."],
          [("Form", "values schema가 있는 field를 입력합니다.", "표시되지 않는 고급 field는 YAML을 사용합니다."), ("YAML", "Chart 구조에 맞는 override YAML을 편집합니다.", "list와 map 자료형을 혼동하지 않습니다."), ("Revision", "저장한 변경을 불변 이력으로 관리합니다.", "배포는 선택한 revision을 정확히 참조합니다.")]),
         ("Custom Values AI 도우미", "34-values-ai-assistant.png", "정확한 Chart 제공사와 버전의 기본 values와 schema를 근거로 override 초안을 만듭니다.",
-         ["원하는 replica, service, persistence, resource와 보안 조건을 자연어로 입력합니다.", "제안 YAML을 diff와 Helm render로 검증한 뒤 적용합니다.", "빈 YAML 입력도 빈 object로 처리되며 사용자의 요구만으로 초안을 만들 수 있습니다."],
-         [("입력 문맥", "Chart, repository, Chart/App 버전과 기본 values 골격을 전달합니다.", "특정 제품에 하드코딩된 prompt를 사용하지 않습니다."), ("Secret", "existing Secret 이름 또는 placeholder만 요청합니다.", "비밀번호 원문을 LLM에 보내지 않습니다."), ("검증", "YAML parse, schema와 helm template을 확인합니다.", "검증 실패 제안은 revision으로 저장하지 않습니다.")]),
+         ["원하는 대상, 수량, 접근 방식, 저장소와 리소스를 자연어로 입력하고 요청 분석 및 제안 생성을 누릅니다.", "이해한 요청과 보충 질문을 확인합니다. 모호한 항목은 요청 내용을 수정해 다시 생성합니다.", "Job Center에서 생성 상태를 확인합니다. 새로고침한 경우 URL의 작업 ID로 결과를 다시 조회합니다.", "요청별 Chart 경로, 기존/제안 변경 비교와 읽기 전용 YAML을 검토한 뒤 편집기에 적용합니다. 수정이 필요하면 적용 후 편집하고 revision 저장 시 다시 검증합니다."],
+         [("요청 해석", "선택한 Chart 원본 Values의 주석과 설정을 읽고, 필요하면 추가 자료를 조회합니다.", "단일 서버와 전체 release의 Pod 하나는 범위가 다릅니다."), ("입력 보완", "추가 입력이 필요하면 구체적인 질문을 표시합니다.", "AI 생성 실패와 사용자 입력 부족을 구분합니다."), ("비동기 생성", "현재 사용자의 암호화된 결과를 별도 조회합니다.", "원본 Values가 달라지면 적용하지 않고 다시 생성합니다."), ("Secret", "인증 방식과 기존 Secret 이름 및 key를 지정합니다.", "새 비밀번호를 입력하거나 임의 환경변수로 인증을 만들지 않습니다."), ("검증", "YAML, Helm lint/렌더와 제시된 리소스 조건을 검사합니다.", "확인하지 못한 요구사항은 경고합니다. 실제 배포·접속은 별도로 확인합니다.")]),
         ("배포 Wizard", "35-deployment-wizard.png", "Cluster, Namespace, release와 접근 방식을 선택하고 manifest Preview 후 배포합니다.",
          ["Target Cluster와 Namespace, release name을 지정합니다.", "Cluster 내부, Chart 관리형 또는 KlueOps HTTPRoute 중 접근 방식을 선택합니다.", "Preview에서 manifest, 권한, Service port, Gateway와 경고를 확인한 뒤 확인 문구로 배포합니다."],
          [("Target", "배포 Cluster, Namespace와 release를 결정합니다.", "Helm release Secret 권한을 사전 검사합니다."), ("Cluster 내부", "Chart Service만 생성합니다.", "외부 접근 경로는 제공하지 않습니다."), ("Chart 관리형", "Values가 생성하는 Ingress 또는 Route를 사용합니다.", "Chart가 지원하는 정확한 field를 사용합니다."), ("KlueOps HTTPRoute", "렌더링된 Service와 Ready Gateway를 선택합니다.", "backend port는 Service spec ports port이며 targetPort와 nodePort가 아닙니다."), ("Preview", "Helm render 결과와 생성·변경 resource를 확인합니다.", "Preview는 Cluster를 변경하지 않습니다.")]),
@@ -311,6 +311,11 @@ def add_table(document, headers, rows, widths):
             if row_index % 2:
                 shade(cells[i], "F3F7FC")
             format_table_paragraph(cells[i].paragraphs[0], first_column=i == 0)
+    # 짧은 안내 표는 제목과 함께 묶어 마지막 한두 행만 다음 페이지에 남지 않게 한다.
+    for row_index, row in enumerate(table.rows):
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                paragraph.paragraph_format.keep_with_next = row_index < len(table.rows) - 1
 
 
 def configure(document):
@@ -494,7 +499,7 @@ def build():
     for index, item in enumerate([
         "Chart Library에서 검증된 Chart를 선택합니다. 없으면 Discover 또는 Sources와 tgz 가져오기를 사용합니다.",
         "Values Profile을 만들고 YAML 또는 schema Form으로 override를 저장합니다. 빈 입력은 빈 object로 처리하며 exact Chart로 Helm render를 통과해야 합니다.",
-        "AI Values 제안은 Chart 제공사, Chart와 App 버전, values와 schema 골격을 사용합니다. Secret 원문 대신 existing Secret 이름을 요청합니다.",
+        "AI Values 제안은 선택한 Chart 원문 참조, 요청 매핑, 기존 Values에 변경 합성과 lint/렌더 검증 순서로 진행합니다. 기존/제안 변경 비교와 확인 범위를 함께 검토합니다. 보충 질문에는 요청을 수정하여 답하고 Job Center에서 생성 상태를 확인합니다. 비밀번호 대신 지원되는 인증 방식과 기존 Secret 이름/key를 지정합니다.",
         "Cluster와 Namespace를 선택합니다. Preview는 Helm release Secret의 get list create 권한을 확인합니다.",
         "HTTPRoute는 렌더링된 Service의 spec ports port와 Ready Gateway를 사용하며 targetPort나 nodePort를 backend port로 사용하지 않습니다.",
         "PostgreSQL과 Redis 같은 TCP 서비스는 port forward, NodePort, LoadBalancer 또는 TCPRoute를 사용합니다.",

@@ -33,6 +33,8 @@ KlueOps는 Kubernetes 상태·이벤트·로그·구성 근거를 먼저 수집�
 
 Tenant가 보유하거나 Artifact Hub에서 가져온 Helm Chart를 exact version으로 관리하고, Custom Values와 대상 Cluster·Namespace를 검증한 뒤 비동기로 배포합니다. 배포 후 Chart 정보, workload, Service port, NodePort와 Route 상태를 함께 확인합니다.
 
+Custom Values AI 도우미는 선택한 Chart의 원본 Values·주석·선택형 Schema를 근거로 자연어 요청을 처리합니다. 공통 프롬프트와 필요한 자료의 추가 조회를 사용하며, 기존 Values에 변경을 합성한 뒤 YAML 구조·Chart 경로·Helm lint/template만 검증합니다. 보충 질문과 변경 비교를 제공하고 Job Center에서 비동기로 추적합니다. 이 단계의 성공은 Values가 유효하다는 의미이며, 실제 Cluster 배포 성공·Pod/Service/Route 상태를 보증하지 않습니다. 배포 검증과 실패 원인은 최종 배포 Job에서 확인합니다. [설계 및 실제 검증 상태](docs/phase-2/application-delivery/values-assistant-redesign.md)를 확인하세요.
+
 ![KlueOps Application Delivery](docs/user-guide/screenshots/06-applications.png)
 
 ### AI Analysis
@@ -87,7 +89,7 @@ kubectl config current-context
 ./scripts/init/all-in-one.sh --dry-run
 ```
 
-2026-09-17 `main` 기준으로 Backend 317개 테스트, Frontend 127개 테스트, typecheck, production build와 오픈소스 위생 검사를 통과했습니다. 로컬 Kubernetes Helm revision 153에서 네 Deployment가 Ready로 수렴했고 실제 OIDC 로그인 후 Dashboard, Applications 상세와 배포 시작 흐름을 다시 확인했습니다.
+2026-09-17 기준으로 Backend 319개 테스트, Frontend 130개 테스트, typecheck, production build와 오픈소스 위생 검사를 통과했습니다. 로컬 Kubernetes Helm revision 156에서 네 Deployment가 Ready로 수렴했고 실제 OIDC 로그인 후 Dashboard, Applications 상세, 배포 시작, Artifact Hub Chart 가져오기와 Values 편집 흐름을 다시 확인했습니다.
 
 ## 로컬 Kubernetes 설치
 

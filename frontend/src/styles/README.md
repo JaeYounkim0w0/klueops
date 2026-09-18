@@ -5,6 +5,7 @@ Frontend style code is centralized in this directory.
 - `base.css`: document, typography, and native element defaults.
 - `form-controls.css`: 제품 전 화면의 input/select/textarea 상태와 `.ui-surface-card`, `.ui-form-grid`, `.ui-form-field` 조합형 UI primitive 계약.
 - `main.css`: shared shell, layout, table, modal, chat, and legacy cross-domain classes.
+- `.table-panel--compact`: 공통 table의 좁은 팝업용 modifier. 열을 고정 배분하고 긴 경로·값을 줄바꿈한다.
 - `product-shell.css`: Phase 2 공통 제품 shell, semantic token 적용, 상단 context bar와 전역 responsive visual refresh.
 - `components/analysis.css`: AI Analysis run controls and command-safety component styles.
 - `components/cluster-detail.css`: cluster inventory, resource detail, and log-viewer styles.

@@ -11,5 +11,6 @@ public enum AsyncJobType {
     HELM_ROLLBACK,
     HELM_UNINSTALL,
     AI_MODEL_PULL,
+    HELM_VALUES,
     AI_ANALYSIS
 }

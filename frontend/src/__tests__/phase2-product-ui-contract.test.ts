@@ -72,7 +72,8 @@ describe('Phase 2 product UI contract', () => {
 
     expect(applications).toContain('jobs.trackJob(job)');
     expect(applications).toContain('Application을 제거했습니다.');
-    expect(jobCenter).toContain('function trackJob(options: RegisterJobOptions)');
+    expect(jobCenter).toContain('function trackJob(options: RegisterJobOptions, poll?');
+    expect(jobCenter).toContain('poll ? poll() : api.getJob(jobId)');
     expect(jobCenter).toContain('isRetryableJobPollError');
     expect(jobCenter).toContain('서버 상태 조회가 지연되어 자동으로 다시 확인 중입니다.');
     expect(consoleStyle).toContain('.console-status-dot');
@@ -94,10 +95,24 @@ describe('Phase 2 product UI contract', () => {
     expect(deliveryStyle).toContain('.delivery-assistant-actions { display: flex; justify-content: flex-end;');
     expect(valuesStudio).toContain("const EMPTY_CUSTOM_VALUES = '{}\\n';");
     expect(valuesStudio).toContain('valuesYaml.value.trim()');
-    expect(valuesStudio).toContain(': EMPTY_CUSTOM_VALUES');
-    expect(valuesStudio).toContain('실제 Helm 렌더링을 통과한 결과만 표시합니다');
+    expect(valuesStudio).toContain(': "{}"');
+    expect(valuesStudio).toContain('api.startValuesAssistance');
+    expect(valuesStudio).toContain('valuesDigest(valuesYaml.value)');
+    expect(valuesStudio).toContain('valuesAssistantJobId');
+    expect(valuesStudio).toContain('YAML·Helm 검증 후 변경 내용과 확인 범위를 함께 표시합니다');
     expect(valuesStudio).toContain('assistantMessage');
-    expect(valuesStudio).toContain('Helm 검증 완료');
+    expect(valuesStudio).toContain('Chart 렌더링·Kubernetes 기본 규칙 검증 완료');
+  });
+
+  it('keeps the Form and YAML editor choices in a horizontal segmented control', () => {
+    const valuesStudio = readFileSync(new URL('../views/ValuesStudioView.vue', import.meta.url), 'utf8');
+    const deliveryStyle = readFileSync(new URL('../styles/components/application-delivery.css', import.meta.url), 'utf8');
+
+    expect(valuesStudio).toContain('class="header-actions values-editor-actions"');
+    expect(valuesStudio).toContain(':aria-pressed="editorMode === \'FORM\'"');
+    expect(valuesStudio).toContain(':aria-pressed="editorMode === \'YAML\'"');
+    expect(deliveryStyle).toContain('.yaml-editor-panel .values-mode-switch { display: inline-grid; grid-template-columns: repeat(2,');
+    expect(deliveryStyle).not.toContain('.yaml-editor-panel header div { display: grid;');
   });
 
   it('uses the shared product form-control system for plain application inputs', () => {

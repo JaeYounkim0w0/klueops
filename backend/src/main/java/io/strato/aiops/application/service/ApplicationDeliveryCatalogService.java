@@ -136,6 +136,8 @@ public class ApplicationDeliveryCatalogService {
                                        String repositoryUrl, String requestedPackageName, String description,
                                        byte[] payload, String actor, ChartTrustStatus trustStatus) {
         var inspected = archiveInspector.inspect(payload);
+        // 저장 전에 검사하여 불완전한 Chart와 artifact가 Library에 남지 않게 한다.
+        ChartValuesEligibility.requireUsable(inspected.defaultValuesYaml());
         String digest = sha256(payload);
         var artifact = repository.saveArtifact(digest, payload, clock.instant());
         String packageName = sourceType == ChartSourceType.UPLOAD ? inspected.name() : requestedPackageName;

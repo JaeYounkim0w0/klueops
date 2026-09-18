@@ -1,5 +1,9 @@
 # Phase 2 Application Delivery UI/UX Screen Design
 
+## Custom Values 도우미 추가 흐름
+
+`요청 분석 및 제안 생성`을 누르면 `Chart 자료 확인·생성·검증 중…`을 표시한다. 결과에는 이해한 요청, Chart 경로 매핑, 기존/제안 변경 비교, YAML과 검증 범위를 제공한다. 기본 Values가 부적합하면 이유와 생성 불가 상태를 안내한다. 보충 질문은 요청 내용을 수정해 다시 실행하며 기존 Values는 유지한다. 생성 중/입력 보완/실패 상태는 적용할 수 없다. 새 실행은 이전 제안을 지운다. 상세 동작은 [고도화 설계](values-assistant-redesign.md)를 따른다.
+
 기준일: 2026-09-17
 
 상태: HTML 시안, P2-0 공통 제품 UI, 전체 정적 route visual regression과 modal 접근성 gate 구현 완료
@@ -187,6 +191,9 @@ Job Center는 Applications 하위 route가 아니라 기존 전역 header에서 
 - validation error가 있으면 revision 저장 차단
 - Form과 YAML 편집 중 `nodePort`가 기본 허용 범위 `30000-32767` 밖이면 즉시 오류와 정확한 경로를 표시하고 저장 버튼을 비활성화한다.
 - `nodePort`가 있으나 가장 가까운 Service `type`이 `NodePort` 또는 `LoadBalancer`가 아니면 적용되지 않을 수 있음을 경고하고, 서버는 실제 렌더링 결과로 최종 차단한다.
+- `clusterIP`에는 빈 값, `None`, IPv4/IPv6만 허용하며 `NodePort` 같은 Service type 문자열이나 port 번호를 입력하면 저장 전에 차단한다. 명시 NodePort는 `servicePort/port`와 별도 `nodePort`로 입력하고 실제 렌더 Service에 같은 값이 반영돼야 한다.
+- AI 제안 성공 표시는 `Chart 렌더링·Kubernetes 기본 규칙 검증 완료`로 표현한다. Values 도우미 상단에는 Chart Values/Schema 기반 제안이며 Chart 버전·제공사에 따라 지원 경로가 달라질 수 있고, 적용 전 YAML·검증 결과를 사용자가 확인해야 한다는 주의 box를 항상 표시한다. 이 상태는 immutable Chart 렌더와 정적 Service 규칙을 통과했다는 의미이며, Target Cluster admission/RBAC 검증은 Target·Preview·최종 배포 Job에서 수행한다고 안내한다.
+- AI가 만든 평문 credential을 제거한 경우 성공 결과 아래에 경고 box를 표시하고 제거 건수와 `valueFrom.secretKeyRef`/`existingSecret` 연결 방법을 안내한다. credential 때문에 안전한 나머지 제안까지 폐기하지 않는다.
 - Secret-like field는 masked input과 existing Secret reference 우선
 - 저장 시 revision note와 변경 key 수 표시
 
@@ -397,6 +404,8 @@ Import는 Cluster 상태를 변경하지 않으므로 exact phrase까지 요구�
 | `초기화` | 사라질 변경 수와 복귀 revision 경고 Modal | 위험 색상의 `변경 초기화` 후 Toast |
 | `Values 저장` | profile 이름/revision note 입력 Modal | 새 immutable revision 저장 후 Toast |
 | `대상과 접근 설정` | draft validation 후 Target/Exposure 이동 | validation 오류가 있으면 이동 차단 |
+
+`Form`과 `YAML`은 한눈에 비교하고 전환할 수 있는 가로형 segmented control로 배치한다. 좁은 화면에서도 두 선택지는 세로로 분리하지 않고 같은 행을 유지하며, 현재 선택은 색상뿐 아니라 `aria-pressed` 상태로도 전달한다.
 
 초기화는 Cluster 변경 작업은 아니므로 exact phrase를 요구하지 않지만 destructive color와 손실되는 변경 수를 표시한다.
 

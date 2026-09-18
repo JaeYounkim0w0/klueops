@@ -30,4 +30,20 @@ describe("reviewNodePortValues", () => {
 
     expect(result).toEqual({ errors: [], warnings: [] });
   });
+
+  it("rejects a Service type stored in clusterIP", () => {
+    const result = reviewNodePortValues({
+      server: { service: { clusterIP: "NodePort", type: "NodePort" } },
+    });
+
+    expect(result.errors[0]).toContain("$.server.service.clusterIP");
+    expect(result.errors[0]).toContain("nodePort 필드");
+  });
+
+  it("accepts empty, headless, IPv4, and IPv6 clusterIP values", () => {
+    expect(reviewNodePortValues({ service: { clusterIP: "" } }).errors).toEqual([]);
+    expect(reviewNodePortValues({ service: { clusterIP: "None" } }).errors).toEqual([]);
+    expect(reviewNodePortValues({ service: { clusterIP: "10.96.0.10" } }).errors).toEqual([]);
+    expect(reviewNodePortValues({ service: { clusterIP: "fd00::10" } }).errors).toEqual([]);
+  });
 });

@@ -73,7 +73,7 @@ class RenderedExposureInspectorTest {
         var services = RenderedExposureInspector.services(manifest, "apps");
 
         assertThat(services).containsExactly(new RenderedExposureInspector.ServiceOption(
-                "apps", "redis", "NodePort", "redis", 80, "6379", 30007,
+                "apps", "redis", "NodePort", null, "redis", 80, "6379", 30007,
                 "TCP", null, "NON_HTTP", "Selected Service port 'redis' (80) is a non-HTTP TCP endpoint. "
                         + "Use port-forward, NodePort, LoadBalancer, or a TCPRoute-capable Gateway"));
         RenderedExposureInspector.requireService(manifest, "apps", "redis", 80);
@@ -174,5 +174,41 @@ class RenderedExposureInspectorTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Service type is ClusterIP")
                 .hasMessageContaining("NodePort or LoadBalancer");
+    }
+
+    /** Service type을 clusterIP 주소 필드에 넣은 렌더 결과를 Kubernetes 적용 전에 차단한다. */
+    @Test
+    void rejectsServiceTypeRenderedAsClusterIpAddress() {
+        String manifest = """
+                apiVersion: v1
+                kind: Service
+                metadata:
+                  name: prometheus
+                spec:
+                  clusterIP: NodePort
+                  type: NodePort
+                  ports:
+                    - name: http
+                      port: 30001
+                      targetPort: 9090
+                """;
+
+        assertThatThrownBy(() -> RenderedExposureInspector.requireValidServices(manifest, "monitoring"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("prometheus")
+                .hasMessageContaining("invalid clusterIP 'NodePort'")
+                .hasMessageContaining("ports[].nodePort");
+    }
+
+    /** 동적 ClusterIP와 명시 IPv4/IPv6 및 headless None은 유효한 표현으로 허용한다. */
+    @Test
+    void acceptsValidClusterIpRepresentations() {
+        assertThat(RenderedExposureInspector.isValidClusterIpValue(null)).isTrue();
+        assertThat(RenderedExposureInspector.isValidClusterIpValue("")).isTrue();
+        assertThat(RenderedExposureInspector.isValidClusterIpValue("None")).isTrue();
+        assertThat(RenderedExposureInspector.isValidClusterIpValue("10.96.0.10")).isTrue();
+        assertThat(RenderedExposureInspector.isValidClusterIpValue("fd00::10")).isTrue();
+        assertThat(RenderedExposureInspector.isValidClusterIpValue("NodePort")).isFalse();
+        assertThat(RenderedExposureInspector.isValidClusterIpValue("999.1.1.1")).isFalse();
     }
 }

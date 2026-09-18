@@ -63,7 +63,10 @@ aiops:
     base-url: ${AIOPS_AI_BASE_URL:http://localhost:11434}
     connect-timeout-ms: ${AIOPS_AI_CONNECT_TIMEOUT_MS:10000}
     timeout-ms: ${AIOPS_AI_TIMEOUT_MS:300000}
+    helm-values-timeout-ms: ${AIOPS_AI_HELM_VALUES_TIMEOUT_MS:600000}
     temperature: ${AIOPS_AI_TEMPERATURE:0.1}
+    ollama:
+      maximum-context-tokens: ${AIOPS_AI_OLLAMA_MAXIMUM_CONTEXT_TOKENS:16384}
     analysis:
       max-context-chars: ${AIOPS_AI_ANALYSIS_MAX_CONTEXT_CHARS:60000}
       section-timeout-ms: ${AIOPS_AI_ANALYSIS_SECTION_TIMEOUT_MS:180000}

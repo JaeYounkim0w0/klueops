@@ -1,5 +1,9 @@
 # KlueOps Current Product Specification
 
+## Values 도우미 고도화 추가 구현
+
+Values 도우미는 정확한 Chart의 원본 Values와 주석·Schema를 근거로 자연어 요청을 처리한다. 제공사별 분기 없는 단일 엔진이 추가 자료 조회, 보충 질문, 기존 설정에 변경 합성, 검증과 변경 비교를 제공한다. 기본 Values가 없는 신규 Chart는 편입하지 않는다. 상세 범위와 검증 상태는 [Values 도우미 고도화](../phase-2/application-delivery/values-assistant-redesign.md)를 따른다.
+
 기준일: 2026-09-17
 
 ## 1. 문서 목적
@@ -164,7 +168,7 @@ AI Trust Center는 평가 corpus, category별 정확도, 근거 coverage, halluc
 - Chart artifact는 digest와 함께 Tenant 범위로 보관하며 Custom은 암호화된 versioned Values Profile만 지원한다.
 - Tenant Admin과 Platform Manager는 exact confirmation 후 Chart를 Library에서 archive할 수 있다. 기존 배포·Release·Values 참조는 보존하며 동일 source/package를 다시 가져오면 복원한다.
 - Values Studio는 정확한 immutable Chart의 `values.yaml`과 선택형 `values.schema.json`을 읽어 Form/YAML 양방향 편집을 제공한다. Schema가 없거나 배열·민감 경로처럼 안전한 Form 표현이 어려운 값은 YAML 편집을 유지하며, 수동 Revision은 동일 Chart로 Helm 렌더링한 뒤 저장한다. Form/YAML은 `nodePort` 기본 범위 `30000-32767` 위반을 즉시 차단하고, Backend는 렌더링된 Service의 type과 port 계약을 Revision 저장·Target 조회·Preview에서 다시 검증한다.
-- AI Values 제안은 Chart 이름·package·제공사, Chart/App 버전, 요청과 현재 override에 관련된 실제 Values section·최상위 key·선택형 JSON Schema를 `helm-values.v10` bounded prompt로 사용한다. 특정 application/provider 전용 분기 없이 exact Chart artifact가 계약을 결정하며, 기본값이나 현재 override가 이미 요청을 만족하면 중복 key를 강제하지 않는다. 신규 Profile의 빈 override는 `{}`로 정규화한다. Kubernetes manifest, 지원하지 않는 중첩 path와 redaction marker를 거부하고 최대 3회 안에서 Helm 검증·오류 재피드백을 거친 YAML만 표시한다. Secret 값은 prompt에서 마스킹하고 결과에서 원래 값을 복원하되 `existingSecret` 같은 resource reference 이름은 유지한다.
+- AI Values 제안은 `helm-values.grounded.v2`의 공통 계약과 immutable Chart 원문을 사용한다. 공백 override는 `{}`로 정규화하며, 신규 credential 생성은 허용하지 않는다. YAML·Chart 경로·Helm lint/template만 검사하고 검토용 변경 비교를 제공한다. 호출/교정 및 참조 상한은 고도화 설계를 따른다. 실제 Target admission과 배포·접속·Pod/Service/Route 상태는 최종 배포 Job에서 별도 검사하며, Values 검증 성공은 배포 성공을 보증하지 않는다.
 - 보유 Chart를 기본 진입점으로 선택하고 Values, Cluster/Namespace, `Cluster 내부`·`Chart에서 관리`·`KlueOps HTTPRoute`·`KlueOps Ingress`·`KlueOps TCPRoute` Exposure와 preview를 거쳐 Helm install을 실행한다. Target은 모든 Exposure 모드에서 현재 렌더링된 Service type, Service/Target/Node Port를 먼저 표시한다. HTTPRoute/TCPRoute는 listener protocol과 `allowedRoutes`를 확인하며 cross-namespace backend는 대상 Service namespace의 `ReferenceGrant`가 있을 때만 허용한다. Ingress는 동일 namespace HTTP Service만 연결한다. Preview와 실제 실행 직전에는 등록 Cluster credential의 대상 Namespace Helm Secret `get/list/create` 권한을 SSAR로 확인한다.
 - install/upgrade/rollback/uninstall은 비동기 Job과 ReleaseOperation으로 추적한다. worker는 metadata transaction commit 이후 bounded executor에서 시작하며 서로 다른 Release는 병렬 처리하고 동일 Application mutation은 DB lock으로 직렬화한다. uninstall은 PVC·DNS companion·TLS Secret 보존 여부를 명시하며 cleanup 실패는 exact confirmation을 거쳐 재시도한다. 큐 포화·worker 시작 실패는 즉시 terminal 실패로 기록하고 중단된 작업은 timeout 후 실패 상태로 복구한다.
 - Application 목록과 상세에서 배포에 사용한 Chart 이름·package·제공사/source·Chart/App version을 확인한다. 상세에서는 Helm 상태, workload/Pod health, Service·Ingress·HTTPRoute endpoint, 접근 범위, IP/Host, Service/Target/Node Port, `READY/APPLIED/DEGRADED` 상태와 operation history를 확인한다.
@@ -225,9 +229,9 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 
 2026-09-17 기준 최신 통합 증빙은 다음과 같다.
 
-- Backend: PostgreSQL 17 Testcontainers와 Flyway를 포함한 317 tests 통과
+- Backend: PostgreSQL 17 Testcontainers와 Flyway를 포함한 319 tests 통과
 - Command Runner: 5 tests 통과
-- Frontend: 127 tests, typecheck와 production build 통과
+- Frontend: 130 tests, typecheck와 production build 통과
 - OpenAPI runtime snapshot과 Orval generated client drift 통과
 - architecture, security, packaging, docs와 maintainability gate 통과
 - Docker Desktop Kubernetes Helm revision 153에서 Frontend, Backend, Managed Keycloak, Command Runner 모두 `1/1 Ready`
@@ -245,11 +249,13 @@ Runtime DB는 PostgreSQL로 통일했으며 H2는 사용하지 않는다. Flyway
 - README와 운영 가이드의 제품 화면은 실제 OIDC 로그인 세션에서 캡처했으며 계정, cluster 식별자와 내부 주소를 공개용 예시 값으로 바꿨다. 운영 가이드는 21개 메뉴 최초 화면과 상세 페이지, 탭, 팝업을 포함한 54개 화면을 사용하며 문서 검증은 대표 화면 asset과 DOCX 생성 소스의 존재를 확인한다.
 - Docker Desktop의 `aiops-system`에서 OIDC 로그인 후 Artifact Hub 검색, nginx Chart import, 암호화 Values 저장·재조회, preview의 Secret redaction, Namespace 생성, Helm install의 `1/1` workload health와 Service endpoint, uninstall, Users & Access, AI Provider 연결 검증과 Ollama model 동기화를 브라우저로 확인했다.
 - Phase 2 공통 제품 Shell을 로컬 Kubernetes Frontend 이미지에 반영하고 실제 OIDC 세션에서 Applications 상태 요약·목록·Runtime/Endpoint inspector, Dashboard, 모바일 navigation과 Application 배포 chooser를 브라우저로 확인했다.
-- CloudPirates nginx Chart `0.16.8`/App `1.31.5`에서 숫자 `targetPort` 수동 Values의 Schema 차단과 올바른 named port 수동 Preview를 확인했다. 같은 Chart에서 간단 요청은 replica 1, ClusterIP, HTTP port 80과 named `targetPort: "http"`를 1회에 생성해 Helm 검증을 통과했다. CloudPirates Redis Chart `0.35.0`/App `8.10.1`의 복잡 요청은 ClusterIP 6379, PVC 1Gi, CPU/Memory requests·limits, runAsNonRoot/RuntimeDefault, liveness/readiness와 `redis-credentials` existing Secret 참조를 생성했고 실제 Preview에서 Service, StatefulSet, PVC와 보안·probe 설정을 확인했다. `helm-values.v10`은 CloudPirates PostgreSQL Chart `0.20.5`/App `18.6.0`에서도 단순 ClusterIP 5432 요청과 PVC 2Gi, CPU/Memory requests·limits, 보안 context, probe, `postgres-credentials` existing Secret 복합 요청을 각각 1회에 생성하고 동일 Chart의 Helm 렌더링을 통과했다. 요청한 `seccompProfile`은 이 Chart Values 계약에 존재하지 않아 만들지 않았다. Kubernetes Deployment manifest 오출력과 지원하지 않는 `cluster.replicaCount` 경로는 재시도 전에 차단했다. Applications에서는 nginx의 immutable Chart 출처와 ClusterIP, Service/Target Port를 실제 OIDC 세션으로 확인했다. Chart Library 제거 modal의 권한별 노출, 보존 범위, exact confirmation과 취소 동작을 OIDC 세션에서 확인했다. Helm Secret 권한이 없는 Namespace는 Preview에서 거부 verb를 표시해 승인 전에 차단했다.
+- CloudPirates nginx Chart `0.16.8`/App `1.31.5`에서 숫자 `targetPort` 수동 Values의 Schema 차단과 올바른 named port 수동 Preview를 확인했다. 같은 Chart에서 간단 요청은 replica 1, ClusterIP, HTTP port 80과 named `targetPort: "http"`를 1회에 생성해 Helm 검증을 통과했다. CloudPirates Redis Chart `0.35.0`/App `8.10.1`의 복잡 요청은 ClusterIP 6379, PVC 1Gi, CPU/Memory requests·limits, runAsNonRoot/RuntimeDefault, liveness/readiness와 `redis-credentials` existing Secret 참조를 생성했고 실제 Preview에서 Service, StatefulSet, PVC와 보안·probe 설정을 확인했다. `helm-values.v11`은 CloudPirates PostgreSQL Chart `0.20.5`/App `18.6.0`에서도 단순 ClusterIP 5432 요청과 PVC 2Gi, CPU/Memory requests·limits, 보안 context, probe, `postgres-credentials` existing Secret 복합 요청을 생성하고 동일 Chart의 Helm 렌더링을 통과했다. 요청한 `seccompProfile`은 이 Chart Values 계약에 존재하지 않아 만들지 않았다. Kubernetes Deployment manifest 오출력과 지원하지 않는 `cluster.replicaCount` 경로는 재시도 전에 차단했다. 2026-09-17 prometheus-community Prometheus Chart `29.30.0`/App `v3.14.0` 실측에서는 계약 context 최적화로 추정 입력을 16,712 token에서 6,920 token으로 줄이고 출력 예산을 256에서 4,096 token으로 확보했다. 서버 replica/PVC/resources/retention/anti-affinity/PDB/probe/network policy와 Alertmanager PVC를 함께 요청한 복합 제안 및 `server.replicaCount: 2` 단순 제안이 실제 Helm 검증을 통과했으며, 단순 제안은 유사 경로 중복과 빈 mapping을 제거한 뒤 1회 생성으로 완료됐다. Applications에서는 nginx의 immutable Chart 출처와 ClusterIP, Service/Target Port를 실제 OIDC 세션으로 확인했다. Chart Library 제거 modal의 권한별 노출, 보존 범위, exact confirmation과 취소 동작을 OIDC 세션에서 확인했다. Helm Secret 권한이 없는 Namespace는 Preview에서 거부 verb를 표시해 승인 전에 차단했다.
 - 2026-09-16 로컬 Helm revision 144에서 PostgreSQL Chart의 schema 118개 Form 필드와 YAML 왕복, HTTPRoute·Ingress·TCPRoute 선택 UI, TCP listener Gateway가 없을 때 Preview 차단을 OIDC 세션으로 확인했다. 설치된 `qwen2.5-coder:7b`에는 분석·상담·Helm Values 6-case 평가를 실제 실행해 6/6, 100점, 평균 1,324ms를 기록하고 기본 모델 승격과 routing 사용 중 삭제 비활성화를 확인했다. 전체 22개 route는 desktop/mobile 44개 snapshot과 modal focus 2개 계약을 예외 없이 통과했다.
 - 2026-09-17 Phase 2 전체 구현을 `main`에 squash 병합하고 Backend 317개, Frontend 127개 테스트, typecheck와 production build를 통과했다. 로컬 Kubernetes Helm revision 153에서 네 Deployment가 Ready로 수렴했고 실제 OIDC 로그인 후 Dashboard, Applications 목록과 상세, 배포 시작 흐름을 다시 확인했다.
 - 현재 제품의 21개 메뉴 최초 화면과 33개 상세 페이지·탭·팝업을 실제 로그인 세션에서 재검증해 공개 가능한 예시 값으로 캡처했으며, 역할·업무 흐름·하위 기능 절차와 문제 해결을 포함한 운영 가이드 DOCX를 전면 갱신했다.
 - PostgreSQL Chart `0.20.5` 배포 Job이 성공했지만 Applications가 최초 `DEPLOYING` snapshot에 머물던 상태 동기화 누락을 수정했다. 진행 중 Application이 있을 때만 2초 간격으로 목록을 직렬 갱신하고 terminal 전환 시 Revision·Runtime·History를 함께 갱신한 뒤 폴링을 중지한다. 로컬 Kubernetes에서 Helm `deployed`, Pod `1/1 Running`, 저장 상태 `RUNNING / revision 1`과 OIDC 브라우저의 동일 표시를 확인했다.
+- HTTPS Helm Repository Chart 가져오기는 Backend의 읽기 전용 HOME을 사용하지 않고 요청별 임시 `HELM_CACHE_HOME`, `HELM_CONFIG_HOME`, `HELM_DATA_HOME`과 repository cache/config를 사용한다. 동시 요청 8건의 캐시 경로 격리 회귀를 포함한 Backend 319개 테스트를 통과했으며, 로컬 Kubernetes Helm revision 155의 실제 OIDC 브라우저에서 `prometheus-community/prometheus 29.30.0`을 가져와 Tenant Chart Library 저장을 확인했다.
+- Values Studio의 `Form`/`YAML` 편집 방식은 가로형 segmented control로 표시하고 현재 선택을 `aria-pressed`로 전달한다. 좁은 화면에서는 헤더 동작 영역만 다음 줄로 이동하되 두 선택지는 가로 배열을 유지한다. Frontend 130개 테스트와 production build를 통과하고 로컬 Kubernetes Helm revision 156의 Prometheus Values 화면에서 실제 배치를 확인했다.
 
 검증 명령과 최신 로컬 품질 증적은 `docs/operations/release-candidate-checklist.md`를 따른다. 문서와 스크립트의 `release-candidate` 명칭은 기존 자동화 호환을 위해 유지하며 상용 릴리스 판정을 의미하지 않는다.
 

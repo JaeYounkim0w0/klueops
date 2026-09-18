@@ -2431,6 +2431,10 @@
   overflow: auto;
 }
 
+/* 팝업 등 좁은 컨테이너의 비교 표는 필드를 줄바꿈하여 가로 스크롤을 줄인다. */
+.table-panel--compact table { min-width: 0; table-layout: fixed; }
+.table-panel--compact th, .table-panel--compact td { white-space: normal; overflow-wrap: anywhere; }
+
 table {
   width: 100%;
   border-collapse: collapse;

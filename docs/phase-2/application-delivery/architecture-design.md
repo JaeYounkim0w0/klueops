@@ -1,5 +1,9 @@
 # Phase 2 Application Delivery Architecture
 
+## Values 요청 해석 및 매핑 API
+
+화면은 `POST /api/v2/application-delivery/values-assistance/jobs`로 비동기 생성을 시작한다. Tenant feature, Values 편집 권한과 요청 사용자 소유권을 확인한다. `HelmValuesAssistanceService`의 단일 엔진이 원문 참조 조회와 생성·검증·제한 교정을 수행하고 `HelmValuesMapping`이 기존 Values에 변경을 합성한다. 결과는 `HELM_TEMPLATE_VALIDATED`, `NEEDS_INPUT`, `GENERATION_FAILED`로 구분한다. 암호화 저장, 전용 bounded executor, Job ID 복원과 원본 Values digest 검사를 적용한다. 상세 계약은 [고도화 설계](values-assistant-redesign.md)를 따른다.
+
 기준일: 2026-09-17
 
 상태: Phase 2 bounded context와 UI 구현·main 병합 완료, OCI/S3 저장 adapter·자동 DNS/TLS만 후속
@@ -256,7 +260,7 @@ Job Center는 Async Job의 queue, progress, cancel과 일시적 실행 출력을
 
 Secret-like Values는 평문 검색, diff와 AI 전송에서 제외한다. DB 저장이 필요한 경우 기존 AES-256-GCM master key 계약으로 전체 Values payload를 암호화하고 key name과 mask만 UI에 노출한다. AI 전송 전 민감 key 값을 `***REDACTED***`로 치환하고, 제안 검증 후에는 사용자가 입력한 원래 값을 서버에서 복원하므로 marker가 실제 Revision 값으로 저장되지 않는다.
 
-Values 제안은 `helm-values.v10` 계약을 사용한다. Backend가 immutable Chart artifact에서 사용자 지시와 현재 override에 관련된 root `values.yaml` section, 사용 가능한 최상위 key와 선택형 `values.schema.json` property를 추출하고 Chart/package, 제공사/source, Chart/App version, 요청 관련 root key와 함께 `HELM_VALUES` Provider에 전달한다. Prompt는 특정 application이나 제공사 이름을 분기 조건으로 사용하지 않는다. exact default 또는 현재 override가 이미 요청을 만족하면 해당 root의 중복 출력을 허용하지 않고 생략할 수 있다. 결과는 Kubernetes manifest 형태와 exact Chart에 없는 재귀 Values path 및 redaction marker를 먼저 거부하고 같은 artifact의 `helm template`로 검증한다. 실패할 때마다 masked·bounded 검증 오류를 재피드백하며 최대 3회 모두 실패하면 제안을 반환하지 않는다. 수동 Revision 저장도 같은 렌더 검증을 통과해야 하며 Helm 프로세스 실행 중 DB transaction을 유지하지 않는다. 실제 credential 값은 masking·복원하고 `existingSecret` 같은 resource reference 이름은 Chart 계약 생성에 사용할 수 있도록 유지한다.
+Values 제안은 `helm-values.grounded.v2`를 사용한다. 고정 2단계 호출, application별 intent/key 추정, 잘린 원문 생성과 평문 credential 제거 후 부분 성공 경로를 제거했다. `HelmValuesReferences`가 실제 원문·주석·dependency와 정적 템플릿 경로를 주소화하고, 모델이 필요한 자료를 요청한다. 검증은 YAML·Chart 경로·Helm lint/template·렌더 조건 순서이다. 수동 Revision도 동일한 Chart 검증을 통과해야 한다. 기존 Secret을 보호/복원하며 모델에 원문 credential이나 렌더 manifest를 보내지 않는다. 최대 5회 모델 호출과 최대 2회 교정을 적용한다. Ollama JSON 출력과 입력/출력 예산을 사용한다. 상세 책임, 자원 상한, 안전한 교정 피드백, 알려진 제한과 실제 인수 결과는 [고도화 설계](values-assistant-redesign.md)에 모아 관리한다.
 
 Chart Library 제거는 `tenant_charts.archived_at`을 갱신하는 soft archive다. `chart_versions`, 암호화 Values profile/revision, 배포 plan과 Application release FK는 그대로 유지해 실행 중 Application과 rollback 이력을 손상하지 않는다. 동일 Tenant/source/package를 다시 가져오면 기존 Chart를 복원하고 digest가 같은 immutable version을 재사용한다.
 

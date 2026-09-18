@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -25,6 +28,7 @@ final class RenderedExposureInspector {
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     private static final Set<Integer> COMMON_HTTP_PORTS = Set.of(80, 443, 3000, 8000, 8080, 8443);
     private static final Set<Integer> COMMON_NON_HTTP_PORTS = Set.of(5432, 3306, 6379, 27017, 5672, 9092);
+    private static final Set<String> SERVICE_TYPES = Set.of("ClusterIP", "NodePort", "LoadBalancer", "ExternalName");
     private static final Set<String> NON_HTTP_NAMES = Set.of(
             "postgres", "postgresql", "mysql", "mariadb", "redis", "mongodb", "amqp", "kafka", "tcp");
 
@@ -63,6 +67,7 @@ final class RenderedExposureInspector {
                 if (name.isBlank()) continue;
                 String namespace = document.path("metadata").path("namespace").asText(defaultNamespace);
                 String type = document.path("spec").path("type").asText("ClusterIP");
+                String clusterIp = document.path("spec").path("clusterIP").asText(null);
                 JsonNode ports = document.path("spec").path("ports");
                 if (!ports.isArray()) continue;
                 for (JsonNode port : ports) {
@@ -73,7 +78,7 @@ final class RenderedExposureInspector {
                     String protocol = port.path("protocol").asText("TCP");
                     String appProtocol = port.path("appProtocol").asText(null);
                     Compatibility compatibility = httpRouteCompatibility(protocol, appProtocol, portName, servicePort);
-                    services.add(new ServiceOption(namespace, name, type, portName, servicePort,
+                    services.add(new ServiceOption(namespace, name, type, clusterIp, portName, servicePort,
                             targetPort.isMissingNode() ? null : targetPort.asText(),
                             port.path("nodePort").canConvertToInt() ? port.path("nodePort").asInt() : null,
                             protocol, appProtocol, compatibility.status(), compatibility.message()));
@@ -91,6 +96,20 @@ final class RenderedExposureInspector {
     /** 렌더링된 Service가 Kubernetes 기본 포트 계약을 만족하는지 배포 전에 검증한다. */
     static void requireValidServices(String manifest, String defaultNamespace) {
         for (ServiceOption service : services(manifest, defaultNamespace)) {
+            if (!SERVICE_TYPES.contains(service.type())) {
+                throw new IllegalArgumentException("Rendered Service " + service.name() + " uses invalid type '"
+                        + service.type() + "'. Use ClusterIP, NodePort, LoadBalancer, or ExternalName");
+            }
+            if (!isValidClusterIpValue(service.clusterIp())) {
+                throw new IllegalArgumentException("Rendered Service " + service.name() + " uses invalid clusterIP '"
+                        + service.clusterIp() + "'. clusterIP must be empty, None, or a valid IPv4/IPv6 address; "
+                        + "put NodePort in spec.type and ports[].nodePort instead");
+            }
+            if ("None".equals(service.clusterIp()) && !"ClusterIP".equals(service.type())) {
+                throw new IllegalArgumentException("Rendered Service " + service.name()
+                        + " combines headless clusterIP None with type " + service.type()
+                        + ". Headless Services must use type ClusterIP");
+            }
             if (service.port() < 1 || service.port() > 65_535) {
                 throw new IllegalArgumentException("Rendered Service " + service.name() + " uses invalid port "
                         + service.port() + ". Service port must be between 1 and 65535");
@@ -106,6 +125,36 @@ final class RenderedExposureInspector {
                         + service.nodePort() + ". Kubernetes default NodePort range is " + DEFAULT_NODE_PORT_MIN
                         + "-" + DEFAULT_NODE_PORT_MAX + "; update the Chart Custom Values before deployment");
             }
+        }
+    }
+
+    /** Kubernetes Service clusterIP 필드에 허용되는 주소 표현인지 DNS 조회 없이 검사한다. */
+    static boolean isValidClusterIpValue(String value) {
+        if (value == null || value.isBlank() || "None".equals(value)) return true;
+        if (value.indexOf(':') >= 0) return isIpv6(value);
+        String[] parts = value.split("\\.", -1);
+        if (parts.length != 4) return false;
+        for (String part : parts) {
+            if (part.isBlank() || !part.chars().allMatch(Character::isDigit) || part.length() > 3) return false;
+            int octet;
+            try {
+                octet = Integer.parseInt(part);
+            } catch (NumberFormatException exception) {
+                return false;
+            }
+            if (octet > 255 || (part.length() > 1 && part.startsWith("0"))) return false;
+        }
+        return true;
+    }
+
+    /** 콜론이 포함된 값만 표준 라이브러리로 파싱해 hostname DNS 조회를 방지한다. */
+    private static boolean isIpv6(String value) {
+        if (!value.matches("[0-9A-Fa-f:.]+")) return false;
+        try {
+            InetAddress parsed = InetAddress.getByName(value);
+            return parsed instanceof Inet6Address;
+        } catch (UnknownHostException exception) {
+            return false;
         }
     }
 
@@ -177,7 +226,7 @@ final class RenderedExposureInspector {
         boolean present() { return ingress || httpRoute; }
     }
 
-    record ServiceOption(String namespace, String name, String type, String portName, int port,
+    record ServiceOption(String namespace, String name, String type, String clusterIp, String portName, int port,
                          String targetPort, Integer nodePort, String protocol, String appProtocol,
                          String httpRouteCompatibility, String compatibilityMessage) { }
     private record Compatibility(String status, String message) { }

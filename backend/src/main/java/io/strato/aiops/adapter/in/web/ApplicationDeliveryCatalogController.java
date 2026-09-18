@@ -216,7 +216,7 @@ public class ApplicationDeliveryCatalogController {
         require(authentication, tenantId, Capability.VALUES_EDIT);
         var contract = catalogService.valuesContract(tenantId, chartVersionId);
         return new ValuesContractResponse(contract.defaultValuesYaml(), contract.valuesSchemaJson(),
-                contract.schemaIncluded());
+                contract.schemaIncluded(), io.strato.aiops.application.service.ChartValuesEligibility.problem(contract.defaultValuesYaml()));
     }
 
     /** ApplicationDeliveryCatalogController의 suggestValues 처리에 필요한 업무 로직을 수행한다. */
@@ -257,16 +257,17 @@ public class ApplicationDeliveryCatalogController {
     }
     public record ValuesPayloadResponse(String valuesYaml) {
     }
-    public record ValuesContractResponse(String defaultValuesYaml, String valuesSchemaJson, boolean schemaIncluded) {
+    public record ValuesContractResponse(String defaultValuesYaml, String valuesSchemaJson, boolean schemaIncluded,
+                                         String eligibilityMessage) {
     }
     public record ValuesSuggestionResponse(String valuesYaml, String promptVersion, String validationStatus,
                                            int attempts, String chartName, String providerName, String chartVersion,
-                                           String applicationVersion, boolean schemaIncluded) {
+                                           String applicationVersion, boolean schemaIncluded, List<String> warnings) {
         /** ValuesSuggestionResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
         static ValuesSuggestionResponse from(HelmValuesSuggestionService.SuggestionResult result) {
             return new ValuesSuggestionResponse(result.valuesYaml(), result.promptVersion(), result.validationStatus(),
                     result.attempts(), result.chartName(), result.providerName(), result.chartVersion(),
-                    result.applicationVersion(), result.schemaIncluded());
+                    result.applicationVersion(), result.schemaIncluded(), result.warnings());
         }
     }
     public record ValuesSuggestionRequest(@NotNull UUID tenantId, @NotNull UUID chartVersionId,

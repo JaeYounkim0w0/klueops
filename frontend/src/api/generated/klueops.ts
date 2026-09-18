@@ -389,9 +389,15 @@ export interface AnalysisFeedback {
 export interface ValuesSuggestionRequest {
   tenantId: string;
   chartVersionId: string;
-  /** @minLength 1 */
+  /**
+   * @minLength 0
+   * @maxLength 1048576
+   */
   currentValuesYaml: string;
-  /** @minLength 1 */
+  /**
+   * @minLength 0
+   * @maxLength 2000
+   */
   instruction: string;
 }
 
@@ -405,6 +411,7 @@ export interface ValuesSuggestionResponse {
   chartVersion?: string;
   applicationVersion?: string;
   schemaIncluded?: boolean;
+  warnings?: string[];
 }
 
 export interface CreateValuesProfileRequest {
@@ -437,6 +444,37 @@ export interface ValuesRevisionResponse {
   parentRevision?: number;
   createdBy?: string;
   createdAt?: string;
+}
+
+export interface Change {
+  requirementId?: string;
+  path?: string;
+  value?: JsonNode;
+  explanation?: string;
+}
+
+export interface JsonNode {}
+
+export interface Requirement {
+  id?: string;
+  request?: string;
+  kind?: string;
+}
+
+export interface Result {
+  valuesYaml?: string;
+  promptVersion?: string;
+  validationStatus?: string;
+  attempts?: number;
+  chartName?: string;
+  providerName?: string;
+  chartVersion?: string;
+  applicationVersion?: string;
+  schemaIncluded?: boolean;
+  warnings?: string[];
+  requirements?: Requirement[];
+  changes?: Change[];
+  questions?: string[];
 }
 
 export type CreateChartSourceRequestSourceType = typeof CreateChartSourceRequestSourceType[keyof typeof CreateChartSourceRequestSourceType];
@@ -481,6 +519,7 @@ export interface TargetOptionsRequest {
   namespace: string;
   /** @minLength 1 */
   releaseName: string;
+  exposureType?: string;
 }
 
 export interface DeploymentTargetOptionsResponse {
@@ -532,6 +571,7 @@ export interface PreviewRequest {
   exposureType?: string;
   hostname?: string;
   exposurePath?: string;
+  backendServiceNamespace?: string;
   backendServiceName?: string;
   backendServicePort?: number;
   gatewayName?: string;
@@ -550,6 +590,7 @@ export interface DeploymentPlanResponse {
   exposureType?: string;
   hostname?: string;
   exposurePath?: string;
+  backendServiceNamespace?: string;
   backendServiceName?: string;
   backendServicePort?: number;
   gatewayName?: string;
@@ -614,6 +655,15 @@ export interface ImportChartRequest {
   version: string;
 }
 
+export interface UninstallRequest {
+  tenantId: string;
+  /** @minLength 1 */
+  confirmationText: string;
+  preservePvcs?: boolean;
+  preserveDns?: boolean;
+  preserveTls?: boolean;
+}
+
 export interface RollbackRequest {
   tenantId: string;
   revision?: number;
@@ -641,6 +691,13 @@ export interface ValidationResponse {
   checkedAt?: string;
 }
 
+export interface ModelEvaluationResponse {
+  score?: number;
+  samples?: number;
+  averageLatencyMs?: number;
+  promotable?: boolean;
+}
+
 export interface LocalModelResponse {
   id?: string;
   modelTag?: string;
@@ -648,6 +705,10 @@ export interface LocalModelResponse {
   status?: string;
   sizeBytes?: number;
   digest?: string;
+  evaluationScore?: number;
+  evaluationSamples?: number;
+  averageLatencyMs?: number;
+  promoted?: boolean;
   updatedAt?: string;
 }
 
@@ -1313,6 +1374,7 @@ export const JobResponseType = {
   HELM_ROLLBACK: 'HELM_ROLLBACK',
   HELM_UNINSTALL: 'HELM_UNINSTALL',
   AI_MODEL_PULL: 'AI_MODEL_PULL',
+  HELM_VALUES: 'HELM_VALUES',
   AI_ANALYSIS: 'AI_ANALYSIS',
 } as const;
 
@@ -2373,6 +2435,18 @@ export interface ValuesPayloadResponse {
   valuesYaml?: string;
 }
 
+export interface Outcome {
+  baseValuesDigest?: string;
+  proposal?: Result;
+}
+
+export interface ValuesContractResponse {
+  defaultValuesYaml?: string;
+  valuesSchemaJson?: string;
+  schemaIncluded?: boolean;
+  eligibilityMessage?: string;
+}
+
 export interface CatalogPackageResponse {
   packageId?: string;
   repository?: string;
@@ -3289,9 +3363,9 @@ export interface ResourceChange {
 }
 
 export interface CsrfToken {
-  token?: string;
-  parameterName?: string;
   headerName?: string;
+  parameterName?: string;
+  token?: string;
 }
 
 export interface AuthSessionResponse {
@@ -3517,6 +3591,12 @@ export interface RemoveChartRequest {
   confirmationText: string;
 }
 
+export interface ModelDeleteRequest {
+  tenantId: string;
+  /** @minLength 1 */
+  confirmationText: string;
+}
+
 export type ProfilesParams = {
 tenantId: string;
 chartVersionId: string;
@@ -3525,6 +3605,8 @@ chartVersionId: string;
 export type RevisionsParams = {
 tenantId: string;
 };
+
+export type Start200 = {[key: string]: string};
 
 export type SourcesParams = {
 tenantId: string;
@@ -3544,6 +3626,14 @@ tenantId: string;
 };
 
 export type ValidateParams = {
+tenantId: string;
+};
+
+export type PromoteLocalModelParams = {
+tenantId: string;
+};
+
+export type EvaluateLocalModelParams = {
 tenantId: string;
 };
 
@@ -3618,9 +3708,21 @@ export type ValuesParams = {
 tenantId: string;
 };
 
+export type StatusParams = {
+tenantId: string;
+};
+
+export type ResultParams = {
+tenantId: string;
+};
+
 export type ChartsParams = {
 tenantId: string;
 includeArchived?: boolean;
+};
+
+export type ValuesContractParams = {
+tenantId: string;
 };
 
 export type SearchParams = {
@@ -4759,6 +4861,92 @@ export const createRevision = async (profileId: string,
 
 
 /**
+ * @summary Interpret requirements and map exact Chart Values, or return clarification questions
+ */
+export type assistResponse200 = {
+  data: Result
+  status: 200
+}
+
+export type assistResponseSuccess = (assistResponse200) & {
+  headers: Headers;
+};
+;
+
+export type assistResponse = (assistResponseSuccess)
+
+export const getAssistUrl = () => {
+
+
+
+
+  return `/api/v2/application-delivery/values-assistance`
+}
+
+export const assist = async (valuesSuggestionRequest: ValuesSuggestionRequest, options?: RequestInit): Promise<assistResponse> => {
+
+  const res = await fetch(getAssistUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      valuesSuggestionRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: assistResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as assistResponse
+}
+
+
+
+/**
+ * @summary Start an owner-scoped asynchronous Values assistance job
+ */
+export type startResponse200 = {
+  data: Start200
+  status: 200
+}
+
+export type startResponseSuccess = (startResponse200) & {
+  headers: Headers;
+};
+;
+
+export type startResponse = (startResponseSuccess)
+
+export const getStartUrl = () => {
+
+
+
+
+  return `/api/v2/application-delivery/values-assistance/jobs`
+}
+
+export const start = async (valuesSuggestionRequest: ValuesSuggestionRequest, options?: RequestInit): Promise<startResponse> => {
+
+  const res = await fetch(getStartUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      valuesSuggestionRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: startResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as startResponse
+}
+
+
+
+/**
  * @summary List tenant Helm and OCI sources
  */
 export type sourcesResponse200 = {
@@ -5097,7 +5285,7 @@ export const getUninstallUrl = (applicationId: string,) => {
 }
 
 export const uninstall = async (applicationId: string,
-    executeRequest: ExecuteRequest, options?: RequestInit): Promise<uninstallResponse> => {
+    uninstallRequest: UninstallRequest, options?: RequestInit): Promise<uninstallResponse> => {
 
   const res = await fetch(getUninstallUrl(applicationId),
   {
@@ -5105,7 +5293,7 @@ export const uninstall = async (applicationId: string,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      executeRequest,)
+      uninstallRequest,)
   }
 )
 
@@ -5154,6 +5342,47 @@ export const rollback = async (applicationId: string,
 
   const data: rollbackResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as rollbackResponse
+}
+
+
+
+export type retryCleanupResponse202 = {
+  data: DeploymentAcceptedResponse
+  status: 202
+}
+
+export type retryCleanupResponseSuccess = (retryCleanupResponse202) & {
+  headers: Headers;
+};
+;
+
+export type retryCleanupResponse = (retryCleanupResponseSuccess)
+
+export const getRetryCleanupUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/v2/application-delivery/applications/${applicationId}/cleanup-retry`
+}
+
+export const retryCleanup = async (applicationId: string,
+    uninstallRequest: UninstallRequest, options?: RequestInit): Promise<retryCleanupResponse> => {
+
+  const res = await fetch(getRetryCleanupUrl(applicationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      uninstallRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: retryCleanupResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as retryCleanupResponse
 }
 
 
@@ -5288,6 +5517,106 @@ export const validate = async (profileId: string,
 
   const data: validateResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as validateResponse
+}
+
+
+
+export type promoteLocalModelResponse200 = {
+  data: ProviderResponse
+  status: 200
+}
+
+export type promoteLocalModelResponseSuccess = (promoteLocalModelResponse200) & {
+  headers: Headers;
+};
+;
+
+export type promoteLocalModelResponse = (promoteLocalModelResponseSuccess)
+
+export const getPromoteLocalModelUrl = (profileId: string,
+    modelTag: string,
+    params: PromoteLocalModelParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/ai-configuration/providers/${profileId}/models/${modelTag}/promote?${stringifiedParams}` : `/api/v2/ai-configuration/providers/${profileId}/models/${modelTag}/promote`
+}
+
+export const promoteLocalModel = async (profileId: string,
+    modelTag: string,
+    params: PromoteLocalModelParams, options?: RequestInit): Promise<promoteLocalModelResponse> => {
+
+  const res = await fetch(getPromoteLocalModelUrl(profileId,modelTag,params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: promoteLocalModelResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as promoteLocalModelResponse
+}
+
+
+
+export type evaluateLocalModelResponse200 = {
+  data: ModelEvaluationResponse
+  status: 200
+}
+
+export type evaluateLocalModelResponseSuccess = (evaluateLocalModelResponse200) & {
+  headers: Headers;
+};
+;
+
+export type evaluateLocalModelResponse = (evaluateLocalModelResponseSuccess)
+
+export const getEvaluateLocalModelUrl = (profileId: string,
+    modelTag: string,
+    params: EvaluateLocalModelParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/ai-configuration/providers/${profileId}/models/${modelTag}/evaluate?${stringifiedParams}` : `/api/v2/ai-configuration/providers/${profileId}/models/${modelTag}/evaluate`
+}
+
+export const evaluateLocalModel = async (profileId: string,
+    modelTag: string,
+    params: EvaluateLocalModelParams, options?: RequestInit): Promise<evaluateLocalModelResponse> => {
+
+  const res = await fetch(getEvaluateLocalModelUrl(profileId,modelTag,params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: evaluateLocalModelResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as evaluateLocalModelResponse
 }
 
 
@@ -9778,6 +10107,108 @@ export const values = async (revisionId: string,
 
 
 /**
+ * @summary Read the requesting user's Values assistance job status
+ */
+export type statusResponse200 = {
+  data: JobResponse
+  status: 200
+}
+
+export type statusResponseSuccess = (statusResponse200) & {
+  headers: Headers;
+};
+;
+
+export type statusResponse = (statusResponseSuccess)
+
+export const getStatusUrl = (id: string,
+    params: StatusParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/values-assistance/jobs/${id}?${stringifiedParams}` : `/api/v2/application-delivery/values-assistance/jobs/${id}`
+}
+
+export const status = async (id: string,
+    params: StatusParams, options?: RequestInit): Promise<statusResponse> => {
+
+  const res = await fetch(getStatusUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: statusResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as statusResponse
+}
+
+
+
+/**
+ * @summary Read the requesting user's decrypted Values proposal
+ */
+export type resultResponse200 = {
+  data: Outcome
+  status: 200
+}
+
+export type resultResponseSuccess = (resultResponse200) & {
+  headers: Headers;
+};
+;
+
+export type resultResponse = (resultResponseSuccess)
+
+export const getResultUrl = (id: string,
+    params: ResultParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/values-assistance/jobs/${id}/result?${stringifiedParams}` : `/api/v2/application-delivery/values-assistance/jobs/${id}/result`
+}
+
+export const result = async (id: string,
+    params: ResultParams, options?: RequestInit): Promise<resultResponse> => {
+
+  const res = await fetch(getResultUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: resultResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as resultResponse
+}
+
+
+
+/**
  * @summary List charts in the selected tenant library
  */
 export type chartsResponse200 = {
@@ -9822,6 +10253,54 @@ export const charts = async (params: ChartsParams, options?: RequestInit): Promi
 
   const data: chartsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as chartsResponse
+}
+
+
+
+export type valuesContractResponse200 = {
+  data: ValuesContractResponse
+  status: 200
+}
+
+export type valuesContractResponseSuccess = (valuesContractResponse200) & {
+  headers: Headers;
+};
+;
+
+export type valuesContractResponse = (valuesContractResponseSuccess)
+
+export const getValuesContractUrl = (chartVersionId: string,
+    params: ValuesContractParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/application-delivery/chart-versions/${chartVersionId}/values-contract?${stringifiedParams}` : `/api/v2/application-delivery/chart-versions/${chartVersionId}/values-contract`
+}
+
+export const valuesContract = async (chartVersionId: string,
+    params: ValuesContractParams, options?: RequestInit): Promise<valuesContractResponse> => {
+
+  const res = await fetch(getValuesContractUrl(chartVersionId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: valuesContractResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as valuesContractResponse
 }
 
 
@@ -14008,6 +14487,49 @@ export const removeChart = async (chartId: string,
 
   const data: removeChartResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as removeChartResponse
+}
+
+
+
+export type deleteLocalModelResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteLocalModelResponseSuccess = (deleteLocalModelResponse204) & {
+  headers: Headers;
+};
+;
+
+export type deleteLocalModelResponse = (deleteLocalModelResponseSuccess)
+
+export const getDeleteLocalModelUrl = (profileId: string,
+    modelTag: string,) => {
+
+
+
+
+  return `/api/v2/ai-configuration/providers/${profileId}/models/${modelTag}`
+}
+
+export const deleteLocalModel = async (profileId: string,
+    modelTag: string,
+    modelDeleteRequest: ModelDeleteRequest, options?: RequestInit): Promise<deleteLocalModelResponse> => {
+
+  const res = await fetch(getDeleteLocalModelUrl(profileId,modelTag),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      modelDeleteRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: deleteLocalModelResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as deleteLocalModelResponse
 }
 
 

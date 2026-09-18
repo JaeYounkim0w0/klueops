@@ -76,7 +76,7 @@ class ApplicationDeliveryCatalogServiceTest {
         ApplicationDeliveryCatalogService importingService = new ApplicationDeliveryCatalogService(
                 catalog, request -> "chart-payload".getBytes(), payload ->
                 new io.strato.aiops.application.port.out.ChartArchiveInspectionPort.InspectedArchive(
-                        "nginx", "0.16.8", "1.31.5", "NGINX", "name: nginx", "{}", null, 3, 1024),
+                        "nginx", "0.16.8", "1.31.5", "NGINX", "name: nginx", "replicaCount: 1", null, 3, 1024),
                 repository, null, new ObjectMapper(), Clock.fixed(NOW, ZoneOffset.UTC), null, null, null);
 
         var imported = importingService.importFromCatalog(
@@ -84,6 +84,20 @@ class ApplicationDeliveryCatalogServiceTest {
 
         assertThat(imported.chart().providerName()).isEqualTo("CloudPirates");
         assertThat(imported.chart().sourceName()).isEqualTo("cloudpirates-nginx");
+    }
+
+    /** 기본 Values가 없는 Chart는 artifact나 Library 행을 저장하기 전에 거부한다. */
+    @Test void rejectsMissingValuesBeforePersistence() {
+        var noWrites = (ApplicationDeliveryRepositoryPort) java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[]{ApplicationDeliveryRepositoryPort.class}, (proxy, method, args) -> {
+                    throw new AssertionError("저장소에 접근하면 안 됩니다: " + method.getName());
+                });
+        var importing = new ApplicationDeliveryCatalogService(null, null, payload ->
+                new io.strato.aiops.application.port.out.ChartArchiveInspectionPort.InspectedArchive(
+                        "sample", "1", "1", "", "name: sample", null, null, 1, 100),
+                noWrites, null, new ObjectMapper(), Clock.fixed(NOW, ZoneOffset.UTC), null, null, null);
+        assertThatThrownBy(() -> importing.upload(tenantId, "upload", new byte[]{1}, "test"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("values.yaml");
     }
 
     private static final class FakeRepository implements ApplicationDeliveryRepositoryPort {

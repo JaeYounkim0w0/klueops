@@ -69,7 +69,8 @@ function timeLabel(value?: string) {
 
 /** durationLabel 처리에 필요한 화면 또는 업무 로직을 수행한다. */
 function durationLabel(job: JobCenterItem) {
-  const elapsed = formatElapsedDuration(job.startedAt, job.completedAt);
+  // 상태가 RUNNING으로 유지돼도 폴링 시각을 반영해 경과 시간을 다시 표시한다.
+  const elapsed = formatElapsedDuration(job.startedAt, job.completedAt, new Date(job.updatedAt));
   if (elapsed === '-') {
     return t('jobs.elapsed', { duration: '-' });
   }

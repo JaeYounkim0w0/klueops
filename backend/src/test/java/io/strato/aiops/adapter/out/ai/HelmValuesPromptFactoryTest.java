@@ -1,26 +1,22 @@
 package io.strato.aiops.adapter.out.ai;
 
-import io.strato.aiops.application.port.out.HelmValuesSuggestionPort;
+import io.strato.aiops.application.port.out.HelmValuesSuggestionPort.SuggestionRequest;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 class HelmValuesPromptFactoryTest {
+    /** 제공사와 Chart가 달라도 시스템 규칙은 동일하며 근거만 런타임에 바뀐다. */
+    @Test void systemPromptIsIndependentOfChart() {
+        var first = HelmValuesPromptFactory.create(request("sample-a", "vendor-a"));
+        var second = HelmValuesPromptFactory.create(request("sample-b", "vendor-b"));
+        assertThat(first.system()).isEqualTo(second.system()).doesNotContain("sample-a", "vendor-a", "NodePort", "prometheus");
+        assertThat(first.user()).contains("sample-a", "vendor-a", "# original comment", "현재 값", "요청");
+        assertThat(second.user()).contains("sample-b", "vendor-b");
+    }
 
-    /** HelmValuesPromptFactoryTest의 includesExactChartContractAndRetryFeedback 처리에 필요한 업무 로직을 수행한다. */
-    @Test
-    void includesExactChartContractAndRetryFeedback() {
-        var request = new HelmValuesSuggestionPort.SuggestionRequest("helm-values.v10", "nginx", "nginx",
-                "cloudpirates-nginx", "ARTIFACT_HUB", "0.16.8", "1.31.5", "service: {}",
-                "service:\n  ports: []", "{\"type\":\"object\"}", java.util.List.of("service"), "Service를 ClusterIP로 설정",
-                "targetPort must be string");
-
-        HelmValuesPromptFactory.Prompt prompt = HelmValuesPromptFactory.create(request);
-
-        assertThat(prompt.system()).contains("helm-values.v10", "exact DEFAULT VALUES SKELETON",
-                "Preserve exact YAML value types", "untrusted data");
-        assertThat(prompt.user()).contains("providerName: cloudpirates-nginx", "chartVersion: 0.16.8",
-                "applicationVersion: 1.31.5", "targetPort must be string", "Service를 ClusterIP로 설정",
-                "REQUEST-RELEVANT ROOT KEYS", "[service]");
+    /** 공통 생성 요청에 정확한 Chart와 원문 Values를 전달한다. */
+    private SuggestionRequest request(String chart, String provider) {
+        return new SuggestionRequest("helm-values.grounded.v2", chart, chart, provider, "UPLOAD", "1.2", "3.4",
+                "현재 값", "ref0 values.yaml", "# original comment\nreplicas: 1", "", java.util.List.of(), "요청", null);
     }
 }

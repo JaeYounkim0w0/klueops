@@ -30,6 +30,11 @@ describe('frontend smoke test', () => {
     expect(notificationSource).toContain("t('notifications.title')");
   });
 
+  // 같은 RUNNING 상태에서도 상태 조회 시각을 경과 시간의 반응형 의존성으로 사용한다.
+  it('refreshes job elapsed time from the latest poll timestamp', () => {
+    expect(jobDockSource).toContain('formatElapsedDuration(job.startedAt, job.completedAt, new Date(job.updatedAt))');
+  });
+
   it('provides login, access denied, and identity administration routes', () => {
     expect(routerSource).toContain("path: '/login'");
     expect(routerSource).toContain("path: '/access-denied'");

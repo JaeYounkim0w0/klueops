@@ -1712,16 +1712,21 @@ export interface DeploymentAcceptedResponse {
 export interface ValuesSuggestionResponse {
   valuesYaml: string;
   promptVersion: string;
-  validationStatus: 'HELM_TEMPLATE_VALIDATED';
+  validationStatus: 'HELM_TEMPLATE_VALIDATED' | 'NEEDS_INPUT' | 'GENERATION_FAILED';
   attempts: number;
   chartName: string;
   providerName?: string;
   chartVersion: string;
   applicationVersion?: string;
   schemaIncluded: boolean;
+  warnings: string[];
+  requirements?: { id: string; request: string }[];
+  changes?: { requirementId: string; path: string; value: unknown; explanation: string }[];
+  questions?: string[];
 }
 
 export interface ValuesContractResponse {
+  eligibilityMessage?: string | null;
   defaultValuesYaml: string;
   valuesSchemaJson?: string;
   schemaIncluded: boolean;
@@ -2049,9 +2054,15 @@ export const api = {
     `/api/v2/application-delivery/chart-versions/${encodeURIComponent(chartVersionId)}/values-contract?tenantId=${encodeURIComponent(tenantId)}`
   ),
   suggestValues: /** suggestValues 처리에 필요한 화면 또는 업무 로직을 수행한다. */ (body: { tenantId: string; chartVersionId: string; currentValuesYaml: string; instruction: string }) =>
-    request<ValuesSuggestionResponse>('/api/v2/application-delivery/values-suggestions', {
+    request<ValuesSuggestionResponse>('/api/v2/application-delivery/values-assistance', {
       method: 'POST', body: JSON.stringify(body),
     }, { timeoutMs: 180_000 }),
+  startValuesAssistance: /** 장시간 생성을 시작하고 즉시 작업 식별자를 받는다. */ (body: { tenantId: string; chartVersionId: string; currentValuesYaml: string; instruction: string }) =>
+    request<StartJobResponse>('/api/v2/application-delivery/values-assistance/jobs', { method: 'POST', body: JSON.stringify(body) }),
+  getValuesAssistanceJob: /** 요청 사용자와 Tenant에 속한 생성 상태를 조회한다. */ (tenantId: string, id: string) =>
+    request<JobResponse>(`/api/v2/application-delivery/values-assistance/jobs/${encodeURIComponent(id)}?tenantId=${encodeURIComponent(tenantId)}`),
+  getValuesAssistanceResult: /** 완료 결과와 원본 Values 지문을 조회한다. */ (tenantId: string, id: string) =>
+    request<{ baseValuesDigest: string; proposal: ValuesSuggestionResponse }>(`/api/v2/application-delivery/values-assistance/jobs/${encodeURIComponent(id)}/result?tenantId=${encodeURIComponent(tenantId)}`),
   getDeploymentTargetOptions: /** getDeploymentTargetOptions 처리 결과를 조회해 반환한다. */ (body: {
     tenantId: string; clusterId: string; chartVersionId: string; valuesRevisionId?: string;
     namespace: string; releaseName: string; exposureType?: string;

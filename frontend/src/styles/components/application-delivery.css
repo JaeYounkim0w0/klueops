@@ -57,6 +57,10 @@
 .delivery-modal-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; background: rgba(13, 25, 40, .55); padding: 20px; backdrop-filter: blur(4px); }
 .delivery-modal { width: min(720px, 100%); max-height: calc(100vh - 40px); overflow: auto; border: 1px solid rgba(255,255,255,.7); border-radius: 18px; background: #fff; box-shadow: 0 30px 80px rgba(10, 24, 42, .3); }
 .delivery-modal.narrow { width: min(560px, 100%); }
+.delivery-modal > .delivery-panel { margin: 14px 22px; padding: 16px; }
+.delivery-modal > .delivery-panel h3 { margin: 0 0 12px; font-size: 14px; }
+.delivery-modal > .delivery-panel ul { margin: 0; padding-left: 20px; }
+.delivery-modal > .delivery-panel li { margin-top: 6px; overflow-wrap: anywhere; }
 .delivery-modal > header, .delivery-modal > footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 20px 22px; }
 .delivery-modal > header { border-bottom: 1px solid #e4eaf1; }
 .delivery-modal > footer { justify-content: flex-end; border-top: 1px solid #e4eaf1; background: #fafbfd; }
@@ -87,7 +91,10 @@
 .values-hint p { margin: 0; font-size: 10px; line-height: 1.5; }
 .yaml-editor-panel { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; background: #14202e; }
 .yaml-editor-panel header, .yaml-editor-panel footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 15px; color: #dbe8f5; }
-.yaml-editor-panel header div { display: grid; gap: 2px; }
+.yaml-editor-panel .values-editor-heading { display: grid; min-width: 0; gap: 2px; }
+.yaml-editor-panel .values-editor-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.yaml-editor-panel .values-mode-switch { display: inline-grid; grid-template-columns: repeat(2, minmax(72px, 1fr)); align-items: center; gap: 3px; min-width: 168px; }
+.yaml-editor-panel .values-mode-switch button { min-height: 36px; white-space: nowrap; }
 .yaml-editor-panel header small, .yaml-editor-panel footer span { color: #8fa3b8; font-size: 10px; }
 .yaml-editor-panel textarea { min-height: 410px; resize: vertical; border: 0; border-block: 1px solid #2a3949; outline: 0; background: #0f1924; padding: 18px; color: #cfe4f7; font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; tab-size: 2; }
 .target-layout, .preview-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -120,11 +127,27 @@
 .delivery-field { margin: 10px 20px 20px; }
 .delivery-field textarea { min-height: 90px; resize: vertical; border: 1px solid #cdd8e5; border-radius: 8px; padding: 10px; color: #223043; font-size: 11px; line-height: 1.5; }
 .delivery-field .suggestion-preview { min-height: 240px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.delivery-inline-notice.warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #f2cf85;
+  border-radius: 12px;
+  background: #fff9eb;
+  color: #765315;
+  line-height: 1.5;
+}
+.values-ai-caution { margin: 16px 20px 0; }
 /* 입력 다음 동작은 시선 흐름의 끝인 우측에 배치한다. */
 .delivery-assistant-actions { display: flex; justify-content: flex-end; margin: -8px 20px 20px; }
 .assistant-notice { margin: 16px 20px 0; }
 .assistant-validation-summary { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 9px; margin: 0 20px 14px; border: 1px solid #bfe1cf; border-radius: 9px; background: #effaf4; padding: 11px 12px; color: #246747; font-size: 10px; }
 .assistant-validation-summary small { grid-column: 2; color: #5d7468; }
+/* 생성 실패와 입력 보완은 검증 성공의 초록색 안내와 명확하게 구분한다. */
+.assistant-validation-summary.is-error { border-color: #e5b8b4; background: #fff8f7; color: var(--danger-color); }
+.assistant-validation-summary.is-warning { border-color: #efd29b; background: #fff9eb; color: var(--warning-color); }
+.assistant-validation-summary.is-error small, .assistant-validation-summary.is-warning small { color: inherit; }
 .wizard-footer { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; border: 1px solid #dbe4ee; border-radius: 11px; background: #fff; padding: 12px 16px; color: #66778b; font-size: 11px; }
 .preview-summary dl { display: grid; margin: 0; padding: 8px 18px; }
 .preview-summary dl div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 10px; border-bottom: 1px solid #edf1f5; padding: 10px 0; }
@@ -179,7 +202,7 @@
 .chart-removal-summary strong { overflow-wrap: anywhere; color: #27364a; font-size: 11px; }
 .exact-confirm-field { margin: 20px 22px; }
 @media (max-width: 1050px) { .chart-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.applications-workspace { grid-template-columns: 1fr; }.application-inspector { order: -1; }.library-row { grid-template-columns: auto 1fr; }.version-select, .library-actions { grid-column: 2; }.source-row { grid-template-columns: 1fr 1.4fr 80px 38px; }.source-row > :nth-child(3) { display: none; } }
-@media (max-width: 700px) { .delivery-hero { align-items: stretch; flex-direction: column; padding: 18px; }.header-actions { flex-wrap: wrap; }.chart-card-grid, .application-grid, .target-layout, .preview-layout, .exposure-options { grid-template-columns: 1fr; }.library-row { grid-template-columns: auto minmax(0, 1fr); align-items: start; }.library-actions { flex-wrap: wrap; }.source-table { overflow-x: auto; }.source-row { min-width: 620px; }.values-workspace { grid-template-columns: 1fr; }.values-sidebar { border-right: 0; border-bottom: 1px solid #e2e8ef; }.delivery-form-grid { grid-template-columns: 1fr; }.delivery-form-grid .wide { grid-column: auto; }.exact-confirm { grid-template-columns: 1fr; }.wizard-steps span { padding-inline: 5px; }.delivery-lifecycle { justify-content: flex-start; }}
+@media (max-width: 700px) { .delivery-hero { align-items: stretch; flex-direction: column; padding: 18px; }.header-actions { flex-wrap: wrap; }.chart-card-grid, .application-grid, .target-layout, .preview-layout, .exposure-options { grid-template-columns: 1fr; }.library-row { grid-template-columns: auto minmax(0, 1fr); align-items: start; }.library-actions { flex-wrap: wrap; }.source-table { overflow-x: auto; }.source-row { min-width: 620px; }.values-workspace { grid-template-columns: 1fr; }.values-sidebar { border-right: 0; border-bottom: 1px solid #e2e8ef; }.yaml-editor-panel header { align-items: stretch; flex-direction: column; }.yaml-editor-panel .values-editor-actions { justify-content: flex-start; }.yaml-editor-panel .values-mode-switch { width: min(100%, 220px); }.delivery-form-grid { grid-template-columns: 1fr; }.delivery-form-grid .wide { grid-column: auto; }.exact-confirm { grid-template-columns: 1fr; }.wizard-steps span { padding-inline: 5px; }.delivery-lifecycle { justify-content: flex-start; }}
 
 /* Applications는 Phase 2 시안의 요약 → 목록 → 운영 상세 위계를 실제 데이터에 적용한다. */
 .applications-workspace {

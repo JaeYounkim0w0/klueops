@@ -61,11 +61,17 @@ public class ProcessBuilderChartAcquisitionAdapter implements ChartAcquisitionPo
 
     /** 임시 디렉터리에서 Helm pull을 실행하고 크기 제한을 통과한 아카이브만 읽는다. */
     private byte[] download(FetchRequest request, boolean verify) {
-        Path directory = null;
+        Path workspace = null;
         try {
-            directory = Files.createTempDirectory("klueops-chart-");
-            List<String> command = command(request, directory, verify);
-            Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
+            workspace = Files.createTempDirectory("klueops-chart-");
+            Path downloadDirectory = Files.createDirectory(workspace.resolve("downloads"));
+            Path cacheDirectory = Files.createDirectories(workspace.resolve("helm-cache/repository"));
+            Path configDirectory = Files.createDirectory(workspace.resolve("helm-config"));
+            Path dataDirectory = Files.createDirectory(workspace.resolve("helm-data"));
+            List<String> command = command(request, downloadDirectory, verify);
+            ProcessBuilder processBuilder = new ProcessBuilder(command).redirectErrorStream(true);
+            configureIsolatedHelmEnvironment(processBuilder, cacheDirectory, configDirectory, dataDirectory);
+            Process process = processBuilder.start();
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             Thread reader = new Thread(() -> drain(process.getInputStream(), output), "helm-pull-output");
             reader.setDaemon(true);
@@ -82,8 +88,11 @@ public class ProcessBuilderChartAcquisitionAdapter implements ChartAcquisitionPo
                 throw new IllegalStateException(verify ? "Helm provenance verification failed" :
                         "Helm chart download failed: " + safeOutput);
             }
-            Path archive = Files.list(directory).filter(path -> path.getFileName().toString().endsWith(".tgz"))
-                    .findFirst().orElseThrow(() -> new IllegalStateException("Helm did not produce a chart archive"));
+            Path archive;
+            try (var paths = Files.list(downloadDirectory)) {
+                archive = paths.filter(path -> path.getFileName().toString().endsWith(".tgz"))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Helm did not produce a chart archive"));
+            }
             long size = Files.size(archive);
             if (size <= 0 || size > maximumChartBytes) {
                 throw new IllegalArgumentException("Downloaded chart exceeds the configured size limit");
@@ -95,8 +104,21 @@ public class ProcessBuilderChartAcquisitionAdapter implements ChartAcquisitionPo
         } catch (IOException exception) {
             throw new IllegalStateException("Helm chart download failed", exception);
         } finally {
-            deleteDirectory(directory);
+            deleteDirectory(workspace);
         }
+    }
+
+    /** 각 다운로드가 공유 HOME이나 다른 요청의 Helm 캐시를 사용하지 않도록 실행 환경을 격리한다. */
+    private void configureIsolatedHelmEnvironment(ProcessBuilder processBuilder, Path repositoryCache,
+                                                   Path configDirectory, Path dataDirectory) {
+        var environment = processBuilder.environment();
+        Path cacheHome = repositoryCache.getParent();
+        environment.put("HELM_CACHE_HOME", cacheHome.toString());
+        environment.put("HELM_CONFIG_HOME", configDirectory.toString());
+        environment.put("HELM_DATA_HOME", dataDirectory.toString());
+        environment.put("HELM_REPOSITORY_CACHE", repositoryCache.toString());
+        environment.put("HELM_REPOSITORY_CONFIG", configDirectory.resolve("repositories.yaml").toString());
+        environment.put("HELM_REGISTRY_CONFIG", configDirectory.resolve("registry.json").toString());
     }
 
     /** ProcessBuilderChartAcquisitionAdapter의 command 처리에 필요한 업무 로직을 수행한다. */

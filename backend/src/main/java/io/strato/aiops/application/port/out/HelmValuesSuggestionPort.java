@@ -16,6 +16,7 @@ public interface HelmValuesSuggestionPort {
             String chartVersion,
             String applicationVersion,
             String currentValuesYaml,
+            String chartContractIndex,
             String defaultValuesSkeleton,
             String valuesSchemaJson,
             List<String> requiredRootKeys,

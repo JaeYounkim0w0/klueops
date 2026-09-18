@@ -13,6 +13,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Configuration
 public class WorkloadExecutorConfig {
 
+    /** Values 생성은 Helm 배포와 분석 worker를 점유하지 않는 제한 큐에서 처리한다. */
+    @Bean("valuesAssistanceExecutor")
+    public ThreadPoolTaskExecutor valuesAssistanceExecutor(
+            @Value("${aiops.executors.values-assistance.workers:2}") int workers,
+            @Value("${aiops.executors.values-assistance.queue-capacity:8}") int capacity) {
+        return executor("values-assistance-", workers, workers, capacity);
+    }
+
     /** WorkloadExecutorConfig의 analysisJobExecutor 처리에 필요한 업무 로직을 수행한다. */
     @Bean("analysisJobExecutor")
     public ThreadPoolTaskExecutor analysisJobExecutor(

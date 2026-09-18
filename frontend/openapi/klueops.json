@@ -823,6 +823,72 @@
         }
       }
     },
+    "/api/v2/application-delivery/values-assistance": {
+      "post": {
+        "tags": [
+          "helm-values-assistance-controller"
+        ],
+        "summary": "Interpret requirements and map exact Chart Values, or return clarification questions",
+        "operationId": "assist",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValuesSuggestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/values-assistance/jobs": {
+      "post": {
+        "tags": [
+          "helm-values-assistance-controller"
+        ],
+        "summary": "Start an owner-scoped asynchronous Values assistance job",
+        "operationId": "start",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValuesSuggestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/application-delivery/sources": {
       "get": {
         "tags": [
@@ -1102,7 +1168,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ExecuteRequest"
+                "$ref": "#/components/schemas/UninstallRequest"
               }
             }
           },
@@ -1144,6 +1210,47 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RollbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentAcceptedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/applications/{applicationId}/cleanup-retry": {
+      "post": {
+        "tags": [
+          "Application Delivery Deployment"
+        ],
+        "operationId": "retryCleanup",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UninstallRequest"
               }
             }
           },
@@ -1258,6 +1365,102 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ValidationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/ai-configuration/providers/{profileId}/models/{modelTag}/promote": {
+      "post": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "promoteLocalModel",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "modelTag",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/ai-configuration/providers/{profileId}/models/{modelTag}/evaluate": {
+      "post": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "evaluateLocalModel",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "modelTag",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelEvaluationResponse"
                 }
               }
             }
@@ -4855,6 +5058,88 @@
         }
       }
     },
+    "/api/v2/application-delivery/values-assistance/jobs/{id}": {
+      "get": {
+        "tags": [
+          "helm-values-assistance-controller"
+        ],
+        "summary": "Read the requesting user's Values assistance job status",
+        "operationId": "status",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/values-assistance/jobs/{id}/result": {
+      "get": {
+        "tags": [
+          "helm-values-assistance-controller"
+        ],
+        "summary": "Read the requesting user's decrypted Values proposal",
+        "operationId": "result",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Outcome"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/application-delivery/charts": {
       "get": {
         "tags": [
@@ -4892,6 +5177,46 @@
                   "items": {
                     "$ref": "#/components/schemas/LibraryChartResponse"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/application-delivery/chart-versions/{chartVersionId}/values-contract": {
+      "get": {
+        "tags": [
+          "Application Delivery Catalog"
+        ],
+        "operationId": "valuesContract",
+        "parameters": [
+          {
+            "name": "chartVersionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValuesContractResponse"
                 }
               }
             }
@@ -8487,6 +8812,48 @@
         }
       }
     },
+    "/api/v2/ai-configuration/providers/{profileId}/models/{modelTag}": {
+      "delete": {
+        "tags": [
+          "ai-provider-configuration-controller"
+        ],
+        "operationId": "deleteLocalModel",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "modelTag",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/security/role-bindings/{bindingId}": {
       "delete": {
         "tags": [
@@ -9378,11 +9745,13 @@
           },
           "currentValuesYaml": {
             "type": "string",
-            "minLength": 1
+            "maxLength": 1048576,
+            "minLength": 0
           },
           "instruction": {
             "type": "string",
-            "minLength": 1
+            "maxLength": 2000,
+            "minLength": 0
           }
         },
         "required": [
@@ -9422,6 +9791,12 @@
           },
           "schemaIncluded": {
             "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -9512,6 +9887,95 @@
           },
           "createdAt": {
             "type": "string"
+          }
+        }
+      },
+      "Change": {
+        "type": "object",
+        "properties": {
+          "requirementId": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "explanation": {
+            "type": "string"
+          }
+        }
+      },
+      "JsonNode": {},
+      "Requirement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "request": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          }
+        }
+      },
+      "Result": {
+        "type": "object",
+        "properties": {
+          "valuesYaml": {
+            "type": "string"
+          },
+          "promptVersion": {
+            "type": "string"
+          },
+          "validationStatus": {
+            "type": "string"
+          },
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "chartName": {
+            "type": "string"
+          },
+          "providerName": {
+            "type": "string"
+          },
+          "chartVersion": {
+            "type": "string"
+          },
+          "applicationVersion": {
+            "type": "string"
+          },
+          "schemaIncluded": {
+            "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Requirement"
+            }
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            }
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -9608,6 +10072,9 @@
           "releaseName": {
             "type": "string",
             "minLength": 1
+          },
+          "exposureType": {
+            "type": "string"
           }
         },
         "required": [
@@ -9701,23 +10168,23 @@
           "targetPort": {
             "type": "string"
           },
-        "nodePort": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "protocol": {
-          "type": "string"
-        },
-        "appProtocol": {
-          "type": "string"
-        },
-        "httpRouteCompatibility": {
-          "type": "string"
-        },
-        "compatibilityMessage": {
-          "type": "string"
+          "nodePort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "appProtocol": {
+            "type": "string"
+          },
+          "httpRouteCompatibility": {
+            "type": "string"
+          },
+          "compatibilityMessage": {
+            "type": "string"
+          }
         }
-      }
       },
       "PreviewRequest": {
         "type": "object",
@@ -9760,6 +10227,9 @@
             "type": "string"
           },
           "exposurePath": {
+            "type": "string"
+          },
+          "backendServiceNamespace": {
             "type": "string"
           },
           "backendServiceName": {
@@ -9823,6 +10293,9 @@
             "type": "string"
           },
           "exposurePath": {
+            "type": "string"
+          },
+          "backendServiceNamespace": {
             "type": "string"
           },
           "backendServiceName": {
@@ -10006,6 +10479,32 @@
           "version"
         ]
       },
+      "UninstallRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "confirmationText": {
+            "type": "string",
+            "minLength": 1
+          },
+          "preservePvcs": {
+            "type": "boolean"
+          },
+          "preserveDns": {
+            "type": "boolean"
+          },
+          "preserveTls": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "confirmationText",
+          "tenantId"
+        ]
+      },
       "RollbackRequest": {
         "type": "object",
         "properties": {
@@ -10083,6 +10582,26 @@
           }
         }
       },
+      "ModelEvaluationResponse": {
+        "type": "object",
+        "properties": {
+          "score": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "samples": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageLatencyMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "promotable": {
+            "type": "boolean"
+          }
+        }
+      },
       "LocalModelResponse": {
         "type": "object",
         "properties": {
@@ -10106,6 +10625,21 @@
           },
           "digest": {
             "type": "string"
+          },
+          "evaluationScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "evaluationSamples": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageLatencyMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "promoted": {
+            "type": "boolean"
           },
           "updatedAt": {
             "type": "string"
@@ -11713,6 +12247,7 @@
               "HELM_ROLLBACK",
               "HELM_UNINSTALL",
               "AI_MODEL_PULL",
+              "HELM_VALUES",
               "AI_ANALYSIS"
             ]
           },
@@ -13672,6 +14207,34 @@
         "type": "object",
         "properties": {
           "valuesYaml": {
+            "type": "string"
+          }
+        }
+      },
+      "Outcome": {
+        "type": "object",
+        "properties": {
+          "baseValuesDigest": {
+            "type": "string"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/Result"
+          }
+        }
+      },
+      "ValuesContractResponse": {
+        "type": "object",
+        "properties": {
+          "defaultValuesYaml": {
+            "type": "string"
+          },
+          "valuesSchemaJson": {
+            "type": "string"
+          },
+          "schemaIncluded": {
+            "type": "boolean"
+          },
+          "eligibilityMessage": {
             "type": "string"
           }
         }
@@ -16217,13 +16780,13 @@
       "CsrfToken": {
         "type": "object",
         "properties": {
-          "token": {
+          "headerName": {
             "type": "string"
           },
           "parameterName": {
             "type": "string"
           },
-          "headerName": {
+          "token": {
             "type": "string"
           }
         }
@@ -16819,6 +17382,23 @@
         }
       },
       "RemoveChartRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "confirmationText": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "confirmationText",
+          "tenantId"
+        ]
+      },
+      "ModelDeleteRequest": {
         "type": "object",
         "properties": {
           "tenantId": {

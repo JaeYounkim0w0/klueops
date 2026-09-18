@@ -29,6 +29,11 @@ public class HelmReleaseCommandRunner {
             List<String> arguments = new ArrayList<>(List.of("template", releaseName, chart.toString(),
                     "--namespace", namespace, "--include-crds"));
             appendValues(arguments, directory, values);
+            // lint는 경고만으로 실패시키지 않으며 Schema·Chart 오류를 먼저 확인한다.
+            List<String> lint = new ArrayList<>(List.of("lint", chart.toString(), "--quiet"));
+            appendValues(lint, directory, values);
+            var lintResult = helm.execute(lint, Duration.ofSeconds(45));
+            if (lintResult.exitCode() != 0) throw new IllegalArgumentException("Helm lint failed: " + bounded(lintResult.stdout()));
             var result = helm.execute(arguments, Duration.ofSeconds(45));
             if (result.exitCode() != 0) throw new IllegalArgumentException("Helm template failed: " + bounded(result.stderr()));
             return result.stdout();

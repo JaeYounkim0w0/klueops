@@ -97,10 +97,10 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
   }
 
   /** trackJob 처리에 필요한 화면 또는 업무 로직을 수행한다. */
-  function trackJob(options: RegisterJobOptions) {
+  function trackJob(options: RegisterJobOptions, poll?: () => Promise<JobResponse>) {
     // 등록과 폴링을 한 진입점으로 묶어 Job Center가 PENDING에 멈추는 호출 누락을 방지한다.
     registerJob(options);
-    return waitForJob(options.jobId, options).catch((error: unknown) => {
+    return waitForJob(options.jobId, options, poll).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : '작업 상태를 확인하지 못했습니다.';
       markJobError(options.jobId, message);
       throw error;
@@ -175,17 +175,17 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
   }
 
   /** waitForJob 처리에 필요한 화면 또는 업무 로직을 수행한다. */
-  async function waitForJob(jobId: string, fallback?: Partial<JobCenterItem>) {
+  async function waitForJob(jobId: string, fallback?: Partial<JobCenterItem>, poll?: () => Promise<JobResponse>) {
     const existing = jobs.value.find((job) => job.jobId === jobId);
     if (existing && TERMINAL_STATUSES.has(existing.status)) {
-      return api.getJob(jobId);
+      return poll ? poll() : api.getJob(jobId);
     }
     const activePoller = pollers.get(jobId);
     if (activePoller) {
       return activePoller;
     }
 
-    const poller = pollJob(jobId, fallback);
+    const poller = pollJob(jobId, fallback, poll);
     pollers.set(jobId, poller);
     try {
       return await poller;
@@ -223,11 +223,11 @@ export const useJobCenterStore = defineStore('jobCenter', () => {
   }
 
   /** pollJob 처리에 필요한 화면 또는 업무 로직을 수행한다. */
-  async function pollJob(jobId: string, fallback?: Partial<JobCenterItem>) {
+  async function pollJob(jobId: string, fallback?: Partial<JobCenterItem>, poll?: () => Promise<JobResponse>) {
     for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
       let job: JobResponse;
       try {
-        job = await api.getJob(jobId);
+        job = await (poll ? poll() : api.getJob(jobId));
       } catch (error) {
         if (!isRetryableJobPollError(error)) throw error;
         // 상태 조회 timeout은 서버 Job 실패가 아니므로 진행 상태를 유지하고 다음 주기에 재조회한다.

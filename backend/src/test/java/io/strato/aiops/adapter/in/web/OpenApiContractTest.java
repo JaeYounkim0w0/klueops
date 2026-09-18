@@ -53,6 +53,9 @@ class OpenApiContractTest {
                 "/api/clusters/{clusterId}/command-favorites",
                 "/api/analysis/namespaces/{namespace}",
                 "/api/jobs/{jobId}",
+                "/api/v2/application-delivery/values-assistance/jobs",
+                "/api/v2/application-delivery/values-assistance/jobs/{id}",
+                "/api/v2/application-delivery/values-assistance/jobs/{id}/result",
                 "/api/operations/runtime-readiness"
         );
         for (String path : criticalPaths) {

@@ -1,0 +1,44 @@
+{
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {"referenceIds": {"type": "array", "minItems": 1, "maxItems": 3, "items": {"type": "string", "pattern": "^ref[0-9]+$"}}},
+      "required": ["referenceIds"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "requirements": {
+          "type": "array", "maxItems": 30,
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string", "pattern": "^r[0-9]+$"},
+              "kind": {"type": "string", "enum": ["CHANGE", "PRESERVE"]},
+              "request": {"type": "string"}
+            },
+            "required": ["id", "kind", "request"], "additionalProperties": false
+          }
+        },
+        "questions": {"type": "array", "maxItems": 20, "items": {"type": "string"}},
+        "items": {
+          "type": "array", "maxItems": 80,
+          "items": {
+            "type": "object",
+            "properties": {
+              "requirementId": {"type": "string", "pattern": "^r[0-9]+$"},
+              "status": {"type": "string", "enum": ["MAPPED"]},
+              "path": {"type": "string", "pattern": "^/.*$"},
+              "value": {},
+              "explanation": {"type": "string"}
+            },
+            "required": ["requirementId", "status", "path", "value", "explanation"], "additionalProperties": false
+          }
+        }
+      },
+      "required": ["requirements", "questions", "items"],
+      "additionalProperties": false
+    }
+  ]
+}

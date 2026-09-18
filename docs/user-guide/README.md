@@ -35,7 +35,7 @@
 
 1. Chart Library에서 검증된 Chart를 선택한다. 필요한 Chart가 없으면 Discover, Sources 또는 tgz 가져오기를 사용한다.
 2. Values Profile을 만들고 YAML 또는 schema Form으로 override를 저장한다. 빈 입력은 빈 object로 처리하고 exact Chart의 Helm render를 통과해야 한다.
-3. AI Values 제안은 선택한 Chart의 제공사, Chart와 App 버전, values와 schema 골격을 사용한다. 비밀번호나 token 대신 기존 Secret 이름을 요청한다.
+3. AI Values 제안은 선택한 Chart 원본 Values·주석·Schema를 읽고 필요한 자료를 추가 조회한다. `이해한 요청`, `요청과 Chart 설정 연결`, 기존/제안 변경 비교와 YAML을 검토한다. 보충 질문은 요청을 수정해 다시 생성한다. 비밀번호나 token 대신 지원되는 기존 Secret 이름/key를 사용한다. YAML·Helm lint/렌더·제시된 리소스 조건을 통과한 결과만 적용한다. Chart에 없는 Values 경로로 매핑되면 적용하지 않고, 거부된 경로와 사유를 경고로 확인한 뒤 Chart가 제공하는 정확한 필드로 요청을 수정한다. 확인하지 못한 요구사항의 경고를 확인하며 실제 배포·접속은 별도 검사한다.
 4. Cluster와 Namespace를 선택하고 Helm release Secret의 `get/list/create` 권한을 확인한다.
 5. HTTPRoute는 렌더링된 Service의 `spec.ports[].port`와 Ready Gateway를 사용한다. `targetPort`나 `nodePort`를 HTTPRoute backend port로 사용하지 않는다.
 6. PostgreSQL과 Redis 같은 TCP 서비스는 port-forward, NodePort, LoadBalancer 또는 TCPRoute를 사용한다.
