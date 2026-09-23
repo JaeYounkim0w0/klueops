@@ -4,6 +4,8 @@
 
 ## 먼저 읽을 문서
 
+개발 에이전트 진입점은 루트 [AGENTS.md](../AGENTS.md)다. 새 프로젝트로 옮겨 사용할 기술·설계·개발 기준은 [재사용 개발 기준](engineering/README.md)과 [이식 절차](engineering/adoption.md)를 참고한다.
+
 1. [현재 제품 통합 명세](product/current-product-specification.md)
 2. [오픈소스 공개 및 잔여 개발](product/remaining-development-items.md)
 3. [기술 스택](development/tech-stack.md)
@@ -25,6 +27,7 @@
 | `architecture/` | 시스템 경계, 배포 구조, 데이터와 리팩터링 기준 |
 | `api/` | OpenAPI와 API 설계 규칙 |
 | `development/` | 기술 스택, 코딩·테스트·문서화 규칙 |
+| `engineering/` | 재사용 가능한 개발 기준과 프로젝트별 구성 프로필 |
 | `features/` | 아직 독립 설명이 필요한 대형 기능의 현재 설계·계약 |
 | `operations/` | 설치, 배포, 복구와 선택적 환경 검증 절차 |
 | `security/` | 인증, 권한, Secret, masking과 보안 검증 |

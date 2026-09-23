@@ -1,0 +1,16 @@
+package io.product.aiops.domain.job;
+
+public enum AsyncJobType {
+    CLUSTER_SYNC,
+    APPLICATION_SYNC,
+    APPLICATION_DEPLOY,
+    APPLICATION_RESTART,
+    APPLICATION_ROLLBACK,
+    HELM_INSTALL,
+    HELM_UPGRADE,
+    HELM_ROLLBACK,
+    HELM_UNINSTALL,
+    AI_MODEL_PULL,
+    HELM_VALUES,
+    AI_ANALYSIS
+}

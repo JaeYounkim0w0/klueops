@@ -3,10 +3,10 @@ kind: Namespace
 metadata:
   name: __NAMESPACE__
   labels:
-    aiops.strato.io/fixture: large-cluster-soak
-    aiops.strato.io/run-id: __RUN_ID__
+    aiops.product.io/fixture: large-cluster-soak
+    aiops.product.io/run-id: __RUN_ID__
   annotations:
-    aiops.strato.io/expires-at: "__EXPIRES_AT__"
+    aiops.product.io/expires-at: "__EXPIRES_AT__"
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -14,7 +14,7 @@ metadata:
   name: large-cluster-soak
   namespace: __NAMESPACE__
   labels:
-    aiops.strato.io/fixture: large-cluster-soak
+    aiops.product.io/fixture: large-cluster-soak
 automountServiceAccountToken: false
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -22,8 +22,8 @@ kind: ClusterRole
 metadata:
   name: __RBAC_NAME__
   labels:
-    aiops.strato.io/fixture: large-cluster-soak
-    aiops.strato.io/run-id: __RUN_ID__
+    aiops.product.io/fixture: large-cluster-soak
+    aiops.product.io/run-id: __RUN_ID__
 rules:
   - apiGroups: [""]
     resources:
@@ -62,8 +62,8 @@ kind: ClusterRoleBinding
 metadata:
   name: __RBAC_NAME__
   labels:
-    aiops.strato.io/fixture: large-cluster-soak
-    aiops.strato.io/run-id: __RUN_ID__
+    aiops.product.io/fixture: large-cluster-soak
+    aiops.product.io/run-id: __RUN_ID__
 subjects:
   - kind: ServiceAccount
     name: large-cluster-soak
@@ -80,7 +80,7 @@ metadata:
   namespace: __NAMESPACE__
   labels:
     app.kubernetes.io/name: log-source
-    aiops.strato.io/fixture: large-cluster-soak
+    aiops.product.io/fixture: large-cluster-soak
 spec:
   replicas: 1
   selector:
@@ -90,7 +90,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: log-source
-        aiops.strato.io/fixture: large-cluster-soak
+        aiops.product.io/fixture: large-cluster-soak
     spec:
       automountServiceAccountToken: false
       containers:

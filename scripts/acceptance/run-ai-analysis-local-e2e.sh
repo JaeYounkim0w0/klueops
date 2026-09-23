@@ -30,7 +30,7 @@ cleanup() {
   if [[ "${FIXTURE_CREATED}" == "true" ]]; then
     local fixture_label
     fixture_label="$(kubectl get namespace "${FIXTURE_NAMESPACE}" \
-      -o jsonpath='{.metadata.labels.aiops\.strato\.io/fixture}' 2>/dev/null || true)"
+      -o jsonpath='{.metadata.labels.aiops\.product\.io/fixture}' 2>/dev/null || true)"
     if [[ "${fixture_label}" == "ai-analysis-e2e" ]]; then
       kubectl delete namespace "${FIXTURE_NAMESPACE}" --wait=true --timeout=180s >/dev/null
     fi
@@ -83,8 +83,8 @@ while IFS=$'\t' read -r namespace expires_at; do
   else
     fail "active or unbounded fixture already exists: ${namespace}"
   fi
-done < <(kubectl get namespaces -l aiops.strato.io/fixture=ai-analysis-e2e -o json | \
-  jq -r '.items[] | [.metadata.name, (.metadata.annotations["aiops.strato.io/expires-at"] // "")] | @tsv')
+done < <(kubectl get namespaces -l aiops.product.io/fixture=ai-analysis-e2e -o json | \
+  jq -r '.items[] | [.metadata.name, (.metadata.annotations["aiops.product.io/expires-at"] // "")] | @tsv')
 
 expires_at="$((now_epoch + TTL_SECONDS))"
 sed -e "s/__NAMESPACE__/${FIXTURE_NAMESPACE}/g" \

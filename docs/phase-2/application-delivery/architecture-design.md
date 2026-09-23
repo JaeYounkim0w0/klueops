@@ -68,7 +68,7 @@ Frontend는 하나를 유지한다. Browser가 Artifact Hub, Chart repository, A
 ## 3. Backend package 경계
 
 ```text
-io.strato.aiops.applicationdelivery
+io.product.aiops.applicationdelivery
 ├─ domain
 │  ├─ chart
 │  ├─ values

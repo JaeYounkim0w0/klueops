@@ -3,10 +3,10 @@ kind: Namespace
 metadata:
   name: __NAMESPACE__
   labels:
-    aiops.strato.io/fixture: ai-analysis-e2e
-    aiops.strato.io/run-id: __RUN_ID__
+    aiops.product.io/fixture: ai-analysis-e2e
+    aiops.product.io/run-id: __RUN_ID__
   annotations:
-    aiops.strato.io/expires-at: "__EXPIRES_AT__"
+    aiops.product.io/expires-at: "__EXPIRES_AT__"
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -14,7 +14,7 @@ metadata:
   name: ai-analysis-acceptance
   namespace: __NAMESPACE__
   labels:
-    aiops.strato.io/fixture: ai-analysis-e2e
+    aiops.product.io/fixture: ai-analysis-e2e
 automountServiceAccountToken: false
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -23,7 +23,7 @@ metadata:
   name: ai-analysis-acceptance
   namespace: __NAMESPACE__
   labels:
-    aiops.strato.io/fixture: ai-analysis-e2e
+    aiops.product.io/fixture: ai-analysis-e2e
 rules:
   - apiGroups: [""]
     resources: ["pods", "pods/log", "services", "endpoints", "configmaps", "events", "persistentvolumeclaims", "serviceaccounts", "resourcequotas", "limitranges"]
@@ -53,7 +53,7 @@ metadata:
   name: ai-analysis-acceptance
   namespace: __NAMESPACE__
   labels:
-    aiops.strato.io/fixture: ai-analysis-e2e
+    aiops.product.io/fixture: ai-analysis-e2e
 subjects:
   - kind: ServiceAccount
     name: ai-analysis-acceptance
@@ -70,7 +70,7 @@ metadata:
   namespace: __NAMESPACE__
   labels:
     app.kubernetes.io/name: privileged-port-failure
-    aiops.strato.io/fixture: ai-analysis-e2e
+    aiops.product.io/fixture: ai-analysis-e2e
 spec:
   replicas: 1
   selector:
@@ -80,7 +80,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: privileged-port-failure
-        aiops.strato.io/fixture: ai-analysis-e2e
+        aiops.product.io/fixture: ai-analysis-e2e
     spec:
       automountServiceAccountToken: false
       containers:
@@ -118,7 +118,7 @@ metadata:
   namespace: __NAMESPACE__
   labels:
     app.kubernetes.io/name: service-backend
-    aiops.strato.io/fixture: ai-analysis-e2e
+    aiops.product.io/fixture: ai-analysis-e2e
 spec:
   replicas: 1
   selector:
@@ -128,7 +128,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: service-backend
-        aiops.strato.io/fixture: ai-analysis-e2e
+        aiops.product.io/fixture: ai-analysis-e2e
     spec:
       automountServiceAccountToken: false
       containers:
@@ -168,7 +168,7 @@ metadata:
   name: service-backend
   namespace: __NAMESPACE__
   labels:
-    aiops.strato.io/fixture: ai-analysis-e2e
+    aiops.product.io/fixture: ai-analysis-e2e
 spec:
   selector:
     app.kubernetes.io/name: service-backend
@@ -184,7 +184,7 @@ metadata:
   namespace: __NAMESPACE__
   labels:
     app.kubernetes.io/name: rollout-target
-    aiops.strato.io/fixture: ai-analysis-e2e
+    aiops.product.io/fixture: ai-analysis-e2e
 spec:
   replicas: 1
   revisionHistoryLimit: 5
@@ -195,7 +195,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: rollout-target
-        aiops.strato.io/fixture: ai-analysis-e2e
+        aiops.product.io/fixture: ai-analysis-e2e
     spec:
       automountServiceAccountToken: false
       containers:

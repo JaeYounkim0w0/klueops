@@ -1,5 +1,7 @@
 # Tech Stack
 
+역할별 선택 기준은 [재사용 기술 스택](../engineering/stack.md), 실제 manifest/lockfile 기준 버전은 [프로젝트 프로필](../engineering/project-profile.md)을 참고한다. 아래는 현재 제품의 기술 구성 요약이다.
+
 ## Backend
 
 - Java 17 LTS
@@ -50,7 +52,9 @@
 ## AI
 
 - 기본 provider: Ollama
-- 확장 후보: OpenAI, Gemini, Azure OpenAI, Anthropic
+- 설정형 provider: Ollama, OpenAI, Google GenAI, OpenAI-compatible
+- 기본 Ollama 경로는 Spring AI를 사용하며, 설정형 provider는 HTTP adapter로 호출한다.
+- Azure OpenAI/Anthropic 전용 adapter는 현재 구현으로 간주하지 않는다.
 
 ## Security
 

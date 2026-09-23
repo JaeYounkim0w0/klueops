@@ -4,12 +4,12 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="${ROOT_DIR}/backend"
 
-if ! rg -n "@Operation" "${ROOT_DIR}/backend/src/main/java/io/strato/aiops/adapter/in/web" >/dev/null; then
+if ! rg -n "@Operation" "${ROOT_DIR}/backend/src/main/java/io/product/aiops/adapter/in/web" >/dev/null; then
   echo "No @Operation annotations found in web adapters." >&2
   exit 1
 fi
 
-if ! rg -n "@Tag" "${ROOT_DIR}/backend/src/main/java/io/strato/aiops/adapter/in/web" >/dev/null; then
+if ! rg -n "@Tag" "${ROOT_DIR}/backend/src/main/java/io/product/aiops/adapter/in/web" >/dev/null; then
   echo "No @Tag annotations found in web adapters." >&2
   exit 1
 fi

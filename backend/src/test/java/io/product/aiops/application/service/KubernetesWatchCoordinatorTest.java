@@ -1,0 +1,311 @@
+package io.product.aiops.application.service;
+
+import io.product.aiops.application.port.out.AnalysisAssuranceRepositoryPort;
+import io.product.aiops.application.port.out.ClusterCredentialRepositoryPort;
+import io.product.aiops.application.port.out.ClusterRepositoryPort;
+import io.product.aiops.application.port.out.KubernetesConnectionCredential;
+import io.product.aiops.application.port.out.KubernetesWatchPort;
+import io.product.aiops.application.port.out.SecretCryptoPort;
+import io.product.aiops.domain.cluster.Cluster;
+import io.product.aiops.domain.cluster.ClusterCredentialType;
+import io.product.aiops.domain.cluster.ClusterEnvironment;
+import io.product.aiops.domain.cluster.ClusterProvider;
+import io.product.aiops.domain.cluster.EncryptedClusterCredential;
+import io.product.aiops.domain.cluster.EncryptedSecret;
+import io.product.aiops.domain.operations.OperationsModels.RegressionRun;
+import io.product.aiops.domain.operations.OperationsModels.WatchSignal;
+import io.product.aiops.domain.operations.OperationsModels.WatchSignalGroup;
+import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class KubernetesWatchCoordinatorTest {
+
+    /** KubernetesWatchCoordinatorTest의 startsWatchDeduplicatesSignalsAndClosesFailedRegistration 처리에 필요한 업무 로직을 수행한다. */
+    @Test
+    void startsWatchDeduplicatesSignalsAndClosesFailedRegistration() {
+        Cluster cluster = Cluster.register("watch-test", "test", ClusterEnvironment.DEV, ClusterProvider.KIND,
+                "local", "test");
+        EncryptedSecret encrypted = new EncryptedSecret("cipher", "key", "AES/GCM", "nonce");
+        EncryptedClusterCredential credential = EncryptedClusterCredential.create(cluster.id(),
+                ClusterCredentialType.KUBECONFIG, encrypted);
+        FakeWatchPort watchPort = new FakeWatchPort();
+        FakeAssuranceRepository repository = new FakeAssuranceRepository();
+        KubernetesWatchCoordinator coordinator = new KubernetesWatchCoordinator(
+                new FakeClusterRepository(cluster), new FakeCredentialRepository(credential),
+                new PlaintextCrypto(), watchPort, repository, true, 1000, 1);
+
+        coordinator.reconcileWatches();
+        awaitState(coordinator, "CONNECTED");
+        assertThat(coordinator.statuses()).singleElement()
+                .satisfies(status -> assertThat(status.state()).isEqualTo("CONNECTED"));
+
+        var signal = new KubernetesWatchPort.CollectedWatchSignal("default", "Pod", "api", "MODIFIED",
+                "CrashLoopBackOff", "Running", "phase=Running, restarts=7", Instant.now());
+        watchPort.listener.onSignal(signal);
+        watchPort.listener.onSignal(signal);
+        assertThat(repository.signals).hasSize(1);
+        assertThat(coordinator.statuses().get(0).lastSignalAt()).isNotNull();
+
+        watchPort.listener.onClosed("connection reset");
+        assertThat(watchPort.closed).isTrue();
+        assertThat(coordinator.statuses()).singleElement().satisfies(status -> {
+            assertThat(status.state()).isEqualTo("DEGRADED");
+            assertThat(status.lastError()).contains("connection reset");
+        });
+    }
+
+    /** KubernetesWatchCoordinatorTest의 disabledWatchNeverOpensClusterConnection 처리에 필요한 업무 로직을 수행한다. */
+    @Test
+    void disabledWatchNeverOpensClusterConnection() {
+        Cluster cluster = Cluster.register("watch-disabled", "test", ClusterEnvironment.DEV, ClusterProvider.KIND,
+                "local", "test");
+        FakeWatchPort watchPort = new FakeWatchPort();
+        KubernetesWatchCoordinator coordinator = new KubernetesWatchCoordinator(
+                new FakeClusterRepository(cluster), new FakeCredentialRepository(null), new PlaintextCrypto(),
+                watchPort, new FakeAssuranceRepository(), false, 1000, 1);
+
+        coordinator.reconcileWatches();
+
+        assertThat(watchPort.openCount).isZero();
+        assertThat(coordinator.statuses().get(0).state()).isEqualTo("DISABLED");
+    }
+
+    /** KubernetesWatchCoordinatorTest의 exposesFailedStateWhenWatchStartupExceedsTimeout 처리에 필요한 업무 로직을 수행한다. */
+    @Test
+    void exposesFailedStateWhenWatchStartupExceedsTimeout() {
+        Cluster cluster = Cluster.register("watch-timeout", "test", ClusterEnvironment.DEV, ClusterProvider.KIND,
+                "local", "test");
+        EncryptedSecret encrypted = new EncryptedSecret("cipher", "key", "AES/GCM", "nonce");
+        EncryptedClusterCredential credential = EncryptedClusterCredential.create(cluster.id(),
+                ClusterCredentialType.KUBECONFIG, encrypted);
+        SlowWatchPort watchPort = new SlowWatchPort();
+        KubernetesWatchCoordinator coordinator = new KubernetesWatchCoordinator(
+                new FakeClusterRepository(cluster), new FakeCredentialRepository(credential),
+                new PlaintextCrypto(), watchPort, new FakeAssuranceRepository(), true, 1000, 1);
+
+        try {
+            coordinator.reconcileWatches();
+            awaitState(coordinator, "FAILED");
+
+            assertThat(coordinator.statuses()).singleElement().satisfies(status ->
+                    assertThat(status.lastError()).contains("timed out after 1000ms"));
+        } finally {
+            watchPort.release.countDown();
+            coordinator.shutdown();
+        }
+    }
+
+    /** KubernetesWatchCoordinatorTest의 fallsBackToPollingAfterConfiguredWatchFailureThreshold 처리에 필요한 업무 로직을 수행한다. */
+    @Test
+    void fallsBackToPollingAfterConfiguredWatchFailureThreshold() {
+        Cluster cluster = Cluster.register("watch-polling", "test", ClusterEnvironment.DEV, ClusterProvider.KIND,
+                "local", "test");
+        EncryptedSecret encrypted = new EncryptedSecret("cipher", "key", "AES/GCM", "nonce");
+        EncryptedClusterCredential credential = EncryptedClusterCredential.create(cluster.id(),
+                ClusterCredentialType.KUBECONFIG, encrypted);
+        KubernetesWatchCoordinator coordinator = new KubernetesWatchCoordinator(
+                new FakeClusterRepository(cluster), new FakeCredentialRepository(credential),
+                new PlaintextCrypto(), new FailingWatchPort(), new FakeAssuranceRepository(),
+                true, 1000, 1, 1);
+
+        try {
+            coordinator.reconcileWatches();
+            awaitState(coordinator, "POLLING");
+            assertThat(coordinator.statuses()).singleElement().satisfies(status -> {
+                assertThat(status.consecutiveFailures()).isEqualTo(1);
+                assertThat(status.lastError()).contains("watch unavailable");
+                assertThat(status.nextRetryAt()).isNotNull();
+            });
+        } finally {
+            coordinator.shutdown();
+        }
+    }
+
+    /** KubernetesWatchCoordinatorTest의 awaitState 처리에 필요한 업무 로직을 수행한다. */
+    private static void awaitState(KubernetesWatchCoordinator coordinator, String expected) {
+        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(2);
+        while (System.nanoTime() < deadline) {
+            if (expected.equals(coordinator.statuses().get(0).state())) return;
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("Interrupted while awaiting watch state", exception);
+            }
+        }
+        throw new AssertionError("Watch did not reach state " + expected + ": " + coordinator.statuses());
+    }
+
+    private static final class FakeClusterRepository implements ClusterRepositoryPort {
+        private final Cluster cluster;
+
+        /** FakeClusterRepository 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
+        private FakeClusterRepository(Cluster cluster) {
+            this.cluster = cluster;
+        }
+
+        /** FakeClusterRepository의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
+        @Override
+        public Cluster save(Cluster value) {
+            return value;
+        }
+
+        /** FakeClusterRepository의 findById 처리 결과를 조회해 반환한다. */
+        @Override
+        public Optional<Cluster> findById(UUID clusterId) {
+            return cluster.id().equals(clusterId) ? Optional.of(cluster) : Optional.empty();
+        }
+
+        /** FakeClusterRepository의 findAll 처리 결과를 조회해 반환한다. */
+        @Override
+        public List<Cluster> findAll() {
+            return List.of(cluster);
+        }
+    }
+
+    private static final class FakeCredentialRepository implements ClusterCredentialRepositoryPort {
+        private final EncryptedClusterCredential credential;
+
+        /** FakeCredentialRepository 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
+        private FakeCredentialRepository(EncryptedClusterCredential credential) {
+            this.credential = credential;
+        }
+
+        /** FakeCredentialRepository의 save 처리에 필요한 데이터를 생성하거나 저장한다. */
+        @Override
+        public EncryptedClusterCredential save(EncryptedClusterCredential value) {
+            return value;
+        }
+
+        /** FakeCredentialRepository의 findByClusterId 처리 결과를 조회해 반환한다. */
+        @Override
+        public Optional<EncryptedClusterCredential> findByClusterId(UUID clusterId) {
+            return Optional.ofNullable(credential);
+        }
+    }
+
+    private static final class PlaintextCrypto implements SecretCryptoPort {
+        /** PlaintextCrypto의 encrypt 처리에 필요한 업무 로직을 수행한다. */
+        @Override
+        public EncryptedSecret encrypt(String plaintext) {
+            return new EncryptedSecret(plaintext, "key", "NONE", "nonce");
+        }
+
+        /** PlaintextCrypto의 decrypt 처리에 필요한 업무 로직을 수행한다. */
+        @Override
+        public String decrypt(EncryptedSecret encryptedSecret) {
+            return "apiVersion: v1";
+        }
+    }
+
+    private static final class FakeWatchPort implements KubernetesWatchPort {
+        private WatchListener listener;
+        private int openCount;
+        private boolean closed;
+
+        /** FakeWatchPort의 watch 처리에 필요한 업무 로직을 수행한다. */
+        @Override
+        public WatchRegistration watch(UUID clusterId, KubernetesConnectionCredential credential,
+                                       WatchListener listener) {
+            this.listener = listener;
+            openCount++;
+            return () -> closed = true;
+        }
+    }
+
+    private static final class SlowWatchPort implements KubernetesWatchPort {
+        private final CountDownLatch release = new CountDownLatch(1);
+
+        /** SlowWatchPort의 watch 처리에 필요한 업무 로직을 수행한다. */
+        @Override
+        public WatchRegistration watch(UUID clusterId, KubernetesConnectionCredential credential,
+                                       WatchListener listener) {
+            try {
+                release.await();
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Watch startup interrupted", exception);
+            }
+            return () -> {
+            };
+        }
+    }
+
+    private static final class FailingWatchPort implements KubernetesWatchPort {
+        /** FailingWatchPort의 watch 처리에 필요한 업무 로직을 수행한다. */
+        @Override
+        public WatchRegistration watch(UUID clusterId, KubernetesConnectionCredential credential,
+                                       WatchListener listener) {
+            throw new IllegalStateException("watch unavailable");
+        }
+    }
+
+    private static final class FakeAssuranceRepository implements AnalysisAssuranceRepositoryPort {
+        private final List<WatchSignal> signals = new ArrayList<>();
+        private final List<WatchSignalGroup> groups = new ArrayList<>();
+
+        /** FakeAssuranceRepository의 saveWatchSignal 처리에 필요한 데이터를 생성하거나 저장한다. */
+        @Override
+        public void saveWatchSignal(WatchSignal signal) {
+            signals.add(signal);
+        }
+
+        /** FakeAssuranceRepository의 findWatchSignals 처리 결과를 조회해 반환한다. */
+        @Override
+        public List<WatchSignal> findWatchSignals(UUID clusterId, String namespace, int limit) {
+            return List.copyOf(signals);
+        }
+
+        /** FakeAssuranceRepository의 saveWatchSignalGroup 처리에 필요한 데이터를 생성하거나 저장한다. */
+        @Override
+        public WatchSignalGroup saveWatchSignalGroup(WatchSignalGroup group) {
+            groups.removeIf(item -> item.id().equals(group.id()));
+            groups.add(group);
+            return group;
+        }
+
+        /** FakeAssuranceRepository의 findWatchSignalGroup 처리 결과를 조회해 반환한다. */
+        @Override
+        public Optional<WatchSignalGroup> findWatchSignalGroup(UUID groupId) {
+            return groups.stream().filter(item -> item.id().equals(groupId)).findFirst();
+        }
+
+        /** FakeAssuranceRepository의 findWatchSignalGroupByFingerprint 처리 결과를 조회해 반환한다. */
+        @Override
+        public Optional<WatchSignalGroup> findWatchSignalGroupByFingerprint(String fingerprint) {
+            return groups.stream().filter(item -> item.fingerprint().equals(fingerprint)).findFirst();
+        }
+
+        /** FakeAssuranceRepository의 findWatchSignalGroups 처리 결과를 조회해 반환한다. */
+        @Override
+        public List<WatchSignalGroup> findWatchSignalGroups(UUID clusterId, String namespace, String state, int limit) {
+            return List.copyOf(groups);
+        }
+
+        /** FakeAssuranceRepository의 saveRegressionRun 처리에 필요한 데이터를 생성하거나 저장한다. */
+        @Override
+        public RegressionRun saveRegressionRun(RegressionRun run) {
+            return run;
+        }
+
+        /** FakeAssuranceRepository의 findRegressionRun 처리 결과를 조회해 반환한다. */
+        @Override
+        public Optional<RegressionRun> findRegressionRun(UUID runId) {
+            return Optional.empty();
+        }
+
+        /** FakeAssuranceRepository의 findRegressionRuns 처리 결과를 조회해 반환한다. */
+        @Override
+        public List<RegressionRun> findRegressionRuns(int limit) {
+            return List.of();
+        }
+    }
+}

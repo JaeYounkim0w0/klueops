@@ -10,6 +10,8 @@ KlueOps는 Kubernetes 상태·이벤트·로그·구성 근거를 먼저 수집�
 
 ## 주요 기능
 
+개발 규칙은 [AGENTS.md](AGENTS.md), 다른 프로젝트에 가져다 쓸 기술·설계 기준은 [재사용 개발 기준](docs/engineering/README.md)에서 확인할 수 있습니다.
+
 - Kubernetes 클러스터·Namespace·워크로드·네트워크·스토리지 상태 탐색
 - 근거, 수집 범위, confidence와 fallback을 포함한 Cluster/Namespace AI 분석
 - Incident, Triage Queue, Runbook, 변경 timeline과 운영 증빙 관리

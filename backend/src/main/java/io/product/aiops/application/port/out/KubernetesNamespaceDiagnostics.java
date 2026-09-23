@@ -1,0 +1,70 @@
+package io.product.aiops.application.port.out;
+
+import java.time.Instant;
+import java.util.List;
+
+public record KubernetesNamespaceDiagnostics(
+        List<DiagnosticResource> resources,
+        List<DiagnosticEvent> events,
+        List<DiagnosticPodLog> podLogs,
+        Instant collectedAt,
+        List<CollectionStage> collectionStages
+) {
+    /** KubernetesNamespaceDiagnostics 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
+    public KubernetesNamespaceDiagnostics(List<DiagnosticResource> resources, List<DiagnosticEvent> events,
+                                          List<DiagnosticPodLog> podLogs, Instant collectedAt) {
+        this(resources, events, podLogs, collectedAt, List.of());
+    }
+
+    /** KubernetesNamespaceDiagnostics 인스턴스를 필요한 의존성과 초기 상태로 구성한다. */
+    public KubernetesNamespaceDiagnostics {
+        resources = resources == null ? List.of() : List.copyOf(resources);
+        events = events == null ? List.of() : List.copyOf(events);
+        podLogs = podLogs == null ? List.of() : List.copyOf(podLogs);
+        collectionStages = collectionStages == null ? List.of() : List.copyOf(collectionStages);
+    }
+
+    /** KubernetesNamespaceDiagnostics의 partial 처리에 필요한 업무 로직을 수행한다. */
+    public boolean partial() {
+        return collectionStages.stream().anyMatch(stage -> !"SUCCEEDED".equals(stage.status()));
+    }
+
+    public record CollectionStage(
+            String source,
+            String status,
+            int itemCount,
+            long latencyMs,
+            String detail
+    ) {
+    }
+
+    public record DiagnosticResource(
+            String namespace,
+            String resourceType,
+            String resourceName,
+            String status,
+            String summaryJson
+    ) {
+    }
+
+    public record DiagnosticEvent(
+            String namespace,
+            String involvedKind,
+            String involvedName,
+            String reason,
+            String type,
+            String message,
+            Instant eventTime,
+            Integer count
+    ) {
+    }
+
+    public record DiagnosticPodLog(
+            String namespace,
+            String podName,
+            String containerName,
+            String log,
+            boolean truncated
+    ) {
+    }
+}

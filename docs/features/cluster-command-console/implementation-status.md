@@ -87,7 +87,7 @@
 
 ## 2026-09-09 실제 클러스터 검증
 
-- 대상: `dev-master / strato-product / comp-portal-backend-64db666487-t98hc`
+- 대상: `dev-master / <검증 namespace> / comp-portal-backend-64db666487-t98hc` (실환경 namespace 명칭 생략)
 - 명령: `kubectl exec -it comp-portal-backend-64db666487-t98hc -- /bin/sh`
 - 확인: WebSocket 연결, TTY prompt, `pwd`, `id`, stdout 출력, `exit` 순서로 검증
 - 결과: `SUCCEEDED`, exit code `0`; 화면과 PostgreSQL 실행 이력에 동일하게 반영

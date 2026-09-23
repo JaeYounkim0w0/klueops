@@ -1,0 +1,30 @@
+package io.product.aiops.adapter.in.web.dto;
+
+import io.product.aiops.application.port.in.ClusterCredentialResult;
+import io.product.aiops.domain.cluster.ClusterCredentialType;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.time.Instant;
+import java.util.UUID;
+
+@Schema(description = "Cluster credential payload. Masked by default; reveal=true returns the stored plaintext credential and writes an audit log.")
+public record ClusterCredentialResponse(
+        UUID clusterId,
+        ClusterCredentialType credentialType,
+        String payload,
+        boolean revealed,
+        boolean masked,
+        Instant updatedAt
+) {
+    /** ClusterCredentialResponse의 from 처리 데이터를 필요한 표현으로 변환한다. */
+    public static ClusterCredentialResponse from(ClusterCredentialResult result) {
+        return new ClusterCredentialResponse(
+                result.clusterId(),
+                result.credentialType(),
+                result.payload(),
+                result.revealed(),
+                result.masked(),
+                result.updatedAt()
+        );
+    }
+}

@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   name: klueops-exposure-acceptance
   labels:
-    aiops.strato.io/fixture: application-exposure
+    aiops.product.io/fixture: application-exposure
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -11,7 +11,7 @@ metadata:
   name: klueops-application-delivery
   namespace: klueops-exposure-acceptance
   labels:
-    aiops.strato.io/fixture: application-exposure
+    aiops.product.io/fixture: application-exposure
 automountServiceAccountToken: false
 ---
 # 반복 수용 테스트 중 단기 토큰 만료로 오판하지 않도록 값이 없는 ServiceAccount token Secret만 선언한다.
@@ -21,7 +21,7 @@ metadata:
   name: klueops-application-delivery-token
   namespace: klueops-exposure-acceptance
   labels:
-    aiops.strato.io/fixture: application-exposure
+    aiops.product.io/fixture: application-exposure
   annotations:
     kubernetes.io/service-account.name: klueops-application-delivery
 type: kubernetes.io/service-account-token
@@ -31,7 +31,7 @@ kind: ClusterRole
 metadata:
   name: klueops-application-delivery-acceptance-discovery
   labels:
-    aiops.strato.io/fixture: application-exposure
+    aiops.product.io/fixture: application-exposure
 rules:
   - apiGroups: [""]
     resources: ["namespaces", "nodes"]
@@ -76,7 +76,7 @@ kind: ClusterRoleBinding
 metadata:
   name: klueops-application-delivery-acceptance-discovery
   labels:
-    aiops.strato.io/fixture: application-exposure
+    aiops.product.io/fixture: application-exposure
 subjects:
   - kind: ServiceAccount
     name: klueops-application-delivery
@@ -92,7 +92,7 @@ metadata:
   name: klueops-application-delivery-acceptance-admin
   namespace: klueops-exposure-acceptance
   labels:
-    aiops.strato.io/fixture: application-exposure
+    aiops.product.io/fixture: application-exposure
 subjects:
   - kind: ServiceAccount
     name: klueops-application-delivery
@@ -108,7 +108,7 @@ metadata:
   name: klueops-application-delivery-acceptance-gateway
   namespace: klueops-exposure-acceptance
   labels:
-    aiops.strato.io/fixture: application-exposure
+    aiops.product.io/fixture: application-exposure
 rules:
   - apiGroups: ["gateway.networking.k8s.io"]
     resources: ["gateways"]
@@ -123,7 +123,7 @@ metadata:
   name: klueops-application-delivery-acceptance-gateway
   namespace: klueops-exposure-acceptance
   labels:
-    aiops.strato.io/fixture: application-exposure
+    aiops.product.io/fixture: application-exposure
 subjects:
   - kind: ServiceAccount
     name: klueops-application-delivery
@@ -138,7 +138,7 @@ kind: GatewayClass
 metadata:
   name: klueops-acceptance
   labels:
-    aiops.strato.io/fixture: application-exposure
+    aiops.product.io/fixture: application-exposure
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
@@ -148,7 +148,7 @@ metadata:
   name: klueops-acceptance
   namespace: klueops-exposure-acceptance
   labels:
-    aiops.strato.io/fixture: application-exposure
+    aiops.product.io/fixture: application-exposure
 spec:
   gatewayClassName: klueops-acceptance
   listeners:

@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>io.strato</groupId>
+    <groupId>io.product</groupId>
     <artifactId>klueops-backend</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <name>KlueOps Backend</name>
@@ -195,7 +195,7 @@
                 <configuration>
                     <useModulePath>false</useModulePath>
                     <systemPropertyVariables>
-                        <AIOPS_DATASOURCE_URL>jdbc:tc:postgresql:17-alpine:///strato_aiops_test?TC_DAEMON=true</AIOPS_DATASOURCE_URL>
+                        <AIOPS_DATASOURCE_URL>jdbc:tc:postgresql:17-alpine:///product_aiops_test?TC_DAEMON=true</AIOPS_DATASOURCE_URL>
                         <AIOPS_DATASOURCE_USERNAME>test</AIOPS_DATASOURCE_USERNAME>
                         <AIOPS_DATASOURCE_PASSWORD>test</AIOPS_DATASOURCE_PASSWORD>
                         <AIOPS_DATASOURCE_DRIVER>org.testcontainers.jdbc.ContainerDatabaseDriver</AIOPS_DATASOURCE_DRIVER>

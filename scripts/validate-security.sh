@@ -29,9 +29,9 @@ done
 
 rg -q "spring-boot-starter-oauth2-client" "${ROOT_DIR}/backend/pom.xml"
 rg -q "spring-session-jdbc" "${ROOT_DIR}/backend/pom.xml"
-rg -q "AUTHENTICATION_REQUIRED" "${ROOT_DIR}/backend/src/main/java/io/strato/aiops/config/SecurityConfig.java"
-rg -q "visibleClusterIds" "${ROOT_DIR}/backend/src/main/java/io/strato/aiops/adapter/in/web/ClusterController.java"
-rg -q "SESSION_COOKIE" "${ROOT_DIR}/backend/src/main/java/io/strato/aiops/application/service/ProductionReadinessService.java"
+rg -q "AUTHENTICATION_REQUIRED" "${ROOT_DIR}/backend/src/main/java/io/product/aiops/config/SecurityConfig.java"
+rg -q "visibleClusterIds" "${ROOT_DIR}/backend/src/main/java/io/product/aiops/adapter/in/web/ClusterController.java"
+rg -q "SESSION_COOKIE" "${ROOT_DIR}/backend/src/main/java/io/product/aiops/application/service/ProductionReadinessService.java"
 rg -q "quay.io/keycloak/keycloak:26.7.3" "${ROOT_DIR}/compose.identity.yaml"
 bash -n "${ROOT_DIR}/scripts/bootstrap-keycloak-dev.sh"
 

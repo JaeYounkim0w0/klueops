@@ -5,6 +5,7 @@
 - `tech-stack.md`: 지원 runtime과 주요 library
 - `coding-standards.md`: Backend/Frontend 코드 작성 규칙
 - `frontend-style-guide.md`: 공통 CSS와 UI 구현 기준
+- [frontend-layout-guide.md](frontend-layout-guide.md): 공통 셸·페이지 유형·스크롤·반응형 레이아웃 규칙
 - `localization.md`: 한국어/영어 locale 계약
 - `testing-strategy.md`: 테스트 계층과 환경 수용 기준
 - `backend-source-validation.md`: Backend 자동 검증 범위

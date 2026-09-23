@@ -35,7 +35,7 @@ cleanup() {
   if [[ "${FIXTURE_CREATED}" == "true" ]]; then
     local fixture_label
     fixture_label="$(kubectl get namespace "${FIXTURE_NAMESPACE}" \
-      -o jsonpath='{.metadata.labels.aiops\.strato\.io/fixture}' 2>/dev/null || true)"
+      -o jsonpath='{.metadata.labels.aiops\.product\.io/fixture}' 2>/dev/null || true)"
     if [[ "${fixture_label}" == "large-cluster-soak" ]]; then
       kubectl delete clusterrolebinding "${RBAC_NAME}" --ignore-not-found >/dev/null
       kubectl delete clusterrole "${RBAC_NAME}" --ignore-not-found >/dev/null
@@ -99,8 +99,8 @@ while IFS=$'\t' read -r namespace run_id expires_at; do
   else
     fail "active or unbounded large-cluster fixture already exists: ${namespace}"
   fi
-done < <(kubectl get namespaces -l aiops.strato.io/fixture=large-cluster-soak -o json | \
-  jq -r '.items[] | [.metadata.name, .metadata.labels["aiops.strato.io/run-id"], (.metadata.annotations["aiops.strato.io/expires-at"] // "")] | @tsv')
+done < <(kubectl get namespaces -l aiops.product.io/fixture=large-cluster-soak -o json | \
+  jq -r '.items[] | [.metadata.name, .metadata.labels["aiops.product.io/run-id"], (.metadata.annotations["aiops.product.io/expires-at"] // "")] | @tsv')
 
 expires_at="$((now_epoch + TTL_SECONDS))"
 sed -e "s/__NAMESPACE__/${FIXTURE_NAMESPACE}/g" \
@@ -118,7 +118,7 @@ generate_configmap_batch() {
   local start="$1" end="$2" index separator=""
   printf '{"apiVersion":"v1","kind":"List","items":['
   for ((index = start; index <= end; index++)); do
-    printf '%s{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"synthetic-%05d","namespace":"%s","labels":{"aiops.strato.io/fixture":"large-cluster-soak","aiops.strato.io/run-id":"%s"}},"data":{"index":"%d","payload":"bounded-synthetic-inventory"}}' \
+    printf '%s{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"synthetic-%05d","namespace":"%s","labels":{"aiops.product.io/fixture":"large-cluster-soak","aiops.product.io/run-id":"%s"}},"data":{"index":"%d","payload":"bounded-synthetic-inventory"}}' \
       "${separator}" "${index}" "${FIXTURE_NAMESPACE}" "${RUN_ID}" "${index}"
     separator=,
   done
@@ -132,7 +132,7 @@ for ((start = 1; start <= RESOURCE_COUNT; start += BATCH_SIZE)); do
   generate_configmap_batch "${start}" "${end}" | kubectl create -f - >/dev/null
 done
 observed_count="$(kubectl -n "${FIXTURE_NAMESPACE}" get configmaps \
-  -l aiops.strato.io/fixture=large-cluster-soak --no-headers | wc -l | tr -d ' ')"
+  -l aiops.product.io/fixture=large-cluster-soak --no-headers | wc -l | tr -d ' ')"
 [[ "${observed_count}" == "${RESOURCE_COUNT}" ]] || fail "fixture count mismatch: ${observed_count}"
 
 kubectl -n "${FIXTURE_NAMESPACE}" create token large-cluster-soak --duration=2h >"${TOKEN_FILE}"
